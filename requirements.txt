@@ -1,1 +1,7 @@
 pycodestyle
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+python-jose
+passlib[bcrypt]
