@@ -2,6 +2,7 @@ pycodestyle
 fastapi
 uvicorn
 pydantic
+pydantic-settings
 sqlalchemy
 python-jose
 passlib[bcrypt]
