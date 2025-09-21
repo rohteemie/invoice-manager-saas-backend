@@ -30,7 +30,7 @@ Build a multi-tenant SaaS platform that allows organizations (tenants) to manage
 | Metrics Dashboard    | API usage, active users, and subscription usage stats.    | Medium    |
 | Admin Panel API    | For system admin to manage tenants and subscriptions.    | Medium    |
 | Caching & Rate Limiting    | Redis for performance and rate limits per tenant.    | Low    |
-| CI/CD Pipeline    | Automated tests, lining, and deployments.    | Medium    |
+| CI/CD Pipeline    | Automated tests, linting, and deployments.    | Medium    |
 
 ### User Roles & Permissions
 
