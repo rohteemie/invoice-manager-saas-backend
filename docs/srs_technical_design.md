@@ -1,9 +1,11 @@
 # System Requirements Document (SRD) - Technical Design
 
 ## Introduction
+
 This System Requirements Document (SRD) provides a detailed technical specification for the FastAPI Multi-Tenant SaaS Platform designed to manage tenants, their users, invoices, subscriptions, and business operations under a unified backend system.
 
 It defines:
+
 - System architecture
 - Functional & non-functional requirements
 - Data model (ERD)
@@ -16,6 +18,7 @@ This document aligns with enterprise-grade software standards and GDPR complianc
 ## Scope & Objectives
 
 ### In Scope (MVP)
+
 - Multi-tenant onboarding with data isolation
 - Role-based access control (RBAC)
 - JWT authentication with refresh tokens
@@ -25,12 +28,14 @@ This document aligns with enterprise-grade software standards and GDPR complianc
 - CI/CD automation for deployments
 
 ### Out of Scope (Future Releases)
+
 - AI-powered analytics dashboards
 - WebSocket-based real-time notifications
 - Self-service billing portals
 - Advanced reporting and BI integrations
 
 ## System Architecture
+
 The architecture is divided into the following layers:
 
 - **Client Layer**: Web & Mobile apps consuming REST APIs
@@ -41,9 +46,11 @@ The architecture is divided into the following layers:
 - **CI/CD Pipeline**: GitHub Actions for build → test → deploy automation
 
 ## Data Model (ERD)
+
 The data model supports multi-tenancy with strict data isolation using tenant_id.
 
 **Key Entities:**
+
 - **Tenants**: Organization details and subscription plans
 - **Users**: Linked to tenants with roles
 - **Roles & Permissions**: Owner, Admin, Manager, Attendant
@@ -74,7 +81,9 @@ The data model supports multi-tenancy with strict data isolation using tenant_id
 | NFR6 | Usability: Swagger & Postman documentation for API endpoints. |
 
 ## API Request/Response Flow
+
 A typical client request flow:
+
 1. Client sends HTTPS request to API Gateway
 2. API Gateway validates JWT & RBAC roles
 3. Auth Service confirms identity & permissions
@@ -83,10 +92,12 @@ A typical client request flow:
 6. Response is returned through the API Gateway to the Client
 
 ### Activity Diagram (Invoice Workflow)
+
 Visualizes the workflow for creating and sending an invoice:
 Login → Select Tenant → Create Invoice → Add Items → Save Invoice → Send to Customer
 
 ## Security Considerations
+
 - **Authentication & Authorization**: JWT with RBAC enforcement
 - **Data Isolation**: Tenant-based row-level security in PostgreSQL
 - **Encryption**: TLS for data in transit, AES for sensitive data at rest
@@ -94,7 +105,9 @@ Login → Select Tenant → Create Invoice → Add Items → Save Invoice → Se
 - **Compliance**: GDPR-compliant data handling, right-to-be-forgotten support
 
 ## CI/CD Pipeline
+
 Stages include:
+
 1. Developer Push Code → GitHub repository
 2. CI Pipeline → Automated unit & integration tests
 3. Docker Image Build → Containerization of services
@@ -102,6 +115,7 @@ Stages include:
 5. Production Deployment → Zero-downtime release
 
 ## Technology Stack
+
 - **Backend Framework**: FastAPI
 - **Database**: PostgreSQL
 - **Caching**: Redis
@@ -111,12 +125,14 @@ Stages include:
 - **External Services**: Stripe (payments), SendGrid (emails)
 
 ## Deployment Strategy
+
 - **Containers**: Docker-based microservices
 - **Orchestration**: Kubernetes or Docker Swarm
 - **Environments**: Dev → Staging → Production with separate configs
 - **Monitoring**: Prometheus, Grafana, Sentry for metrics & alerts
 
 ## Future Enhancements
+
 - AI-driven analytics dashboards
 - Real-time notifications using WebSockets
 - Self-service billing & subscription upgrades
@@ -124,7 +140,8 @@ Stages include:
 
 ## Scaling Plan Section
 
-### Scaling Strategy:
+### Scaling Strategy
+
 - **Short-term (MVP)**: Single DB with row-level security + indexes
 - **Medium-term (100–500 tenants)**: Use read replicas for PostgreSQL, cache frequent queries with Redis
 - **Long-term (500+ tenants)**: Shard tenants across multiple databases, move invoices to partitioned tables, and introduce message queues for async processing
@@ -132,6 +149,7 @@ Stages include:
 ## Glossary & References
 
 ### Glossary
+
 - **RBAC**: Role-Based Access Control
 - **JWT**: JSON Web Token
 - **GDPR**: General Data Protection Regulation
@@ -140,7 +158,8 @@ Stages include:
 - **RLS**: Row-Level Security (PostgreSQL)
 - **SaaS**: Software as a Service
 
-### References:
+### References
+
 - FastAPI Documentation
 - PostgreSQL Row-Level Security
 - Stripe & SendGrid API Docs

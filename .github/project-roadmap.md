@@ -17,7 +17,7 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 - [x] [Use Case diagram](../docs/use_case_diagram.png)
 - [x] [Activity diagram](../docs/activity_diagram.png)
 - [x] [API Sequence diagram](../docs/api_sequence_diagram.png)
-- [ ] GitHub Project board created
+- [x] GitHub Project board created
 
 **Effort:** S
 **Dependencies:** None
