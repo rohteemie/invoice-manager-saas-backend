@@ -85,6 +85,19 @@ def update_tenant(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     update_data = tenant_update.model_dump(exclude_unset=True)
+    # Check for domain uniqueness if domain is being updated
+    if "domain" in update_data and update_data["domain"] is not None:
+        new_domain = update_data["domain"]
+        if new_domain != tenant.domain:
+            existing_tenant = db.query(TenantModel).filter(
+                TenantModel.domain == new_domain,
+                TenantModel.id != tenant_id
+            ).first()
+            if existing_tenant:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A tenant with this domain already exists"
+                )
     for field, value in update_data.items():
         setattr(tenant, field, value)
 
