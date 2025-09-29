@@ -119,7 +119,8 @@ class Gen_Model:
     #         return data
 
 
-new_object = Gen_Model()
+
 
 if __name__ == "__main__":
+    new_object = Gen_Model()
     print(new_object)
