@@ -30,7 +30,7 @@ def create_tenant(
 
     # Create new tenant
     try:
-        db_tenant = TenantModel(**tenant_in.dict())
+        db_tenant = TenantModel(**tenant_in.model_dump())
         db.add(db_tenant)
         db.commit()
         db.refresh(db_tenant)
@@ -58,7 +58,7 @@ def list_tenants(
 
 @router.get("/{tenant_id}", response_model=Tenant)
 def get_tenant(
-    tenant_id: int,
+    tenant_id: str,
     db: Session = Depends(get_db)
 ):
     """
@@ -72,7 +72,7 @@ def get_tenant(
 
 @router.put("/{tenant_id}", response_model=Tenant)
 def update_tenant(
-    tenant_id: int,
+    tenant_id: str,
     tenant_update: TenantUpdate,
     db: Session = Depends(get_db)
 ):
@@ -94,7 +94,7 @@ def update_tenant(
 
 @router.delete("/{tenant_id}")
 def delete_tenant(
-    tenant_id: int,
+    tenant_id: str,
     db: Session = Depends(get_db)
 ):
     """
