@@ -18,15 +18,16 @@ def create_tenant(
     """
     Create a new tenant.
     """
-    # Check if domain already exists
-    existing_tenant = db.query(TenantModel).filter(
-        TenantModel.domain == tenant_in.domain
+    # Check if domain already exists, but only if domain is not None
+    if tenant_in.domain is not None:
+        existing_tenant = db.query(TenantModel).filter(
+            TenantModel.domain == tenant_in.domain
         ).first()
-    if existing_tenant:
-        raise HTTPException(
-            status_code=400,
-            detail="A tenant with this domain already exists"
-        )
+        if existing_tenant:
+            raise HTTPException(
+                status_code=400,
+                detail="A tenant with this domain already exists"
+            )
 
     # Create new tenant
     try:
@@ -83,7 +84,7 @@ def update_tenant(
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    update_data = tenant_update.dict(exclude_unset=True)
+    update_data = tenant_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(tenant, field, value)
 
