@@ -84,7 +84,7 @@ def update_tenant(
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    update_data = tenant_update.dict(exclude_unset=True)
+    update_data = tenant_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(tenant, field, value)
 
