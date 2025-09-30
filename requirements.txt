@@ -2,6 +2,7 @@ pycodestyle
 fastapi
 uvicorn
 pydantic
+pydantic[email]
 sqlalchemy
 python-jose
 passlib[bcrypt]
@@ -9,3 +10,4 @@ pydantic-settings
 pymysql
 cryptography
 alembic
+python-multipart

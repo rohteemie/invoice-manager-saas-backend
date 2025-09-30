@@ -208,3 +208,7 @@ __marimo__/
 development_document.txt
 init.sql
 .ENV
+
+# Database files
+*.db
+test.db
