@@ -31,8 +31,8 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 ## 🏗️ Features (Planned & Implemented)
 
 - [x] Tenant registration & management
-- [ ] User registration & JWT authentication
-- [ ] Role-based access (Owner, Admin, Manager, Attendant)
+- [x] User registration & JWT authentication
+- [x] Role-based access (Owner, Admin, Manager, Attendant)
 - [ ] CRUD for Invoices (tenant-aware)
 - [ ] Invoice lifecycle (Draft → Sent → Paid → Overdue)
 - [ ] Audit logging
