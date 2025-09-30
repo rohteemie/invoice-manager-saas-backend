@@ -7,3 +7,5 @@ python-jose
 passlib[bcrypt]
 pydantic-settings
 pymysql
+cryptography
+alembic
