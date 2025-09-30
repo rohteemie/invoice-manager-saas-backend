@@ -1,17 +1,11 @@
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
+from app.db.database import SessionLocal, init_db
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-metadata = MetaData()
+# Initialize tables
+init_db()
 
 
 def get_db():
+    """Dependency that provides a DB session"""
     db = SessionLocal()
     try:
         yield db

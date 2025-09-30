@@ -117,10 +117,3 @@ class Gen_Model:
     #         return None
     #     elif data:
     #         return data
-
-
-
-
-if __name__ == "__main__":
-    new_object = Gen_Model()
-    print(new_object)
