@@ -1,4 +1,7 @@
-# 📅 Project Roadmap – Multi-Tenant SaaS Backend
+# 📄 Updated `Project Roadmap.md`
+
+```markdown
+# 📅 Project Roadmap – Multi-Tenant Invoicing SaaS Backend
 
 This document outlines the **phases, sprints, and milestones** for building the multi-tenant SaaS backend.
 The roadmap blends **traditional planning** with **iterative sprints**, showcasing backend engineering best practices.
@@ -44,14 +47,14 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 
 ---
 
-## 📦 Phase 2 – Core Business Module (Clients & Invoices)
+## 📦 Phase 2 – Core Business Module (Invoices)
 
-**Goal:** Deliver core SaaS functionality with tenant-aware CRUD.
+**Goal:** Deliver the tenant-aware invoice management system.
 **Sprints:**
 
-- [ ] Sprint 2.1: Client model + CRUD APIs
+- [ ] Sprint 2.1: Invoice schema (branch, customer info, creator details)
   **Effort:** M | **Core** | **Depends on:** Phase 1
-- [ ] Sprint 2.2: Invoice model + lifecycle (Draft → Sent → Paid → Overdue)
+- [ ] Sprint 2.2: Invoice CRUD + lifecycle (Draft → Sent → Paid → Overdue)
   **Effort:** M | **Core** | **Depends on:** 2.1
 - [ ] Sprint 2.3: Tenant-aware query enforcement
   **Effort:** S | **Core** | **Depends on:** 2.2
@@ -66,10 +69,10 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 
 ## 📊 Phase 3 – Analytics & Reporting
 
-**Goal:** Add value-added features for insights.
+**Goal:** Add value-added insights on invoices.
 **Sprints:**
 
-- [ ] Sprint 3.1: Tenant-level sales/summary API
+- [ ] Sprint 3.1: Tenant-level invoice summary (total revenue, overdue count)
   **Effort:** M | **Core** | **Depends on:** Phase 2
 - [ ] Sprint 3.2: Caching with Redis for reports
   **Effort:** M | **Nice-to-have** | **Depends on:** 3.1
@@ -105,7 +108,7 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 
 - [ ] Detailed README (setup + usage examples)
 - [ ] Short demo video (screen-recorded API walkthrough)
-- [ ] Blog post: *“How I Designed a Multi-Tenant SaaS Backend”*
+- [ ] Blog post: *“How I Designed a Multi-Tenant Invoicing SaaS Backend”*
 - [ ] Optional live demo deployment (Render/Heroku)
 
 **Effort:** M
@@ -132,3 +135,14 @@ Progress will be tracked via:
 - [ ] GitHub Project board (Kanban view)
 
 ---
+## 📬 Feedback & Iteration
+
+We welcome feedback on this roadmap and the project as a whole. Please feel free to reach out via:
+
+- GitHub Issues
+- Direct messages
+- Comments on this document
+
+Your input is invaluable in helping us improve and adapt the project to better meet user needs.
+---
+```
