@@ -49,15 +49,15 @@ Multi-Tenant SaaS Backend API
               │
 ┌─────────────▼───────────────────────┐
 │           MANAGER                   │
-│  - Manage inventory & sales         │
+│  - Manage Invoices and Invoice List │
 │  - View reports                     │
 │  - All attendant privileges         │
 └─────────────┬───────────────────────┘
               │
 ┌─────────────▼───────────────────────┐
 │          ATTENDANT                  │
-│  - Record sales                     │
-│  - View inventory                   │
+│  - Create Invoice                   │
+│  - View Invoice Inventory           │
 │  - Basic operations only            │
 └─────────────────────────────────────┘
 ```
