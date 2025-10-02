@@ -19,7 +19,8 @@ class Gen_Model:
                 index=True
                 )
     created_at = Column(DateTime, nullable=False, default=datetime.now)
-    updated_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(DateTime, nullable=False, default=datetime.now,
+                        onupdate=datetime.now)
 
     def __init__(self, *args, **kwargs):
         """ Initializes the general class """
