@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-## Project: Henex SaaS – Multi-Tenant Business Management Platform
+## Project: Multi-Tenant Invoice Management Platform
 
 ### Version
 
@@ -36,15 +36,15 @@ Build a multi-tenant SaaS platform that allows organizations (tenants) to manage
 
 - **Owner**: Manage subscription, users, and all organization data.
 - **Admin**: Manage users, inventory, and sales for the tenant.
-- **Manager**: Manage inventory and sales only.
-- **Attendant**: Record sales, view inventory but no administrative rights.
+- **Manager**: Manage Invoice and Inventories only.
+- **Attendant**: Create Invoice, view inventory but no administrative rights.
 
 ### User Stories
 
 - As an Owner, I want to create an organization account so that I can onboard my employees.
 - As an Admin, I want to manage users within my organization so that I control access.
-- As a Manager, I want to track sales and inventory so I can manage daily operations.
-- As an Attendant, I want to record sales quickly so that I can process transactions.
+- As a Manager, I want to track invoice and inventories so I can manage daily operations.
+- As an Attendant, I want to generate invoices quickly so that I can process transactions.
 - As a System Admin, I want to manage all tenants from a centralized API.
 
 ### Assumptions & Constraints
