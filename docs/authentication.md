@@ -1,0 +1,285 @@
+# User Authentication & Authorization Documentation
+
+## Overview
+
+This document describes the JWT-based authentication and role-based access control (RBAC) implementation for the Multi-Tenant SaaS backend.
+
+## User Model
+
+The User model implements the following attributes:
+
+- **id**: UUID primary key
+- **email**: Unique email address (used as username for login)
+- **full_name**: User's full name
+- **hashed_password**: Bcrypt-hashed password for secure storage
+- **role**: User role enum (Owner, Admin, Manager, Attendant)
+- **tenant_id**: Foreign key to Tenant model for data isolation
+- **is_active**: Boolean flag for soft delete (GDPR-compliant)
+- **is_verified**: Boolean flag for email verification status
+- **created_at**: Timestamp of user creation
+- **updated_at**: Timestamp of last update
+
+## User Roles
+
+The system implements a hierarchical role-based access control:
+
+1. **Owner** (Highest privileges)
+   - Full access to all tenant resources
+   - Can manage all users in the tenant
+   - Can delete users (soft delete)
+   - Can manage subscriptions and billing
+
+2. **Admin**
+   - Manage users within the tenant
+   - Full access to business operations
+   - Cannot manage owners
+
+3. **Manager**
+   - Manage inventory and sales
+   - View reports and analytics
+   - Limited user management
+
+4. **Attendant** (Lowest privileges)
+   - Record sales and transactions
+   - View inventory
+   - No administrative rights
+
+## Authentication Endpoints
+
+### Register User
+**POST** `/api/v1/auth/register`
+
+Register a new user in the system.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "password": "SecurePassword123",
+  "role": "owner",
+  "tenant_id": "tenant-uuid"
+}
+```
+
+**Response:** User object without password
+
+### Login
+**POST** `/api/v1/auth/login`
+
+Authenticate user and receive JWT tokens.
+
+**Request Body (Form Data):**
+```
+username=user@example.com
+password=SecurePassword123
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "refresh_token": "eyJhbGc...",
+  "token_type": "bearer"
+}
+```
+
+### Refresh Token
+**POST** `/api/v1/auth/refresh?refresh_token={token}`
+
+Get new access and refresh tokens using a valid refresh token.
+
+**Response:** New token pair
+
+## User Management Endpoints
+
+All user management endpoints require authentication.
+
+### Get Current User
+**GET** `/api/v1/users/me`
+
+Get information about the currently authenticated user.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+### List Users
+**GET** `/api/v1/users/`
+
+List all users in the current tenant. Requires Admin or Owner role.
+
+**Query Parameters:**
+- `skip`: Number of records to skip (default: 0)
+- `limit`: Maximum number of records (default: 100)
+
+### Get User by ID
+**GET** `/api/v1/users/{user_id}`
+
+Get a specific user by ID. Requires Admin or Owner role.
+
+### Update User
+**PUT** `/api/v1/users/{user_id}`
+
+Update user information. Requires Admin or Owner role.
+
+**Request Body:**
+```json
+{
+  "full_name": "Updated Name",
+  "role": "manager",
+  "is_active": true,
+  "is_verified": true
+}
+```
+
+### Delete User (Soft Delete)
+**DELETE** `/api/v1/users/{user_id}`
+
+Deactivate a user (GDPR-compliant soft delete). Requires Owner role.
+
+## Security Features
+
+### Password Security
+- Passwords are hashed using bcrypt
+- Minimum password length: 8 characters
+- Passwords are never stored in plain text
+- Passwords are never returned in API responses
+
+### JWT Tokens
+- Access tokens expire in 30 minutes (configurable)
+- Refresh tokens expire in 7 days (configurable)
+- Tokens include user ID, tenant ID, and role
+- Tokens are signed with a secret key
+
+### Data Isolation
+- All user queries are automatically filtered by tenant_id
+- Users can only access data from their own tenant
+- Cross-tenant access is prevented at the database level
+
+### GDPR Compliance
+- Soft delete implementation (right-to-be-forgotten)
+- User data can be deactivated instead of permanently deleted
+- Audit trail is maintained for compliance
+- Email is the only personal identifier
+
+## Role-Based Access Control (RBAC)
+
+The `require_role()` dependency factory enables role-based access control:
+
+```python
+from app.core.deps import require_role
+from app.models.user import UserRole
+
+@router.get("/admin-only")
+def admin_endpoint(
+    current_user = Depends(require_role(UserRole.ADMIN))
+):
+    # Only accessible by Admin and Owner roles
+    pass
+```
+
+Role hierarchy ensures that higher roles can access lower-role endpoints:
+- Owner can access Admin, Manager, and Attendant endpoints
+- Admin can access Manager and Attendant endpoints
+- Manager can access Attendant endpoints
+- Attendant can only access Attendant endpoints
+
+## Configuration
+
+Authentication settings are configured in `.env`:
+
+```env
+SECRET_KEY=your-secret-key-here
+ACCESS_TOKEN_EXPIRATION=30  # minutes
+REFRESH_TOKEN_EXPIRATION=10080  # minutes (7 days)
+```
+
+⚠️ **Security Note:** Always use a strong, unique SECRET_KEY in production and never commit it to version control.
+
+## Testing the Authentication Flow
+
+### 1. Create a Tenant
+```bash
+curl -X POST http://localhost:8000/api/v1/tenants/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Company",
+    "domain": "mycompany.com"
+  }'
+```
+
+### 2. Register a User
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "owner@mycompany.com",
+    "full_name": "John Doe",
+    "password": "SecurePassword123",
+    "role": "owner",
+    "tenant_id": "tenant-id-from-step-1"
+  }'
+```
+
+### 3. Login
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=owner@mycompany.com&password=SecurePassword123"
+```
+
+### 4. Use the Access Token
+```bash
+curl -X GET http://localhost:8000/api/v1/users/me \
+  -H "Authorization: Bearer {access_token}"
+```
+
+## Error Handling
+
+### Common Error Responses
+
+- **401 Unauthorized**: Invalid or expired token
+- **403 Forbidden**: Insufficient permissions or inactive user
+- **404 Not Found**: User or resource not found
+- **400 Bad Request**: Invalid input data
+
+### Example Error Response
+```json
+{
+  "detail": "Could not validate credentials"
+}
+```
+
+## Best Practices
+
+1. **Token Management**
+   - Store tokens securely (e.g., httpOnly cookies)
+   - Implement token refresh before expiration
+   - Clear tokens on logout
+
+2. **Password Management**
+   - Enforce strong password requirements
+   - Implement password reset functionality
+   - Consider implementing rate limiting on login attempts
+
+3. **Role Assignment**
+   - Start with the least privileged role (Attendant)
+   - Promote users as needed
+   - Regularly audit user permissions
+
+4. **Data Privacy**
+   - Never log passwords or tokens
+   - Implement proper audit logging
+   - Handle personal data according to GDPR requirements
+
+## Future Enhancements
+
+- [ ] Email verification workflow
+- [ ] Password reset functionality
+- [ ] Two-factor authentication (2FA)
+- [ ] OAuth2 social login integration
+- [ ] Rate limiting on authentication endpoints
+- [ ] Audit logging for security events
+- [ ] Account lockout after failed login attempts
