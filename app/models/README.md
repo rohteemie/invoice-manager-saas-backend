@@ -11,7 +11,8 @@ models/
 ├── __init__.py           # Model registration and imports
 ├── general_model.py      # Base model with common fields
 ├── tenant.py             # Tenant model for multi-tenancy
-└── user.py               # User model with RBAC
+├── user.py               # User model with RBAC
+└── invoice.py            # Invoice and InvoiceItem models
 ```
 
 ## Models
@@ -141,6 +142,111 @@ user = User(
 )
 ```
 
+### Invoice Model (`invoice.py`)
+
+Represents invoices for billing and payment tracking with lifecycle management.
+
+**Table:** `invoices`
+
+**Fields:**
+- `id`: String (UUID) - Primary key (inherited from Gen_Model)
+- `invoice_number`: String(50) - Unique invoice identifier (indexed)
+- `tenant_id`: String(60) - Foreign key to tenants table (indexed)
+- `branch_id`: String(60) - Branch/location identifier (optional, indexed)
+- `customer_name`: String(100) - Customer name (required)
+- `customer_email`: String(255) - Customer email (optional)
+- `customer_phone`: String(20) - Customer phone (optional)
+- `customer_address`: Text - Customer address (optional)
+- `creator_id`: String(60) - Foreign key to users table (indexed)
+- `status`: Enum(InvoiceStatus) - Invoice lifecycle status (indexed)
+- `issue_date`: String(50) - Invoice issue date (required)
+- `due_date`: String(50) - Payment due date (optional)
+- `subtotal`: Numeric(10, 2) - Subtotal before tax/discount
+- `tax_amount`: Numeric(10, 2) - Tax amount
+- `discount_amount`: Numeric(10, 2) - Discount amount
+- `total_amount`: Numeric(10, 2) - Final total amount
+- `notes`: Text - Additional notes (optional)
+- `payment_method`: String(50) - Payment method (optional)
+- `paid_at`: String(50) - Payment timestamp (optional)
+- `created_at`: DateTime - Creation timestamp (inherited)
+- `updated_at`: DateTime - Update timestamp (inherited)
+
+**InvoiceStatus Enum:**
+```python
+    DRAFT = "draft"      # Initial state, can be edited
+    SENT = "sent"        # Sent to customer, awaiting payment
+    PAID = "paid"        # Payment received
+    OVERDUE = "overdue"  # Past due date, not paid
+```
+
+**Lifecycle Flow:**
+```
+DRAFT → SENT → PAID
+         ↓
+      OVERDUE → PAID
+```
+
+**Relationships:**
+- `tenant_id` → Foreign key to `tenants.id`
+- `creator_id` → Foreign key to `users.id`
+- `items` → One-to-many relationship with `InvoiceItem`
+
+**Constraints:**
+- NOT NULL on invoice_number, tenant_id, customer_name, creator_id, status
+- Foreign key constraints to tenants and users tables
+- Indexed on invoice_number, tenant_id, branch_id, creator_id, status
+
+**Example:**
+```python
+from app.models.invoice import Invoice, InvoiceStatus
+
+invoice = Invoice(
+    invoice_number="INV-20240115-0001",
+    tenant_id="tenant-uuid",
+    customer_name="John Doe",
+    customer_email="john@example.com",
+    creator_id="user-uuid",
+    status=InvoiceStatus.DRAFT,
+    issue_date="2024-01-15",
+    due_date="2024-02-15",
+    subtotal=250.00,
+    total_amount=250.00
+)
+```
+
+### InvoiceItem Model (`invoice.py`)
+
+Represents line items within invoices.
+
+**Table:** `invoice_items`
+
+**Fields:**
+- `id`: String (UUID) - Primary key (inherited from Gen_Model)
+- `invoice_id`: String(60) - Foreign key to invoices table (indexed)
+- `description`: String(255) - Item description (required)
+- `quantity`: Numeric(10, 2) - Item quantity (required)
+- `unit_price`: Numeric(10, 2) - Price per unit (required)
+- `total_price`: Numeric(10, 2) - Total price (quantity × unit_price)
+- `created_at`: DateTime - Creation timestamp (inherited)
+- `updated_at`: DateTime - Update timestamp (inherited)
+
+**Relationships:**
+- `invoice_id` → Foreign key to `invoices.id`
+- `invoice` → Many-to-one relationship with `Invoice`
+
+**Example:**
+```python
+from app.models.invoice import InvoiceItem
+
+item = InvoiceItem(
+    invoice_id="invoice-uuid",
+    description="Product A",
+    quantity=2,
+    unit_price=100.00,
+    total_price=200.00
+)
+```
+
 ## Database Relationships
 
 ```
@@ -156,20 +262,35 @@ user = User(
 └──────────┬──────────┘
            │
            │ 1:N
-           │
-┌──────────▼──────────┐
-│       Users         │
-│   (Employees)       │
-├─────────────────────┤
-│ id (PK)             │
-│ email (unique)      │
-│ full_name           │
-│ hashed_password     │
-│ role (enum)         │
-│ tenant_id (FK)      │
-│ is_active           │
-│ is_verified         │
-└─────────────────────┘
+           ├──────────────────────┐
+           │                      │
+┌──────────▼──────────┐  ┌───────▼──────────┐
+│       Users         │  │     Invoices     │
+│   (Employees)       │  │   (Billing)      │
+├─────────────────────┤  ├──────────────────┤
+│ id (PK)             │  │ id (PK)          │
+│ email (unique)      │  │ invoice_number   │
+│ full_name           │  │ tenant_id (FK)   │
+│ hashed_password     │  │ creator_id (FK)  │◄──┐
+│ role (enum)         │  │ customer_name    │   │
+│ tenant_id (FK)      │  │ status (enum)    │   │
+│ is_active           │  │ issue_date       │   │
+│ is_verified         │  │ total_amount     │   │
+└─────────────────────┘  └──────────┬───────┘   │
+                                    │           │
+                                    │ 1:N       │ 1:N
+                                    │           │
+                         ┌──────────▼──────┐    │
+                         │  InvoiceItems   │    │
+                         │  (Line Items)   │    │
+                         ├─────────────────┤    │
+                         │ id (PK)         │    │
+                         │ invoice_id (FK) │────┘
+                         │ description     │
+                         │ quantity        │
+                         │ unit_price      │
+                         │ total_price     │
+                         └─────────────────┘
 ```
 
 ## Data Isolation Strategy
@@ -324,12 +445,11 @@ See [/tests/README.md](../../tests/README.md) for testing documentation.
 
 Planned models for upcoming features:
 
-- **Invoice**: Core business entity for invoice management
-- **InvoiceItem**: Line items within invoices
 - **Branch**: Physical locations within a tenant
-- **Customer**: Customer information for invoices
+- **Customer**: Detailed customer information management
 - **AuditLog**: Tracking user actions for compliance
 - **Subscription**: Detailed subscription management
+- **Payment**: Payment transaction records
 
 ## License
 
