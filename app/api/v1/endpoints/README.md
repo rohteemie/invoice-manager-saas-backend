@@ -700,6 +700,97 @@ Delete an invoice.
 - `403 Forbidden` - Insufficient permissions
 - `404 Not Found` - Invoice not found
 
+#### GET `/api/v1/invoices/export/invoices`
+Export invoices in CSV or JSON format.
+
+**Authentication:** Required (any authenticated user)
+
+**Query Parameters:**
+- `format` (string): Export format - `csv` or `json` (default: `csv`)
+- `status` (string): Filter by status (draft, sent, paid, overdue) - optional
+- `start_date` (string): Filter invoices created on or after this date (ISO 8601) - optional
+- `end_date` (string): Filter invoices created on or before this date (ISO 8601) - optional
+
+**Response (200 OK):**
+
+Content-Type depends on format:
+- CSV: `text/csv`
+- JSON: `application/json`
+
+**Response Headers:**
+- `Content-Disposition: attachment; filename=invoices_YYYYMMDD_HHMMSS.{csv|json}`
+
+**CSV Format:**
+```csv
+Invoice Number,Customer Name,Customer Email,Status,Issue Date,Due Date,Subtotal,Tax Amount,Discount Amount,Total Amount,Payment Method,Paid At,Created At
+INV-20240115-0001,John Doe,john@example.com,draft,2024-01-15,2024-02-15,250.00,0.00,0.00,250.00,,,2024-01-15T10:00:00
+INV-20240115-0002,Jane Smith,jane@example.com,paid,2024-01-16,2024-02-16,500.00,0.00,0.00,500.00,Credit Card,2024-01-20T15:30:00,2024-01-16T11:00:00
+```
+
+**JSON Format:**
+```json
+[
+  {
+    "invoice_number": "INV-20240115-0001",
+    "customer_name": "John Doe",
+    "customer_email": "john@example.com",
+    "customer_phone": "+1234567890",
+    "customer_address": "123 Main St",
+    "status": "draft",
+    "issue_date": "2024-01-15",
+    "due_date": "2024-02-15",
+    "subtotal": 250.00,
+    "tax_amount": 0.00,
+    "discount_amount": 0.00,
+    "total_amount": 250.00,
+    "payment_method": null,
+    "paid_at": null,
+    "created_at": "2024-01-15T10:00:00",
+    "items": [
+      {
+        "description": "Product A",
+        "quantity": 2.0,
+        "unit_price": 100.0,
+        "total_price": 200.0
+      },
+      {
+        "description": "Service B",
+        "quantity": 1.0,
+        "unit_price": 50.0,
+        "total_price": 50.0
+      }
+    ]
+  }
+]
+```
+
+**Use Cases:**
+- Finance teams can export to CSV for analysis in Excel
+- Integration with external systems using JSON format
+- Filtered exports for specific reporting periods or statuses
+
+**Examples:**
+
+Export all invoices as CSV (default):
+```bash
+curl -H "Authorization: Bearer {token}" \
+  "http://localhost:8000/api/v1/invoices/export/invoices"
+```
+
+Export PAID invoices as JSON:
+```bash
+curl -H "Authorization: Bearer {token}" \
+  "http://localhost:8000/api/v1/invoices/export/invoices?format=json&status=paid"
+```
+
+Export invoices for date range:
+```bash
+curl -H "Authorization: Bearer {token}" \
+  "http://localhost:8000/api/v1/invoices/export/invoices?start_date=2024-01-01&end_date=2024-01-31"
+```
+
+**Tenant Isolation:** Only exports invoices belonging to the authenticated user's tenant
+
 ---
 
 ## Common Patterns

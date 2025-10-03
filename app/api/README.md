@@ -473,22 +473,23 @@ def list_users(
 
 ## Future API Features
 
-### Planned Endpoints
+### Implemented Endpoints
 
-**Invoice Management:**
+**Invoice Management:** ✅
 - POST `/api/v1/invoices`
 - GET `/api/v1/invoices`
 - GET `/api/v1/invoices/{id}`
 - PUT `/api/v1/invoices/{id}`
 - DELETE `/api/v1/invoices/{id}`
 
+**Exports:** ✅
+- GET `/api/v1/invoices/export/invoices` (supports CSV and JSON formats)
+
+### Planned Endpoints
+
 **Analytics:**
 - GET `/api/v1/analytics/revenue`
 - GET `/api/v1/analytics/invoices`
-
-**Exports:**
-- GET `/api/v1/exports/invoices/csv`
-- GET `/api/v1/exports/invoices/json`
 
 ### API v2 (Future)
 
