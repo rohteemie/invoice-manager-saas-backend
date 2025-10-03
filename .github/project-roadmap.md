@@ -1,6 +1,3 @@
-# 📄 Updated `Project Roadmap.md`
-
-```markdown
 # 📅 Project Roadmap – Multi-Tenant Invoicing SaaS Backend
 
 This document outlines the **phases, sprints, and milestones** for building the multi-tenant SaaS backend.
@@ -32,13 +29,13 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 **Goal:** Build tenant-aware authentication and basic user roles.
 **Sprints:**
 
-- [ ] Sprint 1.1: Tenant model + registration endpoint
+- [x] Sprint 1.1: Tenant model + registration endpoint
   **Effort:** S | **Core** | **Depends on:** Phase 0
-- [ ] Sprint 1.2: User model + JWT authentication
+- [x] Sprint 1.2: User model + JWT authentication
   **Effort:** M | **Core** | **Depends on:** 1.1
-- [ ] Sprint 1.3: Tenant resolution middleware
+- [x] Sprint 1.3: Tenant resolution middleware
   **Effort:** M | **Core** | **Depends on:** 1.2
-- [ ] Sprint 1.4: Basic role-based access (Owner, Admin, Manager, Attendant)
+- [x] Sprint 1.4: Basic role-based access (Owner, Admin, Manager, Attendant)
   **Effort:** M | **Core** | **Depends on:** 1.2, 1.3
 - [ ] Tests for auth + tenant isolation
   **Effort:** S | **Core** | **Depends on:** All above
