@@ -210,13 +210,14 @@ def update_invoice(
 
         # Create new items
         items = []
-        for item_in in items_data:
-            total_price = item_in.quantity * item_in.unit_price
+        for item_dict in items_data:
+            total_price = Decimal(str(item_dict["quantity"])) * \
+                Decimal(str(item_dict["unit_price"]))
             db_item = InvoiceItemModel(
                 invoice_id=invoice.id,
-                description=item_in.description,
-                quantity=item_in.quantity,
-                unit_price=item_in.unit_price,
+                description=item_dict["description"],
+                quantity=item_dict["quantity"],
+                unit_price=item_dict["unit_price"],
                 total_price=total_price
             )
             items.append(db_item)
