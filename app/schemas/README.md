@@ -6,7 +6,7 @@ This directory contains Pydantic schemas (models) used for request validation an
 
 ## Directory Structure
 
-```
+```bash
 schemas/
 ├── tenant.py    # Tenant-related schemas
 └── user.py      # User-related schemas (authentication & management)
@@ -25,7 +25,9 @@ Pydantic schemas serve multiple purposes in the application:
 ## Schema Patterns
 
 ### Base Schemas
+
 Define common fields shared across create/update operations:
+
 ```python
 class UserBase(BaseModel):
     email: EmailStr
@@ -34,7 +36,9 @@ class UserBase(BaseModel):
 ```
 
 ### Create Schemas
+
 Used for creating new resources (include required fields):
+
 ```python
 class UserCreate(UserBase):
     password: str  # Only present during creation
@@ -42,7 +46,9 @@ class UserCreate(UserBase):
 ```
 
 ### Update Schemas
+
 Used for updating existing resources (all fields optional):
+
 ```python
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -50,20 +56,24 @@ class UserUpdate(BaseModel):
 ```
 
 ### Database Schemas
+
 Represent data as stored in the database:
+
 ```python
 class UserInDB(UserBase):
     id: str
     tenant_id: str
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True  # Enable ORM mode
 ```
 
 ### Response Schemas
+
 Used for API responses (exclude sensitive data):
+
 ```python
 class User(UserInDB):
     pass  # Inherits all fields except password
@@ -72,18 +82,23 @@ class User(UserInDB):
 ## Tenant Schemas (`tenant.py`)
 
 ### TenantBase
+
 Base schema with common tenant fields:
+
 - `name`: String - Tenant name (1-100 characters)
 - `domain`: Optional[String] - Unique domain identifier
 - `plan_type`: String - Subscription plan (default: "free")
 - `description`: Optional[String] - Tenant description (max 500 characters)
 
 ### TenantCreate
+
 Schema for creating a new tenant:
+
 - Inherits all fields from `TenantBase`
 - All fields are required except `domain` and `description`
 
 **Usage Example:**
+
 ```python
 {
     "name": "Acme Corporation",
@@ -94,11 +109,14 @@ Schema for creating a new tenant:
 ```
 
 ### TenantUpdate
+
 Schema for updating tenant information:
+
 - All fields are optional
 - Only provided fields will be updated
 
 **Usage Example:**
+
 ```python
 {
     "plan_type": "pro",
@@ -107,35 +125,45 @@ Schema for updating tenant information:
 ```
 
 ### TenantInDB
+
 Database representation of a tenant:
+
 - Includes: id, is_active, created_at, updated_at
 - Configured with `from_attributes = True` for SQLAlchemy compatibility
 
 ### Tenant
+
 Public tenant schema for API responses:
+
 - Inherits from `TenantInDB`
 - Includes all tenant fields including metadata
 
 ## User Schemas (`user.py`)
 
 ### UserBase
+
 Base schema with common user fields:
+
 - `email`: EmailStr - Validated email address
 - `full_name`: String - User's full name (1-100 characters)
 - `role`: UserRole - Enum (owner, admin, manager, attendant)
 
 ### UserCreate
+
 Schema for user registration:
+
 - Inherits from `UserBase`
 - `password`: String - Plain password (min 8 characters, max 100)
 - `tenant_id`: String - Associated tenant UUID
 
 **Validation Rules:**
+
 - Email format validated automatically
 - Password minimum length: 8 characters
 - Full name cannot be empty
 
 **Usage Example:**
+
 ```python
 {
     "email": "admin@acme.com",
@@ -147,7 +175,9 @@ Schema for user registration:
 ```
 
 ### UserUpdate
+
 Schema for updating user information:
+
 - All fields are optional
 - `full_name`: Optional[String]
 - `role`: Optional[UserRole]
@@ -155,6 +185,7 @@ Schema for updating user information:
 - `is_verified`: Optional[Boolean] - For email verification
 
 **Usage Example:**
+
 ```python
 {
     "role": "manager",
@@ -163,17 +194,22 @@ Schema for updating user information:
 ```
 
 ### UserInDB
+
 Database representation with all fields:
+
 - Includes: id, tenant_id, is_active, is_verified, timestamps
 - Configured with `from_attributes = True`
 - Excludes `hashed_password` from serialization
 
 ### User
+
 Public user schema for API responses:
+
 - Inherits from `UserInDB`
 - Safe for external consumption (no password)
 
 **Response Example:**
+
 ```python
 {
     "id": "user-uuid",
@@ -189,11 +225,14 @@ Public user schema for API responses:
 ```
 
 ### UserLogin
+
 Schema for login credentials:
+
 - `email`: EmailStr - User's email address
 - `password`: String - Plain password
 
 **Usage Example:**
+
 ```python
 {
     "email": "admin@acme.com",
@@ -202,12 +241,15 @@ Schema for login credentials:
 ```
 
 ### Token
+
 Schema for JWT token responses:
+
 - `access_token`: String - JWT access token
 - `refresh_token`: String - JWT refresh token
 - `token_type`: String - Token type (default: "bearer")
 
 **Response Example:**
+
 ```python
 {
     "access_token": "eyJhbGciOiJIUzI1NiIs...",
@@ -217,7 +259,9 @@ Schema for JWT token responses:
 ```
 
 ### TokenPayload
+
 Internal schema for JWT token payload:
+
 - `sub`: String - Subject (user_id)
 - `tenant_id`: String - User's tenant ID
 - `role`: String - User's role
@@ -228,6 +272,7 @@ Internal schema for JWT token payload:
 ### Field Validation
 
 **Email Validation:**
+
 ```python
 from pydantic import EmailStr
 
@@ -235,6 +280,7 @@ email: EmailStr  # Automatically validates email format
 ```
 
 **String Length:**
+
 ```python
 from pydantic import Field
 
@@ -242,6 +288,7 @@ full_name: str = Field(..., min_length=1, max_length=100)
 ```
 
 **Password Complexity:**
+
 ```python
 password: str = Field(..., min_length=8, max_length=100)
 ```
@@ -255,7 +302,7 @@ from pydantic import validator
 
 class UserCreate(BaseModel):
     password: str
-    
+
     @validator('password')
     def password_strength(cls, v):
         if not any(c.isupper() for c in v):
@@ -275,6 +322,7 @@ class Config:
 ```
 
 This allows:
+
 - Automatic conversion from SQLAlchemy models to Pydantic schemas
 - Attribute access instead of dictionary access
 - Seamless integration with FastAPI response models
@@ -282,12 +330,13 @@ This allows:
 ## Usage in Endpoints
 
 ### Request Validation
+
 ```python
 @router.post("/users", response_model=User)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     # user_in is automatically validated
     hashed_password = get_password_hash(user_in.password)
-    db_user = UserModel(**user_in.dict(exclude={'password'}), 
+    db_user = UserModel(**user_in.dict(exclude={'password'}),
                         hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
@@ -295,6 +344,7 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
 ```
 
 ### Response Serialization
+
 ```python
 @router.get("/users/me", response_model=User)
 def get_current_user(current_user: UserModel = Depends(get_current_user)):
@@ -303,7 +353,9 @@ def get_current_user(current_user: UserModel = Depends(get_current_user)):
 ```
 
 ### Error Handling
+
 Pydantic automatically returns 422 Unprocessable Entity for validation errors:
+
 ```json
 {
     "detail": [
@@ -319,6 +371,7 @@ Pydantic automatically returns 422 Unprocessable Entity for validation errors:
 ## API Documentation
 
 Schemas automatically generate OpenAPI documentation with:
+
 - Field descriptions
 - Data types
 - Validation rules
@@ -326,6 +379,7 @@ Schemas automatically generate OpenAPI documentation with:
 - Required/optional indicators
 
 **Example in Swagger UI:**
+
 - Field names and types are displayed
 - Validation constraints are documented
 - Example requests/responses are auto-generated
@@ -333,6 +387,7 @@ Schemas automatically generate OpenAPI documentation with:
 ## Best Practices
 
 ### 1. Separate Create and Update Schemas
+
 ```python
 # Create: All required fields
 class UserCreate(UserBase):
@@ -346,6 +401,7 @@ class UserUpdate(BaseModel):
 ```
 
 ### 2. Never Expose Passwords
+
 ```python
 # ✅ Good: Password only in UserCreate
 class UserCreate(BaseModel):
@@ -357,17 +413,20 @@ class User(BaseModel):
 ```
 
 ### 3. Use Descriptive Field Names
+
 ```python
 email: EmailStr = Field(..., description="User's email address")
 ```
 
 ### 4. Validate at Schema Level
+
 ```python
 # Validation happens before reaching the endpoint
 user_in: UserCreate  # Auto-validated
 ```
 
 ### 5. Reuse Base Schemas
+
 ```python
 class UserBase(BaseModel):
     email: EmailStr
@@ -382,7 +441,7 @@ class User(UserBase):
 
 ## Schema Inheritance Hierarchy
 
-```
+```bash
 BaseModel (Pydantic)
     │
     ├── TenantBase
@@ -401,6 +460,7 @@ BaseModel (Pydantic)
 ## Testing Schemas
 
 Schemas are tested indirectly through API endpoint tests:
+
 - Input validation tests in `/tests/test_auth.py`
 - Response serialization tests in `/tests/test_users.py`
 - Error handling tests for invalid data

@@ -1,6 +1,7 @@
 # Invoice Implementation Summary
 
 ## Overview
+
 This document summarizes the implementation of the Invoice model and lifecycle for Sprint 2.2.
 
 ## What Was Implemented
@@ -8,6 +9,7 @@ This document summarizes the implementation of the Invoice model and lifecycle f
 ### 1. Invoice Data Model (`app/models/invoice.py`)
 
 #### Invoice Model
+
 - **Table**: `invoices`
 - **Key Features**:
   - Unique invoice numbering with auto-generation (format: `INV-YYYYMMDD-XXXX`)
@@ -20,6 +22,7 @@ This document summarizes the implementation of the Invoice model and lifecycle f
   - Lifecycle status management
 
 #### InvoiceItem Model
+
 - **Table**: `invoice_items`
 - **Key Features**:
   - Line item description
@@ -28,6 +31,7 @@ This document summarizes the implementation of the Invoice model and lifecycle f
   - Foreign key relationship to invoice
 
 #### Invoice Status Enum
+
 ```python
 DRAFT = "draft"      # Initial state, editable
 SENT = "sent"        # Sent to customer
@@ -37,13 +41,14 @@ OVERDUE = "overdue"  # Past due date
 
 ### 2. Invoice Lifecycle Flow
 
-```
+```bash
 DRAFT ──────→ SENT ──────→ PAID
                 │
                 └──────→ OVERDUE ──────→ PAID
 ```
 
 **Valid Transitions:**
+
 - DRAFT → SENT
 - SENT → PAID or OVERDUE
 - OVERDUE → PAID
@@ -52,32 +57,38 @@ DRAFT ──────→ SENT ──────→ PAID
 ### 3. API Endpoints (`app/api/v1/endpoints/invoices.py`)
 
 #### POST `/api/v1/invoices`
+
 - **Permission**: All authenticated users
 - **Function**: Create new invoice in DRAFT status
 - **Features**: Auto-generates invoice number, calculates totals
 
 #### GET `/api/v1/invoices`
+
 - **Permission**: All authenticated users
 - **Function**: List invoices with pagination and status filtering
 - **Tenant Isolation**: Only returns invoices from user's tenant
 
 #### GET `/api/v1/invoices/{invoice_id}`
+
 - **Permission**: All authenticated users
 - **Function**: Get specific invoice details with items
 - **Tenant Isolation**: Returns 404 if invoice belongs to different tenant
 
 #### PUT `/api/v1/invoices/{invoice_id}`
+
 - **Permission**: Manager role and above
 - **Function**: Update invoice details and items
 - **Constraint**: Only DRAFT invoices can be updated
 
 #### PATCH `/api/v1/invoices/{invoice_id}/status`
+
 - **Permission**: Manager role and above
 - **Function**: Update invoice lifecycle status
 - **Validation**: Enforces valid status transitions
 - **Special**: PAID status requires payment_method
 
 #### DELETE `/api/v1/invoices/{invoice_id}`
+
 - **Permission**: Admin role and above
 - **Function**: Delete invoice (hard delete)
 - **Constraint**: Only DRAFT invoices can be deleted
@@ -100,6 +111,7 @@ DRAFT ──────→ SENT ──────→ PAID
 - **Invoice**: Public response schema
 
 All schemas include proper validation:
+
 - Email validation
 - Decimal precision for amounts
 - Required fields enforcement
@@ -108,6 +120,7 @@ All schemas include proper validation:
 ### 6. Testing (`tests/test_invoices.py`)
 
 **24 comprehensive tests covering:**
+
 - ✅ Invoice creation with items
 - ✅ Minimal and full invoice creation
 - ✅ Validation (no items error)
@@ -125,9 +138,10 @@ All schemas include proper validation:
 
 ### 7. Documentation Updates
 
-#### Updated Files:
+#### Updated Files
+
 1. **README.md**: Marked invoice features as completed
-2. **app/models/README.md**: 
+2. **app/models/README.md**:
    - Added Invoice and InvoiceItem documentation
    - Updated ERD diagram with relationships
    - Documented lifecycle and constraints
@@ -139,18 +153,22 @@ All schemas include proper validation:
 ## Code Quality
 
 ### ✅ pycodestyle Compliance
+
 All files pass pycodestyle checks:
+
 - `app/models/invoice.py`
 - `app/schemas/invoice.py`
 - `app/api/v1/endpoints/invoices.py`
 - `tests/test_invoices.py`
 
 ### ✅ GDPR Compliance
+
 - Automatic timestamps (`created_at`, `updated_at`) for audit trails
 - Hard delete only for DRAFT invoices
 - Future: Can implement soft delete for non-draft invoices if needed
 
 ### ✅ Security Features
+
 - Tenant isolation at database query level
 - RBAC enforcement on all endpoints
 - Foreign key constraints for data integrity
@@ -159,6 +177,7 @@ All files pass pycodestyle checks:
 ## Technical Highlights
 
 ### Auto-Generated Invoice Numbers
+
 ```python
 def generate_invoice_number(db: Session, tenant_id: str) -> str:
     count = db.query(InvoiceModel).filter(
@@ -169,6 +188,7 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
 ```
 
 ### Automatic Total Calculation
+
 ```python
 def calculate_totals(items: List[InvoiceItemModel]) -> dict:
     subtotal = sum(item.total_price for item in items)
@@ -179,6 +199,7 @@ def calculate_totals(items: List[InvoiceItemModel]) -> dict:
 ```
 
 ### Status Transition Validation
+
 ```python
 valid_transitions = {
     InvoiceStatus.DRAFT: [InvoiceStatus.SENT],
@@ -191,6 +212,7 @@ valid_transitions = {
 ## Database Schema
 
 ### invoices Table
+
 ```sql
 CREATE TABLE invoices (
     id VARCHAR(60) PRIMARY KEY,
@@ -222,6 +244,7 @@ CREATE TABLE invoices (
 ```
 
 ### invoice_items Table
+
 ```sql
 CREATE TABLE invoice_items (
     id VARCHAR(60) PRIMARY KEY,
@@ -253,14 +276,16 @@ While not in scope for this sprint, these enhancements could be added:
 
 ## Files Changed
 
-### New Files Created:
+### New Files Created
+
 1. `app/models/invoice.py` - Invoice and InvoiceItem models
 2. `app/schemas/invoice.py` - Invoice Pydantic schemas
 3. `app/api/v1/endpoints/invoices.py` - Invoice API endpoints
 4. `tests/test_invoices.py` - Comprehensive invoice tests
 5. `docs/INVOICE_IMPLEMENTATION.md` - This summary document
 
-### Modified Files:
+### Modified Files
+
 1. `app/models/__init__.py` - Registered Invoice models
 2. `app/api/v1/api.py` - Registered invoice router
 3. `README.md` - Updated feature checklist
@@ -270,6 +295,7 @@ While not in scope for this sprint, these enhancements could be added:
 ## Summary
 
 ✅ **All requirements met:**
+
 - Invoice model with full lifecycle (Draft → Sent → Paid → Overdue)
 - InvoiceItem model for line items
 - Complete CRUD endpoints with lifecycle management

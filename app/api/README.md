@@ -6,7 +6,7 @@ This directory contains all API routing and endpoint definitions for the Multi-T
 
 ## Directory Structure
 
-```
+```bash
 api/
 ├── __init__.py     # Package initialization
 └── v1/             # API Version 1
@@ -26,13 +26,15 @@ The application uses URL-based versioning for backward compatibility:
 **Current Version:** v1 (prefix: `/api/v1`)
 
 **Version Strategy:**
+
 - Breaking changes require a new version
 - Non-breaking changes added to current version
 - Old versions deprecated gracefully
 - Clear migration paths documented
 
 **Example URLs:**
-```
+
+```bash
 /api/v1/auth/login
 /api/v1/tenants
 /api/v1/users/me
@@ -53,10 +55,12 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 ```
 
 **Router Configuration:**
+
 - `prefix`: URL prefix for all routes in the router
 - `tags`: OpenAPI tags for documentation grouping
 
 **Included in main app:**
+
 ```python
 # In app/main.py
 app.include_router(api_router, prefix=settings.API_V1_STR)
@@ -71,9 +75,11 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 Handles user authentication and token management.
 
 #### POST `/api/v1/auth/register`
+
 Register a new user account.
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -88,15 +94,18 @@ Register a new user account.
 **Status Codes:** 201 Created, 400 Bad Request
 
 #### POST `/api/v1/auth/login`
+
 Authenticate user and receive JWT tokens.
 
 **Request (Form Data):**
-```
+
+```bash
 username=user@example.com
 password=SecurePass123
 ```
 
 **Response:**
+
 ```json
 {
   "access_token": "eyJhbGc...",
@@ -108,9 +117,11 @@ password=SecurePass123
 **Status Codes:** 200 OK, 401 Unauthorized
 
 #### POST `/api/v1/auth/refresh`
+
 Refresh access token using refresh token.
 
 **Request:**
+
 ```json
 {
   "refresh_token": "eyJhbGc..."
@@ -118,6 +129,7 @@ Refresh access token using refresh token.
 ```
 
 **Response:**
+
 ```json
 {
   "access_token": "eyJhbGc...",
@@ -136,24 +148,30 @@ Refresh access token using refresh token.
 Manages tenant (organization) lifecycle.
 
 #### POST `/api/v1/tenants`
+
 Create a new tenant.
 
 **Authentication:** Not required (public registration)
 
 #### GET `/api/v1/tenants`
+
 List all tenants (paginated).
 
 **Query Parameters:**
+
 - `skip`: Offset (default: 0)
 - `limit`: Page size (default: 100)
 
 #### GET `/api/v1/tenants/{tenant_id}`
+
 Get tenant by ID.
 
 #### PUT `/api/v1/tenants/{tenant_id}`
+
 Update tenant information.
 
 #### DELETE `/api/v1/tenants/{tenant_id}`
+
 Soft delete a tenant.
 
 **See:** [endpoints/README.md](v1/endpoints/README.md) for detailed endpoint documentation.
@@ -165,30 +183,35 @@ Soft delete a tenant.
 Manages users within tenants with role-based access control.
 
 #### GET `/api/v1/users/me`
+
 Get current authenticated user.
 
 **Authentication:** Required
 **Authorization:** Any authenticated user
 
 #### GET `/api/v1/users`
+
 List users in current user's tenant.
 
 **Authentication:** Required
 **Authorization:** Admin or Owner
 
 #### GET `/api/v1/users/{user_id}`
+
 Get user by ID (tenant-scoped).
 
 **Authentication:** Required
 **Authorization:** Admin or Owner
 
 #### PUT `/api/v1/users/{user_id}`
+
 Update user information.
 
 **Authentication:** Required
 **Authorization:** Admin or Owner
 
 #### DELETE `/api/v1/users/{user_id}`
+
 Soft delete a user.
 
 **Authentication:** Required
@@ -201,13 +224,15 @@ Soft delete a user.
 ### RESTful Design
 
 **Resource-Based URLs:**
-```
+
+```bash
 /api/v1/tenants          # Collection
 /api/v1/tenants/{id}     # Specific resource
 /api/v1/users/me         # Special resource
 ```
 
 **HTTP Methods:**
+
 - `GET`: Retrieve resources
 - `POST`: Create new resources
 - `PUT`: Update resources (full replacement)
@@ -217,6 +242,7 @@ Soft delete a user.
 ### Response Formats
 
 **Success Response:**
+
 ```json
 {
   "id": "uuid",
@@ -227,6 +253,7 @@ Soft delete a user.
 ```
 
 **Error Response:**
+
 ```json
 {
   "detail": "Error message here"
@@ -234,6 +261,7 @@ Soft delete a user.
 ```
 
 **Validation Error:**
+
 ```json
 {
   "detail": [
@@ -249,11 +277,13 @@ Soft delete a user.
 ### Status Codes
 
 **Success:**
+
 - `200 OK`: Successful GET, PUT, DELETE
 - `201 Created`: Successful POST
 - `204 No Content`: Successful DELETE (no body)
 
 **Client Errors:**
+
 - `400 Bad Request`: Invalid input data
 - `401 Unauthorized`: Missing or invalid authentication
 - `403 Forbidden`: Insufficient permissions
@@ -261,6 +291,7 @@ Soft delete a user.
 - `422 Unprocessable Entity`: Validation error
 
 **Server Errors:**
+
 - `500 Internal Server Error`: Unexpected error
 
 ## Authentication & Authorization
@@ -278,14 +309,17 @@ Soft delete a user.
 ### Authorization Levels
 
 **Any Authenticated User:**
+
 - GET `/api/v1/users/me`
 
 **Admin or Owner:**
+
 - GET `/api/v1/users`
 - GET `/api/v1/users/{id}`
 - PUT `/api/v1/users/{id}`
 
 **Owner Only:**
+
 - DELETE `/api/v1/users/{id}`
 
 ### Tenant Isolation
@@ -309,22 +343,25 @@ def list_users(
 
 ### Interactive Documentation
 
-**Swagger UI:** http://localhost:8000/docs
+**Swagger UI:** <http://localhost:8000/docs>
+
 - Interactive API explorer
 - Try out endpoints
 - View request/response schemas
 - Authentication support
 
-**ReDoc:** http://localhost:8000/redoc
+**ReDoc:** <http://localhost:8000/redoc>
+
 - Clean, organized documentation
 - Better for reading
 - Printable format
 
 ### OpenAPI Specification
 
-**JSON Format:** http://localhost:8000/api/v1/openapi.json
+**JSON Format:** <http://localhost:8000/api/v1/openapi.json>
 
 **Features:**
+
 - Complete API specification
 - Machine-readable format
 - Client generation support
@@ -335,6 +372,7 @@ def list_users(
 All requests are validated using Pydantic schemas:
 
 **Automatic Validation:**
+
 - Type checking
 - Required fields
 - Field constraints (length, format)
@@ -343,6 +381,7 @@ All requests are validated using Pydantic schemas:
 - UUID format
 
 **Example:**
+
 ```python
 @router.post("/users", response_model=User)
 def create_user(
@@ -456,17 +495,20 @@ def list_users(
 ## Security Best Practices
 
 ### Input Validation
+
 - ✅ All inputs validated with Pydantic
 - ✅ SQL injection prevention via ORM
 - ✅ XSS prevention via JSON responses
 
 ### Authentication
+
 - ✅ JWT tokens for stateless auth
 - ✅ Secure password hashing (bcrypt)
 - ✅ Token expiration
 - ✅ HTTPS required in production
 
 ### Authorization
+
 - ✅ Role-based access control
 - ✅ Tenant isolation enforced
 - ✅ Principle of least privilege
@@ -476,6 +518,7 @@ def list_users(
 ### Implemented Endpoints
 
 **Invoice Management:** ✅
+
 - POST `/api/v1/invoices`
 - GET `/api/v1/invoices`
 - GET `/api/v1/invoices/{id}`
@@ -483,17 +526,20 @@ def list_users(
 - DELETE `/api/v1/invoices/{id}`
 
 **Exports:** ✅
+
 - GET `/api/v1/invoices/export/invoices` (supports CSV and JSON formats)
 
 ### Planned Endpoints
 
 **Analytics:**
+
 - GET `/api/v1/analytics/revenue`
 - GET `/api/v1/analytics/invoices`
 
 ### API v2 (Future)
 
 Breaking changes will be introduced in v2:
+
 - GraphQL support
 - WebSocket endpoints for real-time updates
 - Improved pagination (cursor-based)

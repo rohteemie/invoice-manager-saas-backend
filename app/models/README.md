@@ -6,7 +6,7 @@ This directory contains SQLAlchemy ORM models that define the database schema fo
 
 ## Directory Structure
 
-```
+```bash
 models/
 ├── __init__.py           # Model registration and imports
 ├── general_model.py      # Base model with common fields
@@ -22,17 +22,20 @@ models/
 The `Gen_Model` class provides common fields and functionality for all models:
 
 **Common Fields:**
+
 - `id`: String (UUID) - Primary key
 - `created_at`: DateTime - Timestamp of record creation
 - `updated_at`: DateTime - Timestamp of last update
 
 **Features:**
+
 - Automatic UUID generation for new records
 - Automatic timestamp management
 - Consistent field naming across all models
 - Base class for SQLAlchemy declarative base
 
 **Usage:**
+
 ```python
 from app.models.general_model import Gen_Model, Base
 
@@ -48,6 +51,7 @@ Represents organizations/companies in the multi-tenant architecture.
 **Table:** `tenants`
 
 **Fields:**
+
 - `id`: String (UUID) - Primary key (inherited from Gen_Model)
 - `name`: String(100) - Tenant name (required)
 - `domain`: String(100) - Unique domain identifier (optional, unique)
@@ -58,16 +62,19 @@ Represents organizations/companies in the multi-tenant architecture.
 - `updated_at`: DateTime - Update timestamp (inherited)
 
 **Constraints:**
+
 - Unique domain for each tenant
 - NOT NULL on name field
 
 **Use Cases:**
+
 - Tenant onboarding and management
 - Subscription plan tracking
 - Tenant isolation and data segregation
 - Soft deletion for GDPR compliance
 
 **Example:**
+
 ```python
 from app.models.tenant import Tenant
 
@@ -86,6 +93,7 @@ Represents users within tenants with role-based access control.
 **Table:** `users`
 
 **Fields:**
+
 - `id`: String (UUID) - Primary key (inherited from Gen_Model)
 - `email`: String(255) - Unique email address (indexed)
 - `full_name`: String(100) - User's full name (required)
@@ -98,6 +106,7 @@ Represents users within tenants with role-based access control.
 - `updated_at`: DateTime - Update timestamp (inherited)
 
 **UserRole Enum:**
+
 ```python
 class UserRole(str, enum.Enum):
     OWNER = "owner"        # Full tenant management
@@ -107,28 +116,33 @@ class UserRole(str, enum.Enum):
 ```
 
 **Relationships:**
+
 - `tenant_id` → Foreign key to `tenants.id`
 - Users belong to exactly one tenant (data isolation)
 
 **Constraints:**
+
 - Unique email address globally
 - NOT NULL on email, full_name, hashed_password, role, tenant_id
 - Foreign key constraint to tenants table
 - Indexed on email and tenant_id for performance
 
 **Security Features:**
+
 - Password hashing with bcrypt (never store plain text)
 - Soft deletion with `is_active` flag (GDPR compliance)
 - Email verification support with `is_verified`
 - Tenant isolation via foreign key
 
 **Use Cases:**
+
 - User authentication and authorization
 - Role-based access control
 - User management within tenants
 - Audit trails and activity tracking
 
 **Example:**
+
 ```python
 from app.models.user import User, UserRole
 from app.core.security import get_password_hash
@@ -149,6 +163,7 @@ Represents invoices for billing and payment tracking with lifecycle management.
 **Table:** `invoices`
 
 **Fields:**
+
 - `id`: String (UUID) - Primary key (inherited from Gen_Model)
 - `invoice_number`: String(50) - Unique invoice identifier (indexed)
 - `tenant_id`: String(60) - Foreign key to tenants table (indexed)
@@ -172,6 +187,7 @@ Represents invoices for billing and payment tracking with lifecycle management.
 - `updated_at`: DateTime - Update timestamp (inherited)
 
 **InvoiceStatus Enum:**
+
 ```python
     DRAFT = "draft"      # Initial state, can be edited
     SENT = "sent"        # Sent to customer, awaiting payment
@@ -180,23 +196,27 @@ Represents invoices for billing and payment tracking with lifecycle management.
 ```
 
 **Lifecycle Flow:**
-```
+
+```bash
 DRAFT → SENT → PAID
          ↓
       OVERDUE → PAID
 ```
 
 **Relationships:**
+
 - `tenant_id` → Foreign key to `tenants.id`
 - `creator_id` → Foreign key to `users.id`
 - `items` → One-to-many relationship with `InvoiceItem`
 
 **Constraints:**
+
 - NOT NULL on invoice_number, tenant_id, customer_name, creator_id, status
 - Foreign key constraints to tenants and users tables
 - Indexed on invoice_number, tenant_id, branch_id, creator_id, status
 
 **Example:**
+
 ```python
 from app.models.invoice import Invoice, InvoiceStatus
 
@@ -221,6 +241,7 @@ Represents line items within invoices.
 **Table:** `invoice_items`
 
 **Fields:**
+
 - `id`: String (UUID) - Primary key (inherited from Gen_Model)
 - `invoice_id`: String(60) - Foreign key to invoices table (indexed)
 - `description`: String(255) - Item description (required)
@@ -231,10 +252,12 @@ Represents line items within invoices.
 - `updated_at`: DateTime - Update timestamp (inherited)
 
 **Relationships:**
+
 - `invoice_id` → Foreign key to `invoices.id`
 - `invoice` → Many-to-one relationship with `Invoice`
 
 **Example:**
+
 ```python
 from app.models.invoice import InvoiceItem
 
@@ -249,7 +272,7 @@ item = InvoiceItem(
 
 ## Database Relationships
 
-```
+```bash
 ┌─────────────────────┐
 │      Tenants        │
 │  (Organizations)    │
@@ -296,12 +319,14 @@ item = InvoiceItem(
 ## Data Isolation Strategy
 
 ### Tenant Isolation
+
 - All user records include a `tenant_id` foreign key
 - API queries filter by authenticated user's `tenant_id`
 - Cross-tenant access is prevented at the application layer
 - Database constraints ensure referential integrity
 
 ### Security Considerations
+
 - Foreign key constraints prevent orphaned records
 - Soft deletes preserve data for audit purposes
 - Indexed fields optimize tenant-scoped queries
@@ -311,27 +336,29 @@ item = InvoiceItem(
 
 ### Creating a New Model
 
-1. Inherit from `Gen_Model` and `Base`:
+- Inherit from `Gen_Model` and `Base`:
+
 ```python
 from app.models.general_model import Gen_Model, Base
 from sqlalchemy import Column, String, ForeignKey
 
 class MyModel(Gen_Model, Base):
     __tablename__ = "my_table"
-    
+
     name = Column(String(100), nullable=False)
     tenant_id = Column(String(60), ForeignKey("tenants.id"), nullable=False)
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 ```
 
-2. Register in `__init__.py`:
+- Register in `__init__.py`:
+
 ```python
 from app.models.my_model import MyModel
 ```
 
-3. Database will auto-create table on next startup
+- Database will auto-create table on next startup
 
 ### Querying with Tenant Isolation
 
@@ -386,11 +413,13 @@ Base.metadata.create_all(bind=engine)
 ## Migration Strategy
 
 ### Current Approach
+
 - SQLAlchemy auto-creates tables on startup
 - Suitable for development and testing
 - Schema changes require manual database cleanup
 
 ### Future Approach (Planned)
+
 - Alembic migrations for production
 - Version-controlled schema changes
 - Safe migrations with rollback support
@@ -399,27 +428,32 @@ Base.metadata.create_all(bind=engine)
 ## GDPR Compliance
 
 ### Right to be Forgotten
+
 - Soft deletion with `is_active` flag
 - Preserves audit trails while removing user access
 - Can be hard-deleted after retention period
 
 ### Data Minimization
+
 - Only essential fields are stored
 - No sensitive data beyond hashed passwords
 - Email used as primary identifier
 
 ### Audit Trails
+
 - `created_at` and `updated_at` timestamps on all records
 - Future: Audit log model for tracking changes
 
 ## Performance Considerations
 
 ### Indexes
+
 - Primary keys (id) are automatically indexed
 - Email field indexed for fast user lookups
 - `tenant_id` indexed for efficient tenant-scoped queries
 
 ### Query Optimization
+
 - Use select queries with appropriate filters
 - Avoid N+1 queries with eager loading (when needed)
 - Limit result sets with pagination
@@ -427,6 +461,7 @@ Base.metadata.create_all(bind=engine)
 ## Testing
 
 Models are tested in `/tests/test_tenants.py` and `/tests/test_users.py`:
+
 - CRUD operations
 - Constraint validation
 - Relationship integrity

@@ -36,10 +36,10 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Invoice CRUD (tenant-aware)
 - [x] Invoice lifecycle (Draft → Sent → Paid → Overdue)
 - [x] Invoice metadata: branch, creator, customer info
-- [ ] Audit logging
-- [ ] CSV/JSON exports
+- [x] CSV/JSON exports
 - [ ] Analytics & reporting endpoints (e.g., revenue by branch, overdue invoices)
 - [ ] Caching & background workers for heavy tasks
+- [ ] Audit logging
 
 ---
 
@@ -74,7 +74,7 @@ This project follows a **phased + sprint-based roadmap**:
 
 ### System Architecture
 
-```
+```bash
 ┌─────────────────────────────────────────────────────────────┐
 │                        Client Layer                         │
 │                  (Web/Mobile Applications)                  │
@@ -110,21 +110,21 @@ This project follows a **phased + sprint-based roadmap**:
 
 ### Multi-Tenant Data Isolation
 
-```
+```bash
 ┌──────────────────────────────────────────────────────────┐
 │                     Tenant A                             │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐        │
-│  │   Users    │  │  Invoices  │  │  Branches  │        │
-│  │ (filtered) │  │ (filtered) │  │ (filtered) │        │
-│  └────────────┘  └────────────┘  └────────────┘        │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐          │
+│  │   Users    │  │  Invoices  │  │  Branches  │          │
+│  │ (filtered) │  │ (filtered) │  │ (filtered) │          │
+│  └────────────┘  └────────────┘  └────────────┘          │
 └──────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────┐
 │                     Tenant B                             │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐        │
-│  │   Users    │  │  Invoices  │  │  Branches  │        │
-│  │ (filtered) │  │ (filtered) │  │ (filtered) │        │
-│  └────────────┘  └────────────┘  └────────────┘        │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐          │
+│  │   Users    │  │  Invoices  │  │  Branches  │          │
+│  │ (filtered) │  │ (filtered) │  │ (filtered) │          │
+│  └────────────┘  └────────────┘  └────────────┘          │
 └──────────────────────────────────────────────────────────┘
 
 All queries automatically filtered by tenant_id
@@ -132,7 +132,7 @@ All queries automatically filtered by tenant_id
 
 ### Role-Based Access Control
 
-```
+```bash
 ┌─────────────────────────────────────┐
 │            OWNER                    │
 │  - Full tenant management           │
@@ -166,7 +166,7 @@ All queries automatically filtered by tenant_id
 
 ## 📁 Project Structure
 
-```
+```bash
 multi-tenant-saas-backend/
 ├── app/
 │   ├── api/v1/          # API endpoints (auth, users, tenants)
@@ -190,6 +190,7 @@ multi-tenant-saas-backend/
 ```
 
 **Detailed Documentation:**
+
 - [Application Structure](app/README.md) - Application architecture and components
 - [API Documentation](app/api/README.md) - API layer overview
 - [Models Documentation](app/models/README.md) - Database models
@@ -209,14 +210,14 @@ multi-tenant-saas-backend/
 
 ### Quick Start
 
-1. **Clone the repository:**
+- **Clone the repository:**
 
 ```bash
 git clone https://github.com/rohteemie/multi-tenant-saas-backend.git
 cd multi-tenant-saas-backend
 ```
 
-2. **Create and activate a virtual environment:**
+- **Create and activate a virtual environment:**
 
 ```bash
 # Create virtual environment
@@ -229,13 +230,13 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-3. **Install dependencies:**
+- **Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Set up environment variables:**
+- **Set up environment variables:**
 
 ```bash
 # Copy example environment file
@@ -247,17 +248,17 @@ cp .env.example .env
 # - DATABASE_URL (default: sqlite:///./app.db)
 ```
 
-5. **Run the application:**
+-**Run the application:**
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-6. **Access the API:**
+- **Access the API:**
 
-- **Swagger UI (Interactive):** http://localhost:8000/docs
-- **ReDoc (Documentation):** http://localhost:8000/redoc
-- **API Base URL:** http://localhost:8000/api/v1
+- **Swagger UI (Interactive):** <http://localhost:8000/docs>
+- **ReDoc (Documentation):** <http://localhost:8000/redoc>
+- **API Base URL:** <http://localhost:8000/api/v1>
 
 ### Running Tests
 
@@ -279,11 +280,13 @@ pytest tests/test_auth.py -v
 ### Quick API Reference
 
 **Authentication:**
+
 - `POST /api/v1/auth/register` - Register new user
 - `POST /api/v1/auth/login` - Login and get JWT tokens
 - `POST /api/v1/auth/refresh` - Refresh access token
 
 **Tenant Management:**
+
 - `POST /api/v1/tenants` - Create new tenant
 - `GET /api/v1/tenants` - List all tenants
 - `GET /api/v1/tenants/{id}` - Get tenant by ID
@@ -291,6 +294,7 @@ pytest tests/test_auth.py -v
 - `DELETE /api/v1/tenants/{id}` - Soft delete tenant
 
 **User Management:**
+
 - `GET /api/v1/users/me` - Get current user
 - `GET /api/v1/users` - List users (Admin+)
 - `GET /api/v1/users/{id}` - Get user by ID (Admin+)
@@ -298,6 +302,7 @@ pytest tests/test_auth.py -v
 - `DELETE /api/v1/users/{id}` - Delete user (Owner only)
 
 **Comprehensive Documentation:**
+
 - [API Structure Overview](docs/API_STRUCTURE.md) - Complete API documentation
 - [Authentication Guide](docs/authentication.md) - Auth implementation details
 - [Endpoint Documentation](app/api/v1/endpoints/README.md) - Detailed endpoint specs
@@ -305,6 +310,7 @@ pytest tests/test_auth.py -v
 ### Example Usage
 
 **Register a new user:**
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -318,6 +324,7 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 ```
 
 **Login:**
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -325,6 +332,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 ```
 
 **Access protected endpoint:**
+
 ```bash
 curl -X GET http://localhost:8000/api/v1/users/me \
   -H "Authorization: Bearer {access_token}"
@@ -335,11 +343,13 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 ## 📚 Documentation Resources
 
 ### Technical Documentation
+
 - [System Requirements Document (SRD)](docs/srs_technical_design.md) - Technical specifications
 - [Product Requirements Document (PRD)](docs/product_requirement.md) - Business requirements
 - [Sprint 1.2 Summary](docs/sprint_1.2_summary.md) - Latest implementation summary
 
 ### Diagrams
+
 - [Architecture Diagram](docs/system_architecture.png) - System architecture overview
 - [ERD Diagram](docs/erd_diagram.png) - Database entity relationships
 - [Use Case Diagram](docs/use_case_diagram.png) - User role interactions
@@ -347,8 +357,9 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 - [Roadmap Timeline](docs/roadmap_timeline.png) - Project timeline
 
 ### Code Documentation
+
 - [Full Documentation Index](docs/README.md) - Complete documentation guide
-- Interactive API Docs - http://localhost:8000/docs
+- Interactive API Docs - <http://localhost:8000/docs>
 
 ---
 
@@ -364,6 +375,7 @@ The project includes comprehensive test coverage:
   - `test_tenant_isolation.py` - Multi-tenant isolation
 
 **Coverage includes:**
+
 - ✅ User registration and authentication
 - ✅ JWT token generation and validation
 - ✅ Role-based access control (RBAC)
@@ -378,16 +390,19 @@ See [Testing Documentation](tests/README.md) for details.
 ## 🚦 Next Steps
 
 **Immediate (Phase 2):**
+
 - [x] Implement invoice CRUD and lifecycle
 - [x] Add invoice metadata (branch, customer, creator)
 - [ ] Implement Alembic migrations for production
 
 **Short-term (Phase 3):**
+
 - [ ] Analytics & reporting endpoints
 - [ ] CSV/JSON export functionality
 - [ ] Caching with Redis
 
 **Long-term (Phase 4-5):**
+
 - [ ] CI/CD pipeline with GitHub Actions
 - [ ] Monitoring and logging
 - [ ] Rate limiting and performance optimization
@@ -398,6 +413,7 @@ See [Testing Documentation](tests/README.md) for details.
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
+
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
@@ -415,9 +431,12 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ## 👤 Author
 
-**Rohteemie**
-- GitHub: [@rohteemie](https://github.com/rohteemie)
+Name: Rotimi Owolabi
+
+- X/Twitter: [Rotimi Owolabi](https://twitter.com/rohteemie)
+- LinkedIn: [Rotimi Owolabi](https://www.linkedin.com/in/rotimijournal/)
+- GitHub: [Rotimi Owolabi](https://github.com/rohteemie)
 
 ---
 
-**Built with ❤️ using FastAPI, SQLAlchemy, and PostgreSQL**
+Built with ❤️ using FastAPI, SQLAlchemy, and PostgreSQL**

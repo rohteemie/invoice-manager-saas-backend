@@ -6,7 +6,7 @@ This directory contains core application utilities and configurations that are u
 
 ## Directory Structure
 
-```
+```bash
 core/
 ├── config.py     # Application configuration and settings
 ├── deps.py       # Dependency injection functions
@@ -20,6 +20,7 @@ core/
 Manages application configuration using Pydantic Settings for environment variable management.
 
 **Key Configuration:**
+
 - `PROJECT_NAME`: Application name for documentation
 - `API_V1_STR`: API version prefix (default: "/api/v1")
 - `DATABASE_URL`: Database connection string
@@ -29,6 +30,7 @@ Manages application configuration using Pydantic Settings for environment variab
 - `ALGORITHM`: JWT algorithm (default: "HS256")
 
 **Usage:**
+
 ```python
 from app.core.config import settings
 
@@ -39,6 +41,7 @@ token_expire = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 **Environment Variables:**
 Create a `.env` file with:
+
 ```env
 SECRET_KEY=your-secret-key-here
 DATABASE_URL=sqlite:///./app.db
@@ -46,6 +49,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 **Features:**
+
 - Type-safe configuration
 - Automatic environment variable loading
 - Default values for optional settings
@@ -58,6 +62,7 @@ Provides security utilities following OWASP best practices.
 #### Password Management
 
 **Password Hashing:**
+
 ```python
 from app.core.security import get_password_hash
 
@@ -66,6 +71,7 @@ hashed = get_password_hash("user_password")
 ```
 
 **Password Verification:**
+
 ```python
 from app.core.security import verify_password
 
@@ -74,6 +80,7 @@ is_valid = verify_password("plain_password", hashed_password)
 ```
 
 **Implementation Details:**
+
 - Uses `bcrypt` algorithm for secure password hashing
 - Automatic salt generation
 - Configurable work factor (cost)
@@ -82,6 +89,7 @@ is_valid = verify_password("plain_password", hashed_password)
 #### JWT Token Management
 
 **Access Token Creation:**
+
 ```python
 from app.core.security import create_access_token
 from datetime import timedelta
@@ -99,6 +107,7 @@ access_token = create_access_token(
 ```
 
 **Refresh Token Creation:**
+
 ```python
 from app.core.security import create_refresh_token
 
@@ -109,6 +118,7 @@ refresh_token = create_refresh_token(
 ```
 
 **Token Decoding:**
+
 ```python
 from app.core.security import decode_token
 
@@ -117,6 +127,7 @@ payload = decode_token(token_string)
 ```
 
 **Token Features:**
+
 - JWT (JSON Web Tokens) for stateless authentication
 - Configurable expiration times
 - Role and tenant information embedded in token
@@ -124,6 +135,7 @@ payload = decode_token(token_string)
 - Automatic expiration handling
 
 **Security Considerations:**
+
 - Tokens are signed with SECRET_KEY
 - Cannot be tampered with without detection
 - Include expiration timestamp (exp claim)
@@ -136,6 +148,7 @@ Provides dependency injection functions for FastAPI endpoints.
 #### Database Session Dependency
 
 **get_db:**
+
 ```python
 from app.core.deps import get_db
 from fastapi import Depends
@@ -147,6 +160,7 @@ def list_users(db: Session = Depends(get_db)):
 ```
 
 **Features:**
+
 - Yields database session for each request
 - Automatically closes session after request
 - Thread-safe scoped sessions
@@ -155,6 +169,7 @@ def list_users(db: Session = Depends(get_db)):
 #### Authentication Dependencies
 
 **get_current_user:**
+
 ```python
 from app.core.deps import get_current_user
 from fastapi import Depends
@@ -165,6 +180,7 @@ def read_users_me(current_user: User = Depends(get_current_user)):
 ```
 
 **Flow:**
+
 1. Extracts JWT token from Authorization header
 2. Validates and decodes token
 3. Queries database for user by ID
@@ -172,10 +188,12 @@ def read_users_me(current_user: User = Depends(get_current_user)):
 5. Returns user object
 
 **Raises:**
+
 - `401 Unauthorized` - Invalid or missing token
 - `401 Unauthorized` - User not found or inactive
 
 **get_current_active_user:**
+
 ```python
 from app.core.deps import get_current_active_user
 
@@ -186,12 +204,14 @@ def protected_route(user: User = Depends(get_current_active_user)):
 ```
 
 Additional validation on top of `get_current_user`:
+
 - Ensures user.is_active == True
 - Raises 401 if user is deactivated
 
 #### Role-Based Dependencies
 
 **require_role:**
+
 ```python
 from app.core.deps import require_role
 from app.models.user import UserRole
@@ -207,12 +227,14 @@ def delete_user(
 ```
 
 **Role Hierarchy:**
+
 1. **Owner** - Full access (includes Admin privileges)
 2. **Admin** - User management (includes Manager privileges)
 3. **Manager** - Invoice/inventory management (includes Attendant privileges)
 4. **Attendant** - Basic operations only
 
 **Implementation:**
+
 ```python
 def require_role(required_role: UserRole):
     def role_checker(current_user: User = Depends(get_current_user)):
@@ -223,6 +245,7 @@ def require_role(required_role: UserRole):
 ```
 
 **has_role Function:**
+
 ```python
 def has_role(user: User, required_role: UserRole) -> bool:
     """Check if user has required role (includes hierarchy)"""
@@ -239,7 +262,7 @@ def has_role(user: User, required_role: UserRole) -> bool:
 
 ### Authentication Flow
 
-```
+```bash
 1. User Login
    └─> Validate credentials
        └─> Generate JWT tokens
@@ -256,7 +279,7 @@ def has_role(user: User, required_role: UserRole) -> bool:
 
 ### Authorization Flow
 
-```
+```bash
 1. Request to Protected Endpoint
    └─> Authenticate user (get_current_user)
        └─> Check role requirements (require_role)
@@ -267,18 +290,21 @@ def has_role(user: User, required_role: UserRole) -> bool:
 ### Token Security
 
 **Access Token:**
+
 - Short-lived (30 minutes default)
 - Contains user ID, tenant ID, and role
 - Used for API authentication
 - Cannot be revoked (stateless)
 
 **Refresh Token:**
+
 - Long-lived (7 days default)
 - Contains only user ID
 - Used to obtain new access tokens
 - Should be stored securely
 
 **Best Practices:**
+
 - Access tokens in memory only
 - Refresh tokens in httpOnly cookies
 - Always use HTTPS in production
@@ -289,6 +315,7 @@ def has_role(user: User, required_role: UserRole) -> bool:
 FastAPI's dependency injection system provides:
 
 ### 1. Automatic Execution
+
 ```python
 # Dependency is automatically called
 def endpoint(db: Session = Depends(get_db)):
@@ -296,6 +323,7 @@ def endpoint(db: Session = Depends(get_db)):
 ```
 
 ### 2. Nested Dependencies
+
 ```python
 # Dependencies can depend on other dependencies
 def get_current_user(
@@ -306,6 +334,7 @@ def get_current_user(
 ```
 
 ### 3. Reusability
+
 ```python
 # Same dependency used across multiple endpoints
 @router.get("/users", dependencies=[Depends(get_current_user)])
@@ -313,6 +342,7 @@ def get_current_user(
 ```
 
 ### 4. Testing
+
 ```python
 # Dependencies can be overridden in tests
 app.dependency_overrides[get_db] = override_get_db
@@ -373,7 +403,7 @@ def update_password(
 ):
     if not verify_password(old_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect password")
-    
+
     current_user.hashed_password = get_password_hash(new_password)
     db.commit()
     return {"message": "Password updated successfully"}
@@ -384,6 +414,7 @@ def update_password(
 ### Environment-Specific Settings
 
 **Development (.env.dev):**
+
 ```env
 DATABASE_URL=sqlite:///./dev.db
 SECRET_KEY=dev-secret-key
@@ -391,6 +422,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours for development
 ```
 
 **Production (.env.prod):**
+
 ```env
 DATABASE_URL=postgresql://user:pass@localhost/prod_db
 SECRET_KEY=very-secure-production-key

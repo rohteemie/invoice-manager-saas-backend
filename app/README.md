@@ -6,7 +6,7 @@ This directory contains the main FastAPI application code for the Multi-Tenant S
 
 ## Directory Structure
 
-```
+```bash
 app/
 ├── api/               # API route handlers and endpoints
 ├── core/              # Core application utilities (config, security, dependencies)
@@ -20,7 +20,9 @@ app/
 ## Key Components
 
 ### `main.py`
+
 The application entry point that:
+
 - Initializes the FastAPI application
 - Configures lifespan events (startup/shutdown)
 - Includes API routers
@@ -28,6 +30,7 @@ The application entry point that:
 - Sets up OpenAPI documentation
 
 **Key Features:**
+
 - Application title and description configuration
 - Database initialization on startup
 - API versioning with `/api/v1` prefix
@@ -36,12 +39,15 @@ The application entry point that:
 ### Subdirectories
 
 #### `/api` - API Layer
+
 Contains all API endpoints and routing logic. Organized by API version and feature domain.
 
 **See:** [api/README.md](api/README.md) for detailed API documentation.
 
 #### `/core` - Core Utilities
+
 Houses core application functionality including:
+
 - Configuration management
 - Security utilities (JWT, password hashing)
 - Dependency injection functions
@@ -50,7 +56,9 @@ Houses core application functionality including:
 **See:** [core/README.md](core/README.md) for core utilities documentation.
 
 #### `/db` - Database Layer
+
 Manages database connectivity and session handling:
+
 - Database engine configuration
 - Session factory and dependency
 - Database initialization
@@ -58,7 +66,9 @@ Manages database connectivity and session handling:
 **See:** [db/README.md](db/README.md) for database configuration details.
 
 #### `/models` - Data Models
+
 SQLAlchemy ORM models representing database tables:
+
 - Tenant model (multi-tenant support)
 - User model (authentication and RBAC)
 - Base model with common fields
@@ -67,7 +77,9 @@ SQLAlchemy ORM models representing database tables:
 **See:** [models/README.md](models/README.md) for data model documentation.
 
 #### `/schemas` - Request/Response Schemas
+
 Pydantic schemas for API validation and serialization:
+
 - Input validation schemas
 - Response serialization schemas
 - Data transfer objects (DTOs)
@@ -77,19 +89,24 @@ Pydantic schemas for API validation and serialization:
 ## Architecture Patterns
 
 ### Multi-Tenant Architecture
+
 The application implements tenant isolation at the data layer:
+
 - All user data is scoped to a `tenant_id`
 - Foreign key relationships enforce data boundaries
 - API endpoints validate tenant access
 
 ### Role-Based Access Control (RBAC)
+
 Four-tier role hierarchy:
+
 1. **Owner** - Full tenant management
 2. **Admin** - User and business operations management
 3. **Manager** - Invoice and inventory management
 4. **Attendant** - Basic operations (create invoices, view inventory)
 
 ### Security Layers
+
 1. **Input Validation** - Pydantic schemas validate all inputs
 2. **Authentication** - JWT token verification
 3. **Authorization** - Role-based access control
@@ -98,7 +115,7 @@ Four-tier role hierarchy:
 
 ## Application Flow
 
-```
+```bash
 Client Request
       │
       ▼
@@ -151,25 +168,29 @@ Client Request
 
 ### Local Development
 
-1. Install dependencies:
+- Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Set up environment variables (copy `.env.example` to `.env`):
+- Set up environment variables (copy `.env.example` to `.env`):
+
 ```bash
 cp .env.example .env
 ```
 
-3. Run the development server:
+- Run the development server:
+
 ```bash
 uvicorn app.main:app --reload
 ```
 
-4. Access the application:
-- API Documentation: http://localhost:8000/docs
-- Alternative Docs: http://localhost:8000/redoc
-- API Endpoints: http://localhost:8000/api/v1/
+- Access the application:
+
+- API Documentation: <http://localhost:8000/docs>
+- Alternative Docs: <http://localhost:8000/redoc>
+- API Endpoints: <http://localhost:8000/api/v1/>
 
 ### Database Initialization
 
@@ -178,12 +199,14 @@ The database is automatically initialized on application startup via the `lifesp
 ## API Documentation
 
 The application provides automatic interactive API documentation:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+
+- **Swagger UI**: <http://localhost:8000/docs>
+- **ReDoc**: <http://localhost:8000/redoc>
 
 ## Configuration
 
 Application configuration is managed through environment variables (see `core/config.py`):
+
 - `DATABASE_URL`: Database connection string
 - `SECRET_KEY`: JWT signing key
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: Token expiration time
@@ -213,6 +236,7 @@ Application configuration is managed through environment variables (see `core/co
 Tests are located in the `/tests` directory at the project root.
 
 Run tests with:
+
 ```bash
 pytest tests/ -v
 ```
@@ -222,6 +246,7 @@ See [/tests/README.md](../tests/README.md) for detailed testing documentation.
 ## Current Implementation Status
 
 ### ✅ Implemented
+
 - Multi-tenant architecture with data isolation
 - User authentication and JWT token management
 - Role-based access control (RBAC)
@@ -230,6 +255,7 @@ See [/tests/README.md](../tests/README.md) for detailed testing documentation.
 - Comprehensive test coverage
 
 ### 🚧 Planned
+
 - Invoice management (CRUD and lifecycle)
 - Audit logging for compliance
 - Caching with Redis

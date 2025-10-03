@@ -23,7 +23,7 @@ The test suite validates the following core functionalities:
 
 ## Test Structure
 
-```
+```bash
 tests/
 ├── conftest.py                    # Test configuration and fixtures
 ├── test_auth.py                   # Authentication tests
@@ -37,12 +37,13 @@ tests/
 
 ### Prerequisites
 
-1. Install test dependencies:
+- Install test dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Ensure you have a test environment set up (tests use SQLite in-memory database)
+- Ensure you have a test environment set up (tests use SQLite in-memory database)
 
 ### Run All Tests
 
@@ -162,14 +163,17 @@ pytest tests/test_tenant_isolation.py -v
 Contains all test fixtures and configuration:
 
 **Database Fixtures**:
+
 - `db_session`: Fresh database session for each test
 - `client`: Test client with database override
 
 **Tenant Fixtures**:
+
 - `test_tenant`: Primary test tenant
 - `second_tenant`: Secondary tenant for isolation tests
 
 **User Fixtures**:
+
 - `test_user`: Owner role user
 - `test_admin`: Admin role user
 - `test_manager`: Manager role user
@@ -178,6 +182,7 @@ Contains all test fixtures and configuration:
 - `inactive_user`: Deactivated user
 
 **Auth Fixtures**:
+
 - `auth_headers`: Authentication headers for owner
 - `admin_auth_headers`: Authentication headers for admin
 - `manager_auth_headers`: Authentication headers for manager
@@ -189,6 +194,7 @@ Contains all test fixtures and configuration:
 Tests authentication endpoints (`/api/v1/auth/*`):
 
 **Key Test Scenarios**:
+
 - Registration validation and security
 - Login authentication flow
 - Token generation and structure
@@ -197,6 +203,7 @@ Tests authentication endpoints (`/api/v1/auth/*`):
 - Inactive user handling
 
 **Security Validations**:
+
 - Passwords are never returned in responses
 - Passwords are properly hashed with bcrypt
 - Tokens contain user ID, tenant ID, and role
@@ -208,6 +215,7 @@ Tests authentication endpoints (`/api/v1/auth/*`):
 Tests user management endpoints (`/api/v1/users/*`):
 
 **Key Test Scenarios**:
+
 - Current user retrieval
 - User listing with pagination
 - User retrieval by ID
@@ -215,6 +223,7 @@ Tests user management endpoints (`/api/v1/users/*`):
 - Soft deletion (GDPR compliance)
 
 **RBAC Validations**:
+
 - Owner can perform all operations
 - Admin can list, get, and update users
 - Admin cannot delete users
@@ -227,6 +236,7 @@ Tests user management endpoints (`/api/v1/users/*`):
 Tests tenant management endpoints (`/api/v1/tenants/*`):
 
 **Key Test Scenarios**:
+
 - Tenant creation with validation
 - Domain uniqueness enforcement
 - Tenant listing with pagination
@@ -234,6 +244,7 @@ Tests tenant management endpoints (`/api/v1/tenants/*`):
 - Soft deletion
 
 **Validation Tests**:
+
 - Name length constraints
 - Domain uniqueness on create and update
 - Optional domain handling
@@ -244,6 +255,7 @@ Tests tenant management endpoints (`/api/v1/tenants/*`):
 Tests data isolation between tenants:
 
 **Key Test Scenarios**:
+
 - Cross-tenant user visibility
 - Cross-tenant user access by ID
 - Cross-tenant user modification prevention
@@ -252,6 +264,7 @@ Tests data isolation between tenants:
 - Deactivated user isolation
 
 **Security Validations**:
+
 - Users can only see their tenant's data
 - Authentication doesn't bypass tenant isolation
 - User lists are filtered by tenant
@@ -262,11 +275,13 @@ Tests data isolation between tenants:
 ### Database Fixtures
 
 #### `db_session`
+
 - **Scope**: Function (new for each test)
 - **Purpose**: Provides isolated database session
 - **Features**: Automatic rollback, clean state per test
 
 #### `client`
+
 - **Scope**: Function
 - **Purpose**: FastAPI TestClient with database override
 - **Usage**: For making HTTP requests in tests
@@ -277,22 +292,24 @@ The test suite provides pre-configured users for each role:
 
 | Fixture | Role | Email | Use Case |
 |---------|------|-------|----------|
-| `test_user` | Owner | owner@testcompany.com | Full permissions testing |
-| `test_admin` | Admin | admin@testcompany.com | Admin permission testing |
-| `test_manager` | Manager | manager@testcompany.com | Limited permission testing |
-| `test_attendant` | Attendant | attendant@testcompany.com | Minimal permission testing |
-| `second_tenant_user` | Owner | owner@secondcompany.com | Isolation testing |
-| `inactive_user` | Attendant | inactive@testcompany.com | Inactive user testing |
+| `test_user` | Owner | <owner@testcompany.com> | Full permissions testing |
+| `test_admin` | Admin | <admin@testcompany.com> | Admin permission testing |
+| `test_manager` | Manager | <manager@testcompany.com> | Limited permission testing |
+| `test_attendant` | Attendant | <attendant@testcompany.com> | Minimal permission testing |
+| `second_tenant_user` | Owner | <owner@secondcompany.com> | Isolation testing |
+| `inactive_user` | Attendant | <inactive@testcompany.com> | Inactive user testing |
 
 ### Authentication Fixtures
 
 Authentication header fixtures automatically:
+
 1. Create the user if not exists
 2. Perform login
 3. Extract access token
 4. Return properly formatted Authorization header
 
 Example usage:
+
 ```python
 def test_example(client, auth_headers):
     response = client.get("/api/v1/users/me", headers=auth_headers)
@@ -304,6 +321,7 @@ def test_example(client, auth_headers):
 ### Isolation
 
 Each test is completely isolated:
+
 - Fresh database for each test
 - No shared state between tests
 - Automatic cleanup after each test
@@ -311,11 +329,13 @@ Each test is completely isolated:
 ### Naming Convention
 
 Tests follow descriptive naming:
+
 ```python
 def test_[action]_[scenario]_[expected_result]
 ```
 
 Examples:
+
 - `test_login_success`
 - `test_login_incorrect_password`
 - `test_list_users_as_manager_forbidden`
@@ -323,6 +343,7 @@ Examples:
 ### Assertions
 
 Tests use clear, descriptive assertions:
+
 ```python
 # Good
 assert response.status_code == 200
@@ -336,6 +357,7 @@ assert "not found" in response.json()["detail"].lower()
 ### Test Organization
 
 Tests are organized by:
+
 1. **Feature**: Each file tests a specific feature area
 2. **Scenario**: Related tests are grouped together
 3. **Complexity**: Simple cases before edge cases
@@ -343,6 +365,7 @@ Tests are organized by:
 ### Common Patterns
 
 #### Testing Protected Endpoints
+
 ```python
 def test_protected_endpoint(client, auth_headers):
     response = client.get("/api/v1/users/me", headers=auth_headers)
@@ -350,6 +373,7 @@ def test_protected_endpoint(client, auth_headers):
 ```
 
 #### Testing Role-Based Access
+
 ```python
 def test_admin_required(client, manager_auth_headers):
     response = client.get("/api/v1/users/", headers=manager_auth_headers)
@@ -357,6 +381,7 @@ def test_admin_required(client, manager_auth_headers):
 ```
 
 #### Testing Tenant Isolation
+
 ```python
 def test_cross_tenant_access(client, auth_headers, second_tenant_user):
     response = client.get(
@@ -370,7 +395,7 @@ def test_cross_tenant_access(client, auth_headers, second_tenant_user):
 
 When all tests pass, you should see:
 
-```
+```bash
 tests/test_auth.py ..................                    [ 21%]
 tests/test_tenants.py ...............                    [ 40%]
 tests/test_tenant_isolation.py ..............            [ 58%]
@@ -384,6 +409,7 @@ tests/test_users.py ..............................        [100%]
 ### Database Issues
 
 If you see database errors:
+
 1. Ensure test database is clean: `rm -f test.db`
 2. Check SQLAlchemy models are imported correctly
 3. Verify database initialization in `conftest.py`
@@ -391,6 +417,7 @@ If you see database errors:
 ### Import Errors
 
 If you see import errors:
+
 1. Ensure you're running from project root
 2. Check PYTHONPATH includes project directory
 3. Verify all dependencies are installed
@@ -398,6 +425,7 @@ If you see import errors:
 ### Fixture Errors
 
 If fixtures are not found:
+
 1. Ensure `conftest.py` is in the tests directory
 2. Check fixture naming matches usage
 3. Verify pytest discovers the conftest file

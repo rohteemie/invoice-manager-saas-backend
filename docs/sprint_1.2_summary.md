@@ -7,6 +7,7 @@ This sprint successfully implemented the User model and JWT-based authentication
 ## What Was Implemented
 
 ### 1. User Model (`app/models/user.py`)
+
 - Created User model with SQLAlchemy ORM
 - Implemented user role enumeration (Owner, Admin, Manager, Attendant)
 - Added foreign key relationship to Tenant model for data isolation
@@ -17,6 +18,7 @@ This sprint successfully implemented the User model and JWT-based authentication
 - Added proper indexing on email and tenant_id for performance
 
 ### 2. User Schemas (`app/schemas/user.py`)
+
 - Created Pydantic models for request/response validation
 - Implemented schemas:
   - `UserBase`: Base user attributes
@@ -30,6 +32,7 @@ This sprint successfully implemented the User model and JWT-based authentication
 - Used EmailStr for email validation with proper format checking
 
 ### 3. Security Utilities (`app/core/security.py`)
+
 - Implemented password hashing using passlib with bcrypt
 - Created JWT token management functions:
   - `create_access_token()`: Generate access tokens (30 min expiry)
@@ -39,6 +42,7 @@ This sprint successfully implemented the User model and JWT-based authentication
 - Followed OWASP security best practices
 
 ### 4. Authentication Dependencies (`app/core/deps.py`)
+
 - Created OAuth2PasswordBearer for token authentication
 - Implemented `get_current_user()`: Extract user from JWT token
 - Implemented `get_current_active_user()`: Verify user is active
@@ -47,50 +51,60 @@ This sprint successfully implemented the User model and JWT-based authentication
   - Owner (level 4) > Admin (level 3) > Manager (level 2) > Attendant (level 1)
 
 ### 5. Authentication Endpoints (`app/api/v1/endpoints/auth.py`)
+
 Implemented three authentication endpoints:
 
 #### POST /api/v1/auth/register
+
 - User registration with email uniqueness validation
 - Password hashing before storage
 - Tenant association for data isolation
 - Returns user object without password
 
 #### POST /api/v1/auth/login
+
 - OAuth2 password flow authentication
 - Email and password verification
 - Active user check
 - Returns JWT access and refresh tokens
 
 #### POST /api/v1/auth/refresh
+
 - Refresh token validation
 - Issues new access and refresh tokens
 - Maintains session security
 
 ### 6. User Management Endpoints (`app/api/v1/endpoints/users.py`)
+
 Implemented CRUD operations with RBAC:
 
 #### GET /api/v1/users/me
+
 - Get current authenticated user
 - No role requirements
 
 #### GET /api/v1/users/
+
 - List all users in tenant
 - Requires Admin or Owner role
 - Implements tenant-based filtering
 - Supports pagination
 
 #### GET /api/v1/users/{user_id}
+
 - Get specific user by ID
 - Requires Admin or Owner role
 - Enforces tenant isolation
 
 #### PUT /api/v1/users/{user_id}
+
 - Update user information
 - Requires Admin or Owner role
 - Partial updates supported
 - Enforces tenant isolation
 
 #### DELETE /api/v1/users/{user_id}
+
 - Soft delete (GDPR-compliant)
 - Requires Owner role
 - Sets is_active to False
@@ -98,6 +112,7 @@ Implemented CRUD operations with RBAC:
 - Prevents self-deletion
 
 ### 7. Configuration Updates
+
 - Updated `requirements.txt` with new dependencies:
   - `pydantic[email]`: Email validation
   - `python-multipart`: Form data support
@@ -105,6 +120,7 @@ Implemented CRUD operations with RBAC:
 - Configured token expiration in settings
 
 ### 8. Documentation
+
 - Created comprehensive authentication documentation (`docs/authentication.md`)
 - Documented all endpoints with examples
 - Explained security features and GDPR compliance
@@ -114,24 +130,28 @@ Implemented CRUD operations with RBAC:
 ## Security Features
 
 ### Password Security
+
 ✅ Bcrypt hashing with salt
 ✅ Minimum 8-character password requirement
 ✅ Passwords never returned in API responses
 ✅ Passwords never logged or exposed
 
 ### JWT Token Security
+
 ✅ Access tokens expire in 30 minutes
 ✅ Refresh tokens expire in 7 days
 ✅ Tokens signed with secret key
 ✅ Tokens include user context (ID, tenant, role)
 
 ### Data Isolation
+
 ✅ All queries filtered by tenant_id
 ✅ Cross-tenant access prevented
 ✅ Foreign key constraints enforced
 ✅ Indexed for performance
 
 ### GDPR Compliance
+
 ✅ Soft delete implementation
 ✅ Right-to-be-forgotten support
 ✅ Audit trail maintained
@@ -165,11 +185,13 @@ All functionality was manually tested and verified:
 ## API Endpoints
 
 ### Authentication
+
 - `POST /api/v1/auth/register` - Register new user
 - `POST /api/v1/auth/login` - Login with email/password
 - `POST /api/v1/auth/refresh` - Refresh access token
 
 ### User Management
+
 - `GET /api/v1/users/me` - Get current user
 - `GET /api/v1/users/` - List users (Admin+)
 - `GET /api/v1/users/{user_id}` - Get user (Admin+)
@@ -179,6 +201,7 @@ All functionality was manually tested and verified:
 ## Database Schema
 
 ### Users Table
+
 ```sql
 CREATE TABLE users (
     id VARCHAR(60) PRIMARY KEY,
@@ -205,12 +228,14 @@ CREATE TABLE users (
 ## Compliance
 
 ### GDPR
+
 ✅ Right to be forgotten (soft delete)
 ✅ Data minimization (only essential fields)
 ✅ Audit trail for user actions
 ✅ Data isolation per tenant
 
 ### Security Best Practices
+
 ✅ OWASP password hashing guidelines
 ✅ JWT best practices
 ✅ Input validation with Pydantic
@@ -220,6 +245,7 @@ CREATE TABLE users (
 ## Files Created/Modified
 
 ### Created
+
 - `app/models/user.py` - User model
 - `app/schemas/user.py` - User schemas
 - `app/core/security.py` - Security utilities
@@ -230,6 +256,7 @@ CREATE TABLE users (
 - `docs/sprint_1.2_summary.md` - This summary
 
 ### Modified
+
 - `app/models/__init__.py` - Register User model
 - `app/api/v1/api.py` - Add auth and users routers
 - `requirements.txt` - Add new dependencies

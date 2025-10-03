@@ -6,7 +6,7 @@ This directory contains database configuration, session management, and initiali
 
 ## Directory Structure
 
-```
+```bash
 db/
 ├── __init__.py      # Package initialization
 ├── database.py      # Database engine and session configuration
@@ -22,6 +22,7 @@ Configures the SQLAlchemy engine and session factory.
 **Key Components:**
 
 #### Database Engine
+
 ```python
 from sqlalchemy import create_engine
 from app.core.config import settings
@@ -33,15 +34,18 @@ engine = create_engine(
 ```
 
 **Configuration:**
+
 - `settings.DATABASE_URL`: Connection string from environment variables
 - `pool_pre_ping=True`: Validates connections before use (prevents stale connections)
 
 **Supported Databases:**
+
 - SQLite (development): `sqlite:///./app.db`
 - PostgreSQL (production): `postgresql://user:pass@host/db`
 - MySQL (alternative): `mysql+pymysql://user:pass@host/db`
 
 #### Session Factory
+
 ```python
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -56,6 +60,7 @@ SessionLocal = scoped_session(
 ```
 
 **Configuration Options:**
+
 - `bind=engine`: Associates sessions with the database engine
 - `autocommit=False`: Requires explicit commits (safer for transactions)
 - `autoflush=False`: Manual control over when changes are flushed to DB
@@ -63,6 +68,7 @@ SessionLocal = scoped_session(
 - `scoped_session`: Thread-local session management
 
 #### Database Initialization
+
 ```python
 def init_db():
     """Initialize database (create tables)"""
@@ -71,11 +77,13 @@ def init_db():
 ```
 
 **Purpose:**
+
 - Creates all tables defined in SQLAlchemy models
 - Idempotent: Safe to run multiple times
 - Called during application startup via lifespan event
 
 **Table Creation Flow:**
+
 1. Import all models (via `app.models.__init__.py`)
 2. SQLAlchemy introspects model definitions
 3. Generates CREATE TABLE statements
@@ -86,6 +94,7 @@ def init_db():
 Provides the database session dependency for FastAPI endpoints.
 
 **get_db Function:**
+
 ```python
 from app.db.database import SessionLocal
 
@@ -102,6 +111,7 @@ def get_db():
 ```
 
 **Usage in Endpoints:**
+
 ```python
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -114,6 +124,7 @@ def list_users(db: Session = Depends(get_db)):
 ```
 
 **Features:**
+
 - Automatic session creation per request
 - Guaranteed session cleanup via try/finally
 - Thread-safe session management
@@ -126,12 +137,14 @@ def list_users(db: Session = Depends(get_db)):
 SQLAlchemy's connection pool manages database connections efficiently:
 
 **Pool Features:**
+
 - Reuses connections across requests
 - Configurable pool size (default: 5)
 - Overflow handling for burst traffic
 - Automatic connection recycling
 
 **Configuration (Optional):**
+
 ```python
 engine = create_engine(
     settings.DATABASE_URL,
@@ -144,7 +157,7 @@ engine = create_engine(
 
 ### Session Lifecycle
 
-```
+```bash
 Request Received
       │
       ▼
@@ -184,6 +197,7 @@ Request Received
 ### Transaction Management
 
 **Explicit Commits:**
+
 ```python
 @router.post("/users")
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
@@ -195,6 +209,7 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
 ```
 
 **Rollback on Error:**
+
 ```python
 try:
     db_user = User(**user_in.dict())
@@ -206,6 +221,7 @@ except IntegrityError:
 ```
 
 **Context Manager (Alternative):**
+
 ```python
 with db.begin():
     # Auto-commit on success, rollback on exception
@@ -217,16 +233,19 @@ with db.begin():
 ### Environment Variables
 
 **Development (.env):**
+
 ```env
 DATABASE_URL=sqlite:///./app.db
 ```
 
 **Production (.env.prod):**
+
 ```env
 DATABASE_URL=postgresql://user:password@db-host:5432/saas_db
 ```
 
 **Docker Compose:**
+
 ```env
 DATABASE_URL=postgresql://saas_user:saas_pass@postgres:5432/saas_db
 ```
@@ -234,18 +253,21 @@ DATABASE_URL=postgresql://saas_user:saas_pass@postgres:5432/saas_db
 ### SQLite (Development)
 
 **Advantages:**
+
 - No installation required
 - File-based database
 - Fast for development
 - Simple to reset (delete file)
 
 **Usage:**
+
 ```python
 DATABASE_URL=sqlite:///./app.db  # Relative path
 DATABASE_URL=sqlite:////absolute/path/to/app.db  # Absolute path
 ```
 
 **Limitations:**
+
 - Not suitable for production
 - Limited concurrency
 - No network access
@@ -254,17 +276,20 @@ DATABASE_URL=sqlite:////absolute/path/to/app.db  # Absolute path
 ### PostgreSQL (Production)
 
 **Advantages:**
+
 - Production-ready RDBMS
 - Excellent concurrency
 - Advanced features (JSON, full-text search)
 - Battle-tested reliability
 
 **Connection String:**
-```
+
+```bash
 postgresql://username:password@hostname:port/database
 ```
 
 **Installation:**
+
 ```bash
 # Docker
 docker run --name postgres -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres
@@ -278,6 +303,7 @@ pip install psycopg2-binary
 ### CRUD Operations
 
 **Create:**
+
 ```python
 def create_user(db: Session, user_in: UserCreate):
     db_user = User(**user_in.dict())
@@ -288,12 +314,14 @@ def create_user(db: Session, user_in: UserCreate):
 ```
 
 **Read:**
+
 ```python
 def get_user(db: Session, user_id: str):
     return db.query(User).filter(User.id == user_id).first()
 ```
 
 **Update:**
+
 ```python
 def update_user(db: Session, user_id: str, user_in: UserUpdate):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -305,6 +333,7 @@ def update_user(db: Session, user_id: str, user_in: UserUpdate):
 ```
 
 **Delete (Soft):**
+
 ```python
 def delete_user(db: Session, user_id: str):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -316,6 +345,7 @@ def delete_user(db: Session, user_id: str):
 ### Query Patterns
 
 **Filter by Tenant:**
+
 ```python
 users = db.query(User).filter(
     User.tenant_id == current_user.tenant_id,
@@ -324,16 +354,19 @@ users = db.query(User).filter(
 ```
 
 **Pagination:**
+
 ```python
 users = db.query(User).limit(10).offset(0).all()
 ```
 
 **Ordering:**
+
 ```python
 users = db.query(User).order_by(User.created_at.desc()).all()
 ```
 
 **Joins:**
+
 ```python
 users_with_tenants = db.query(User).join(Tenant).filter(
     Tenant.plan_type == "enterprise"
@@ -345,6 +378,7 @@ users_with_tenants = db.query(User).join(Tenant).filter(
 ### Test Database Setup
 
 **conftest.py:**
+
 ```python
 from app.db.database import Base, engine
 from app.db.session import get_db
@@ -361,6 +395,7 @@ def db():
 ```
 
 **Override Dependency:**
+
 ```python
 def override_get_db():
     try:
@@ -375,6 +410,7 @@ app.dependency_overrides[get_db] = override_get_db
 ### Test Isolation
 
 Each test gets a fresh database:
+
 ```python
 @pytest.fixture(autouse=True)
 def reset_db():
@@ -387,6 +423,7 @@ def reset_db():
 ### Current Approach (Development)
 
 **Auto-creation on startup:**
+
 - `init_db()` creates tables automatically
 - Simple for development
 - No version control for schema changes
@@ -394,6 +431,7 @@ def reset_db():
 ### Future Approach (Production)
 
 **Alembic Migrations:**
+
 ```bash
 # Initialize Alembic
 alembic init alembic
@@ -409,6 +447,7 @@ alembic downgrade -1
 ```
 
 **Benefits:**
+
 - Version-controlled schema changes
 - Safe production deployments
 - Rollback capability
@@ -419,6 +458,7 @@ alembic downgrade -1
 ### Query Optimization
 
 **Use Eager Loading:**
+
 ```python
 # Avoid N+1 queries
 users = db.query(User).options(
@@ -427,6 +467,7 @@ users = db.query(User).options(
 ```
 
 **Index Usage:**
+
 ```python
 # Ensure indexes on foreign keys
 class User(Base):
@@ -434,6 +475,7 @@ class User(Base):
 ```
 
 **Query Only Needed Fields:**
+
 ```python
 # Instead of: db.query(User).all()
 user_emails = db.query(User.email).all()
@@ -442,6 +484,7 @@ user_emails = db.query(User.email).all()
 ### Connection Management
 
 **Connection Pool Tuning:**
+
 ```python
 engine = create_engine(
     DATABASE_URL,
@@ -452,6 +495,7 @@ engine = create_engine(
 ```
 
 **Session Lifespan:**
+
 - Keep sessions short-lived
 - Commit or rollback explicitly
 - Close sessions in finally blocks
@@ -485,12 +529,14 @@ def receive_connect(dbapi_conn, connection_record):
 ### Common Issues
 
 **Stale Connections:**
+
 ```python
 # Solution: Enable pool_pre_ping
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 ```
 
 **Session Leaks:**
+
 ```python
 # Always use try/finally
 try:
@@ -500,6 +546,7 @@ finally:
 ```
 
 **Deadlocks:**
+
 ```python
 # Use consistent ordering in queries
 # Lock tables in same order across transactions
@@ -517,11 +564,13 @@ engine = create_engine(DATABASE_URL, echo=True)
 ### SQL Injection Prevention
 
 **Use ORM (Safe):**
+
 ```python
 db.query(User).filter(User.email == email).first()  # Parameterized
 ```
 
 **Avoid Raw SQL:**
+
 ```python
 # ❌ Dangerous
 db.execute(f"SELECT * FROM users WHERE email = '{email}'")
@@ -533,11 +582,13 @@ db.execute("SELECT * FROM users WHERE email = :email", {"email": email})
 ### Connection Security
 
 **Use SSL in Production:**
+
 ```python
 DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
 ```
 
 **Encrypt Credentials:**
+
 - Store credentials in environment variables
 - Use secrets management (AWS Secrets Manager, HashiCorp Vault)
 - Never commit credentials to version control

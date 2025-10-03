@@ -131,8 +131,7 @@ Progress will be tracked via:
 - [ ] GitHub Issues (one per sprint)
 - [ ] GitHub Project board (Kanban view)
 
----
-## 📬 Feedback & Iteration
+---## 📬 Feedback & Iteration
 
 We welcome feedback on this roadmap and the project as a whole. Please feel free to reach out via:
 
@@ -141,5 +140,3 @@ We welcome feedback on this roadmap and the project as a whole. Please feel free
 - Comments on this document
 
 Your input is invaluable in helping us improve and adapt the project to better meet user needs.
----
-```
