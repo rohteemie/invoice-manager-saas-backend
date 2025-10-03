@@ -1,9 +1,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal
 from datetime import datetime
+import csv
+import io
+import json
 
 from app.db.session import get_db
 from app.models.invoice import (
@@ -328,3 +332,143 @@ def delete_invoice(
     db.delete(invoice)
     db.commit()
     return {"message": "Invoice deleted successfully"}
+
+
+@router.get("/export/invoices")
+def export_invoices(
+    format: str = Query("csv", pattern="^(csv|json)$",
+                        description="Export format: csv or json"),
+    status: Optional[InvoiceStatus] = Query(None,
+                                            description="Filter by status"),
+    start_date: Optional[str] = Query(
+        None, description="Start date filter (ISO 8601)"
+    ),
+    end_date: Optional[str] = Query(
+        None, description="End date filter (ISO 8601)"
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Export invoices in CSV or JSON format.
+
+    Permissions: All authenticated users can export their tenant's invoices.
+    Results are automatically filtered by tenant_id.
+
+    Optional filters:
+    - status: Filter by invoice status
+    - start_date: Filter invoices created on or after this date
+    - end_date: Filter invoices created on or before this date
+    - format: csv or json (default: csv)
+
+    Returns file download with proper Content-Disposition header.
+    """
+    # Build query with tenant isolation
+    query = db.query(InvoiceModel).filter(
+        InvoiceModel.tenant_id == current_user.tenant_id
+    )
+
+    # Apply status filter
+    if status:
+        query = query.filter(InvoiceModel.status == status)
+
+    # Apply date range filters
+    if start_date:
+        query = query.filter(InvoiceModel.created_at >= start_date)
+    if end_date:
+        query = query.filter(InvoiceModel.created_at <= end_date)
+
+    # Get all invoices
+    invoices = query.all()
+
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"invoices_{timestamp}.{format}"
+
+    if format == "csv":
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write header
+        writer.writerow([
+            "Invoice Number", "Customer Name", "Customer Email",
+            "Status", "Issue Date", "Due Date",
+            "Subtotal", "Tax Amount", "Discount Amount", "Total Amount",
+            "Payment Method", "Paid At", "Created At"
+        ])
+
+        # Write data rows
+        for invoice in invoices:
+            writer.writerow([
+                invoice.invoice_number,
+                invoice.customer_name,
+                invoice.customer_email or "",
+                invoice.status.value,
+                invoice.issue_date,
+                invoice.due_date or "",
+                float(invoice.subtotal),
+                float(invoice.tax_amount),
+                float(invoice.discount_amount),
+                float(invoice.total_amount),
+                invoice.payment_method or "",
+                invoice.paid_at or "",
+                invoice.created_at.isoformat() if hasattr(
+                    invoice.created_at, 'isoformat'
+                ) else str(invoice.created_at)
+            ])
+
+        # Prepare response
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    else:  # JSON format
+        # Prepare JSON data
+        data = []
+        for invoice in invoices:
+            invoice_data = {
+                "invoice_number": invoice.invoice_number,
+                "customer_name": invoice.customer_name,
+                "customer_email": invoice.customer_email,
+                "customer_phone": invoice.customer_phone,
+                "customer_address": invoice.customer_address,
+                "status": invoice.status.value,
+                "issue_date": invoice.issue_date,
+                "due_date": invoice.due_date,
+                "subtotal": float(invoice.subtotal),
+                "tax_amount": float(invoice.tax_amount),
+                "discount_amount": float(invoice.discount_amount),
+                "total_amount": float(invoice.total_amount),
+                "payment_method": invoice.payment_method,
+                "paid_at": invoice.paid_at,
+                "created_at": invoice.created_at.isoformat() if hasattr(
+                    invoice.created_at, 'isoformat'
+                ) else str(invoice.created_at),
+                "items": [
+                    {
+                        "description": item.description,
+                        "quantity": float(item.quantity),
+                        "unit_price": float(item.unit_price),
+                        "total_price": float(item.total_price)
+                    }
+                    for item in invoice.items
+                ]
+            }
+            data.append(invoice_data)
+
+        # Convert to JSON
+        json_str = json.dumps(data, indent=2)
+
+        # Prepare response
+        return StreamingResponse(
+            iter([json_str]),
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
