@@ -33,9 +33,9 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Tenant registration & management
 - [x] User registration & JWT authentication
 - [x] Role-based access (Owner, Admin, Manager, Attendant)
-- [ ] Invoice CRUD (tenant-aware)
-- [ ] Invoice lifecycle (Draft → Sent → Paid → Overdue)
-- [ ] Invoice metadata: branch, creator, customer info
+- [x] Invoice CRUD (tenant-aware)
+- [x] Invoice lifecycle (Draft → Sent → Paid → Overdue)
+- [x] Invoice metadata: branch, creator, customer info
 - [ ] Audit logging
 - [ ] CSV/JSON exports
 - [ ] Analytics & reporting endpoints (e.g., revenue by branch, overdue invoices)
@@ -378,8 +378,8 @@ See [Testing Documentation](tests/README.md) for details.
 ## 🚦 Next Steps
 
 **Immediate (Phase 2):**
-- [ ] Implement invoice CRUD and lifecycle
-- [ ] Add invoice metadata (branch, customer, creator)
+- [x] Implement invoice CRUD and lifecycle
+- [x] Add invoice metadata (branch, customer, creator)
 - [ ] Implement Alembic migrations for production
 
 **Short-term (Phase 3):**

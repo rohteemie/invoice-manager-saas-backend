@@ -11,7 +11,8 @@ endpoints/
 ├── __init__.py     # Package initialization
 ├── auth.py         # Authentication & token management endpoints
 ├── tenants.py      # Tenant CRUD endpoints
-└── users.py        # User management endpoints with RBAC
+├── users.py        # User management endpoints with RBAC
+└── invoices.py     # Invoice CRUD and lifecycle endpoints
 ```
 
 ## Endpoint Files
@@ -510,6 +511,197 @@ Soft delete a user.
 
 ---
 
+### Invoice Endpoints (`invoices.py`)
+
+**Purpose:** Manage invoices with lifecycle states and tenant isolation.
+
+**Tag:** `invoices`
+
+**Endpoints:**
+
+#### POST `/api/v1/invoices`
+Create a new invoice.
+
+**Authentication:** Required (any authenticated user)
+
+**Request Body:**
+```json
+{
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "customer_phone": "+1234567890",
+  "customer_address": "123 Main St, City, Country",
+  "branch_id": "branch-uuid",
+  "issue_date": "2024-01-15",
+  "due_date": "2024-02-15",
+  "notes": "Payment terms: Net 30",
+  "items": [
+    {
+      "description": "Product A",
+      "quantity": 2,
+      "unit_price": 100.00
+    },
+    {
+      "description": "Service B",
+      "quantity": 1,
+      "unit_price": 50.00
+    }
+  ]
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "invoice-uuid",
+  "invoice_number": "INV-20240115-0001",
+  "tenant_id": "tenant-uuid",
+  "creator_id": "user-uuid",
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "status": "draft",
+  "subtotal": 250.00,
+  "tax_amount": 0.00,
+  "discount_amount": 0.00,
+  "total_amount": 250.00,
+  "items": [
+    {
+      "id": "item-uuid-1",
+      "description": "Product A",
+      "quantity": 2,
+      "unit_price": 100.00,
+      "total_price": 200.00
+    },
+    {
+      "id": "item-uuid-2",
+      "description": "Service B",
+      "quantity": 1,
+      "unit_price": 50.00,
+      "total_price": 50.00
+    }
+  ],
+  "created_at": "2024-01-15T10:00:00",
+  "updated_at": "2024-01-15T10:00:00"
+}
+```
+
+#### GET `/api/v1/invoices`
+List invoices for current tenant.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `skip` (int): Pagination offset (default: 0)
+- `limit` (int): Results per page (default: 100, max: 100)
+- `status` (string): Filter by status (draft, sent, paid, overdue)
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "invoice-uuid",
+    "invoice_number": "INV-20240115-0001",
+    "customer_name": "John Doe",
+    "status": "draft",
+    "total_amount": 250.00,
+    ...
+  }
+]
+```
+
+#### GET `/api/v1/invoices/{invoice_id}`
+Get a specific invoice.
+
+**Authentication:** Required
+
+**Response (200 OK):** Invoice object with items
+
+**Tenant Isolation:** Returns 404 if invoice belongs to different tenant
+
+#### PUT `/api/v1/invoices/{invoice_id}`
+Update an invoice.
+
+**Authentication:** Required (Manager role or higher)
+
+**Permissions:** `MANAGER`, `ADMIN`, `OWNER`
+
+**Constraints:** Only DRAFT invoices can be updated
+
+**Request Body:**
+```json
+{
+  "customer_name": "Updated Name",
+  "notes": "Updated notes",
+  "items": [
+    {
+      "description": "New Item",
+      "quantity": 3,
+      "unit_price": 75.00
+    }
+  ]
+}
+```
+
+**Note:** Updating items replaces all existing items
+
+#### PATCH `/api/v1/invoices/{invoice_id}/status`
+Update invoice status (lifecycle management).
+
+**Authentication:** Required (Manager role or higher)
+
+**Permissions:** `MANAGER`, `ADMIN`, `OWNER`
+
+**Request Body:**
+```json
+{
+  "status": "sent"
+}
+```
+
+**For PAID status:**
+```json
+{
+  "status": "paid",
+  "payment_method": "Credit Card"
+}
+```
+
+**Valid Status Transitions:**
+- `DRAFT` → `SENT`
+- `SENT` → `PAID`, `OVERDUE`
+- `OVERDUE` → `PAID`
+- `PAID` → (no transitions allowed)
+
+**Response (200 OK):** Updated invoice object
+
+**Error Responses:**
+- `400 Bad Request` - Invalid status transition
+- `400 Bad Request` - Missing payment_method for PAID status
+- `403 Forbidden` - Insufficient permissions
+
+#### DELETE `/api/v1/invoices/{invoice_id}`
+Delete an invoice.
+
+**Authentication:** Required (Admin role or higher)
+
+**Permissions:** `ADMIN`, `OWNER`
+
+**Constraints:** Only DRAFT invoices can be deleted
+
+**Response (200 OK):**
+```json
+{
+  "message": "Invoice deleted successfully"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` - Cannot delete non-DRAFT invoice
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Invoice not found
+
+---
+
 ## Common Patterns
 
 ### Authentication Header
@@ -586,6 +778,12 @@ Owner > Admin > Manager > Attendant
 | GET /users/{id} | ❌ | ❌ | ✅ | ✅ |
 | PUT /users/{id} | ❌ | ❌ | ✅ | ✅ |
 | DELETE /users/{id} | ❌ | ❌ | ❌ | ✅ |
+| POST /invoices | ✅ | ✅ | ✅ | ✅ |
+| GET /invoices | ✅ | ✅ | ✅ | ✅ |
+| GET /invoices/{id} | ✅ | ✅ | ✅ | ✅ |
+| PUT /invoices/{id} | ❌ | ✅ | ✅ | ✅ |
+| PATCH /invoices/{id}/status | ❌ | ✅ | ✅ | ✅ |
+| DELETE /invoices/{id} | ❌ | ❌ | ✅ | ✅ |
 
 ### Implementation
 
@@ -638,20 +836,22 @@ def test_list_users_as_admin(client, admin_auth_headers):
 
 Planned endpoints for upcoming features:
 
-### Invoice Management
-- POST `/api/v1/invoices`
-- GET `/api/v1/invoices`
-- GET `/api/v1/invoices/{id}`
-- PUT `/api/v1/invoices/{id}`
-- DELETE `/api/v1/invoices/{id}`
-
 ### Branch Management
 - POST `/api/v1/branches`
 - GET `/api/v1/branches`
+- GET `/api/v1/branches/{id}`
+- PUT `/api/v1/branches/{id}`
+- DELETE `/api/v1/branches/{id}`
 
 ### Analytics
 - GET `/api/v1/analytics/revenue`
 - GET `/api/v1/analytics/invoices`
+- GET `/api/v1/analytics/overdue`
+
+### Customer Management
+- POST `/api/v1/customers`
+- GET `/api/v1/customers`
+- GET `/api/v1/customers/{id}`
 
 ## License
 
