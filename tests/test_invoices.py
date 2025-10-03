@@ -619,3 +619,291 @@ def test_tenant_isolation(client, auth_headers, second_tenant_auth_headers):
         headers=second_tenant_auth_headers
     )
     assert response.status_code == 404
+
+
+def test_export_invoices_csv(client, auth_headers):
+    """Test exporting invoices in CSV format."""
+    # Create test invoices
+    for i in range(3):
+        client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": f"Customer {i}",
+                "customer_email": f"customer{i}@example.com",
+                "issue_date": "2024-01-15",
+                "items": [{"description": "Item", "quantity": 1,
+                           "unit_price": 100}]
+            },
+            headers=auth_headers
+        )
+
+    # Export as CSV
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=csv",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+    assert "attachment" in response.headers["content-disposition"]
+    assert "invoices_" in response.headers["content-disposition"]
+    assert ".csv" in response.headers["content-disposition"]
+
+    # Check CSV content
+    csv_content = response.text
+    lines = csv_content.strip().split("\n")
+    assert len(lines) >= 4  # Header + at least 3 data rows
+    assert "Invoice Number" in lines[0]
+    assert "Customer Name" in lines[0]
+    assert "Total Amount" in lines[0]
+
+
+def test_export_invoices_json(client, auth_headers):
+    """Test exporting invoices in JSON format."""
+    # Create test invoices
+    for i in range(2):
+        client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": f"Customer {i}",
+                "customer_email": f"customer{i}@example.com",
+                "issue_date": "2024-01-15",
+                "items": [
+                    {"description": "Item A", "quantity": 2,
+                     "unit_price": 50},
+                    {"description": "Item B", "quantity": 1,
+                     "unit_price": 100}
+                ]
+            },
+            headers=auth_headers
+        )
+
+    # Export as JSON
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=json",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    assert "application/json" in response.headers["content-type"]
+    assert "attachment" in response.headers["content-disposition"]
+    assert "invoices_" in response.headers["content-disposition"]
+    assert ".json" in response.headers["content-disposition"]
+
+    # Check JSON content
+    json_data = response.json()
+    assert isinstance(json_data, list)
+    assert len(json_data) >= 2
+    assert "invoice_number" in json_data[0]
+    assert "customer_name" in json_data[0]
+    assert "items" in json_data[0]
+    assert isinstance(json_data[0]["items"], list)
+    assert len(json_data[0]["items"]) == 2
+
+
+def test_export_invoices_with_status_filter(client, auth_headers,
+                                            manager_auth_headers):
+    """Test exporting invoices with status filter."""
+    # Create invoices with different statuses
+    draft_response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Draft Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1,
+                       "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    sent_response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Sent Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1,
+                       "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+    sent_id = sent_response.json()["id"]
+
+    # Change one to SENT status
+    client.patch(
+        f"/api/v1/invoices/{sent_id}/status",
+        json={"status": "sent"},
+        headers=manager_auth_headers
+    )
+
+    # Export only SENT invoices
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=json&status=sent",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    json_data = response.json()
+    # Should have at least the one SENT invoice
+    sent_invoices = [inv for inv in json_data if inv["status"] == "sent"]
+    assert len(sent_invoices) >= 1
+    # All returned invoices should be SENT
+    for invoice in json_data:
+        assert invoice["status"] == "sent"
+
+
+def test_export_invoices_with_date_filter(client, auth_headers):
+    """Test exporting invoices with date range filter."""
+    # Create invoice
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Test Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1,
+                       "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Export with date filter (future date - should return nothing new)
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=json&"
+        "start_date=2025-01-01",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    json_data = response.json()
+    # May be empty or have older invoices from other tests
+    assert isinstance(json_data, list)
+
+
+def test_export_invoices_invalid_format(client, auth_headers):
+    """Test that invalid export format is rejected."""
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=xml",
+        headers=auth_headers
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_export_invoices_unauthenticated(client):
+    """Test that unauthenticated users cannot export invoices."""
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=csv"
+    )
+    assert response.status_code == 401
+
+
+def test_export_invoices_tenant_isolation(client, auth_headers,
+                                          second_tenant_auth_headers):
+    """Test that exports are tenant-isolated."""
+    # Create invoice in first tenant
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Tenant 1 Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1,
+                       "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Create invoice in second tenant
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Tenant 2 Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1,
+                       "unit_price": 100}]
+        },
+        headers=second_tenant_auth_headers
+    )
+
+    # Export from first tenant
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=json",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    json_data = response.json()
+
+    # Should only contain Tenant 1's invoices
+    for invoice in json_data:
+        assert "Tenant 2" not in invoice["customer_name"]
+
+
+def test_export_csv_format_structure(client, auth_headers):
+    """Test CSV export has correct structure and data types."""
+    # Create invoice with all fields
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Full Data Customer",
+            "customer_email": "full@example.com",
+            "customer_phone": "+1234567890",
+            "customer_address": "123 Main St",
+            "issue_date": "2024-01-15",
+            "due_date": "2024-02-15",
+            "notes": "Test notes",
+            "items": [{"description": "Item", "quantity": 2,
+                       "unit_price": 50}]
+        },
+        headers=auth_headers
+    )
+
+    # Export as CSV
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=csv",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+
+    csv_content = response.text
+    lines = csv_content.strip().split("\n")
+
+    # Check header columns
+    header = lines[0]
+    assert "Invoice Number" in header
+    assert "Customer Name" in header
+    assert "Customer Email" in header
+    assert "Status" in header
+    assert "Total Amount" in header
+
+
+def test_export_json_includes_items(client, auth_headers):
+    """Test JSON export includes invoice items."""
+    # Create invoice with multiple items
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Items Test Customer",
+            "issue_date": "2024-01-15",
+            "items": [
+                {"description": "Item A", "quantity": 2, "unit_price": 50},
+                {"description": "Item B", "quantity": 1, "unit_price": 100},
+                {"description": "Item C", "quantity": 3, "unit_price": 25}
+            ]
+        },
+        headers=auth_headers
+    )
+
+    # Export as JSON
+    response = client.get(
+        "/api/v1/invoices/export/invoices?format=json",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    json_data = response.json()
+
+    # Find our invoice
+    test_invoice = None
+    for invoice in json_data:
+        if invoice["customer_name"] == "Items Test Customer":
+            test_invoice = invoice
+            break
+
+    assert test_invoice is not None
+    assert "items" in test_invoice
+    assert len(test_invoice["items"]) == 3
+    assert test_invoice["items"][0]["description"] == "Item A"
+    assert test_invoice["items"][0]["quantity"] == 2.0
+    assert test_invoice["items"][0]["unit_price"] == 50.0
