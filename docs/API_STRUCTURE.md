@@ -22,12 +22,19 @@ Multi-Tenant SaaS Backend API
 │   ├── POST /login    - Login and get tokens
 │   └── POST /refresh  - Refresh access token
 │
-└── /api/v1/users (User Management)
-    ├── GET    /me - Get current user info (Authenticated)
-    ├── GET    /   - List users in tenant (Admin+)
-    ├── GET    /{user_id} - Get user by ID (Admin+)
-    ├── PUT    /{user_id} - Update user (Admin+)
-    └── DELETE /{user_id} - Soft delete user (Owner)
+├── /api/v1/users (User Management)
+│   ├── GET    /me - Get current user info (Authenticated)
+│   ├── GET    /   - List users in tenant (Admin+)
+│   ├── GET    /{user_id} - Get user by ID (Admin+)
+│   ├── PUT    /{user_id} - Update user (Admin+)
+│   └── DELETE /{user_id} - Soft delete user (Owner)
+│
+└── /api/v1/clients (Client/Customer Management)
+    ├── POST   / - Create new client (Admin+)
+    ├── GET    / - List clients in tenant (Admin+)
+    ├── GET    /{client_id} - Get client by ID (Admin+)
+    ├── PUT    /{client_id} - Update client (Admin+)
+    └── DELETE /{client_id} - Soft delete client (Owner)
 ```
 
 ## Role Hierarchy
@@ -143,6 +150,21 @@ Multi-Tenant SaaS Backend API
 │  - is_active     │
 │  - is_verified   │
 └──────────────────┘
+         │
+         │ 1:N
+         │
+         ▼
+┌──────────────────┐
+│     Client       │
+│  - id (PK)       │
+│  - name          │
+│  - email         │
+│  - phone         │
+│  - address       │
+│  - tax_id        │
+│  - tenant_id(FK) │◄── Foreign Key
+│  - is_active     │
+└──────────────────┘
 ```
 
 ## Security Layers
@@ -235,17 +257,30 @@ app/
 │   ├── tenant.py (Tenant schemas)
 │   └── user.py (User schemas, Token, etc.) ✨ NEW
 │
+├── models/
+│   ├── __init__.py (registers Tenant, User & Client)
+│   ├── general_model.py (base model)
+│   ├── tenant.py (Tenant model)
+│   ├── user.py (User model + UserRole enum) ✨ Sprint 1.2
+│   └── client.py (Client model) ✨ Sprint 2.1
+│
+├── schemas/
+│   ├── tenant.py (Tenant schemas)
+│   ├── user.py (User schemas, Token, etc.) ✨ Sprint 1.2
+│   └── client.py (Client schemas) ✨ Sprint 2.1
+│
 ├── core/
 │   ├── config.py (settings)
-│   ├── security.py (password & JWT utils) ✨ NEW
-│   └── deps.py (auth dependencies) ✨ NEW
+│   ├── security.py (password & JWT utils) ✨ Sprint 1.2
+│   └── deps.py (auth dependencies) ✨ Sprint 1.2
 │
 ├── api/v1/
 │   ├── api.py (router aggregation)
 │   └── endpoints/
 │       ├── tenants.py (tenant CRUD)
-│       ├── auth.py (register, login, refresh) ✨ NEW
-│       └── users.py (user management) ✨ NEW
+│       ├── auth.py (register, login, refresh) ✨ Sprint 1.2
+│       ├── users.py (user management) ✨ Sprint 1.2
+│       └── clients.py (client management) ✨ Sprint 2.1
 │
 └── db/
     ├── database.py (engine & session)
@@ -254,14 +289,15 @@ app/
 
 ## Summary Statistics
 
-- **Total Endpoints**: 14 (5 tenant + 3 auth + 6 user)
-- **Protected Endpoints**: 6 (require authentication)
-- **Role-Restricted**: 5 (require specific roles)
+- **Total Endpoints**: 19 (5 tenant + 3 auth + 6 user + 5 client)
+- **Protected Endpoints**: 11 (require authentication)
+- **Role-Restricted**: 10 (require specific roles)
 - **Authentication Methods**: JWT Bearer Token
 - **Password Hashing**: Bcrypt
 - **Token Types**: 2 (access + refresh)
 - **User Roles**: 4 (Owner, Admin, Manager, Attendant)
 - **Security Layers**: 5 (validation, auth, authz, isolation, ORM)
+- **Data Models**: 3 (Tenant, User, Client)
 
 ## Quick Start Commands
 
