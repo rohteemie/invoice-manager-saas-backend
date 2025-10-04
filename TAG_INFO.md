@@ -1,24 +1,29 @@
-# Sprint 2 Git Tag
+# Sprint 3 Git Tag
 
-Tag: `v0.2.0-sprint-2` has been created locally.
+Tag: `v0.3.0-sprint-3` has been created locally.
 
 ## Tag Details
 
-**Name:** v0.2.0-sprint-2  
-**Message:** Sprint 2 Complete: Invoice Management & Integration Tests
+**Name:** v0.3.0-sprint-3  
+**Message:** Sprint 3 Complete: Analytics & Reporting
 
-- Invoice CRUD with status lifecycle
-- CSV/JSON export with filtering
-- Comprehensive integration tests
-- Multi-tenant isolation verified
-- 109 tests passing
+- Tenant-level invoice analytics endpoints
+- Redis caching (64% performance improvement)
+- Celery background worker for overdue checks
+- Performance benchmarks
+- 130 tests passing (21 new tests)
+- Sub-100ms analytics response times
+
+## Previous Tags
+
+**v0.2.0-sprint-2** - Sprint 2 Complete: Invoice Management & Integration Tests
 
 ## To Push the Tag
 
 The tag has been created locally. To push it to the remote repository, run:
 
 ```bash
-git push origin v0.2.0-sprint-2
+git push origin v0.3.0-sprint-3
 ```
 
 Or push all tags:
@@ -33,5 +38,5 @@ To verify the tag exists locally:
 
 ```bash
 git tag -l
-git show v0.2.0-sprint-2
+git show v0.3.0-sprint-3
 ```

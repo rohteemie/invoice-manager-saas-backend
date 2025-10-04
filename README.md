@@ -19,7 +19,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 
 - **Backend:** FastAPI, SQLAlchemy
 - **Database:** PostgreSQL (SQLite for local dev)
-- **Cache / Queue:** Redis, Celery (planned)
+- **Cache / Queue:** Redis ✅, Celery ✅
 - **Containerization:** Docker, Docker Compose
 - **Testing:** Pytest
 - **CI/CD:** GitHub Actions (planned)
@@ -38,8 +38,9 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Invoice metadata: branch, creator, customer info ✅ **Sprint 2**
 - [x] CSV/JSON exports ✅ **Sprint 2**
 - [x] Integration tests ✅ **Sprint 2**
-- [ ] Analytics & reporting endpoints (e.g., revenue by branch, overdue invoices)
-- [ ] Caching & background workers for heavy tasks
+- [x] Analytics & reporting endpoints ✅ **Sprint 3**
+- [x] Caching with Redis for performance ✅ **Sprint 3**
+- [x] Background workers for automated tasks ✅ **Sprint 3**
 - [ ] Audit logging
 
 ---
@@ -61,8 +62,11 @@ This project follows a **phased + sprint-based roadmap**:
    - Export endpoints (CSV/JSON)
    - **Integration tests** ✅
 
-4. **Phase 3**: Analytics & Reporting
-   - Invoice metrics APIs, caching, scheduled tasks
+4. **Phase 3**: Analytics & Reporting ✅ **COMPLETED**
+   - Invoice analytics APIs
+   - Redis caching for performance
+   - Background workers (Celery) for scheduled tasks
+   - Performance benchmarks
 
 5. **Phase 4**: Reliability & Scalability
    - CI/CD pipelines, monitoring, rate limiting
@@ -70,8 +74,8 @@ This project follows a **phased + sprint-based roadmap**:
 6. **Phase 5**: Final Showcase (Polish & Deployment)
    - Demo video, blog post, deployment guides
 
-**Current Status:** ✅ Phase 2 Complete (Tag: `v0.2.0-sprint-2`)
-**Next:** Phase 3 - Analytics & Reporting
+**Current Status:** ✅ Phase 3 Complete (Tag: `v0.3.0-sprint-3`)
+**Next:** Phase 4 - Reliability & Scalability
 
 ---
 
