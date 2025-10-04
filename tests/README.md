@@ -20,6 +20,8 @@ The test suite validates the following core functionalities:
 2. **User Management**: CRUD operations, role hierarchy, soft deletion (GDPR compliance)
 3. **Tenant Management**: Tenant CRUD operations, domain uniqueness, soft deletion
 4. **Tenant Isolation**: Cross-tenant access prevention, data isolation verification
+5. **Invoice Management**: Invoice CRUD, status lifecycle, export functionality
+6. **Integration Workflows**: End-to-end business processes, cross-module integration
 
 ## Test Structure
 
@@ -30,6 +32,8 @@ tests/
 ├── test_users.py                  # User management tests
 ├── test_tenants.py                # Tenant CRUD tests
 ├── test_tenant_isolation.py       # Tenant isolation tests
+├── test_invoices.py               # Invoice CRUD and lifecycle tests
+├── test_integration.py            # End-to-end integration tests
 └── README.md                      # This file
 ```
 
@@ -270,6 +274,48 @@ Tests data isolation between tenants:
 - User lists are filtered by tenant
 - All operations respect tenant boundaries
 
+### `test_invoices.py`
+
+Tests invoice module functionality (`/api/v1/invoices/*`):
+
+**Key Test Scenarios**:
+- Invoice CRUD operations
+- Status lifecycle management (Draft → Sent → Paid → Overdue)
+- Permission-based access control
+- CSV/JSON export with filtering
+- Tenant-aware data isolation
+
+### `test_integration.py`
+
+**NEW - Sprint 2 Integration Tests**
+
+Comprehensive end-to-end workflow tests:
+
+**Invoice Lifecycle Integration:**
+- Complete workflow from user registration to invoice payment
+- Multi-step invoice lifecycle (draft → sent → paid)
+- Overdue invoice handling
+
+**Multi-Tenant Integration:**
+- Concurrent operations across different tenants
+- Cross-tenant data isolation verification
+- Tenant-specific export isolation
+
+**Role-Based Workflows:**
+- Multi-role invoice approval workflows
+- Permission validation across user roles
+- Role-based operation restrictions
+
+**Business Scenarios:**
+- Branch performance tracking
+- Customer invoice history
+- Filtered export scenarios
+
+**Data Consistency:**
+- Invoice item calculations
+- Total recalculation on updates
+- Transaction integrity verification
+
 ## Fixtures
 
 ### Database Fixtures
@@ -449,11 +495,12 @@ Future test enhancements:
 - [ ] Email verification flow tests
 - [ ] Password reset flow tests
 - [ ] API rate limiting tests
-- [ ] Integration tests with real database
-- [ ] End-to-end workflow tests
+- [x] Integration tests with real database ✓ (Added in Sprint 2)
+- [x] End-to-end workflow tests ✓ (Added in Sprint 2)
 
 ---
 
-**Last Updated**: Phase 1 - Authentication & Tenant Isolation
+**Last Updated**: Sprint 2 - Invoice Management & Integration Tests
 **Test Framework**: pytest 7.4.3
 **Coverage Target**: >80% code coverage
+**Total Tests**: 109 (including 10 integration tests)
