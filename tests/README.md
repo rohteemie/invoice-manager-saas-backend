@@ -279,6 +279,7 @@ Tests data isolation between tenants:
 Tests invoice module functionality (`/api/v1/invoices/*`):
 
 **Key Test Scenarios**:
+
 - Invoice CRUD operations
 - Status lifecycle management (Draft → Sent → Paid → Overdue)
 - Permission-based access control
@@ -287,31 +288,36 @@ Tests invoice module functionality (`/api/v1/invoices/*`):
 
 ### `test_integration.py`
 
-**NEW - Sprint 2 Integration Tests**
+### NEW - Sprint 2 Integration Tests
 
 Comprehensive end-to-end workflow tests:
 
 **Invoice Lifecycle Integration:**
+
 - Complete workflow from user registration to invoice payment
 - Multi-step invoice lifecycle (draft → sent → paid)
 - Overdue invoice handling
 
 **Multi-Tenant Integration:**
+
 - Concurrent operations across different tenants
 - Cross-tenant data isolation verification
 - Tenant-specific export isolation
 
 **Role-Based Workflows:**
+
 - Multi-role invoice approval workflows
 - Permission validation across user roles
 - Role-based operation restrictions
 
 **Business Scenarios:**
+
 - Branch performance tracking
 - Customer invoice history
 - Filtered export scenarios
 
 **Data Consistency:**
+
 - Invoice item calculations
 - Total recalculation on updates
 - Transaction integrity verification
