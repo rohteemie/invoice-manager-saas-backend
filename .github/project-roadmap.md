@@ -49,18 +49,19 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 **Goal:** Deliver the tenant-aware invoice management system.
 **Sprints:**
 
-- [ ] Sprint 2.1: Invoice schema (branch, customer info, creator details)
+- [x] Sprint 2.1: Invoice schema (branch, customer info, creator details)
   **Effort:** M | **Core** | **Depends on:** Phase 1
-- [ ] Sprint 2.2: Invoice CRUD + lifecycle (Draft → Sent → Paid → Overdue)
+- [x] Sprint 2.2: Invoice CRUD + lifecycle (Draft → Sent → Paid → Overdue)
   **Effort:** M | **Core** | **Depends on:** 2.1
-- [ ] Sprint 2.3: Tenant-aware query enforcement
+- [x] Sprint 2.3: Tenant-aware query enforcement
   **Effort:** S | **Core** | **Depends on:** 2.2
-- [ ] Sprint 2.4: CSV/JSON export endpoints
+- [x] Sprint 2.4: CSV/JSON export endpoints
   **Effort:** S | **Nice-to-have** | **Depends on:** 2.2
-- [ ] Integration tests
+- [x] Integration tests ✅ **COMPLETED**
   **Effort:** S | **Core** | **Depends on:** All above
 
 **Tech Stack:** FastAPI, SQLAlchemy, Pandas (for export)
+**Status:** ✅ **PHASE 2 COMPLETE** - Tag: `v0.2.0-sprint-2`
 
 ---
 

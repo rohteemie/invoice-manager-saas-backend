@@ -30,14 +30,15 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 
 ## 🏗️ Features (Planned & Implemented)
 
-- [x] Tenant registration & management
-- [x] User registration & JWT authentication
-- [x] Role-based access (Owner, Admin, Manager, Attendant)
-- [x] Invoice CRUD (tenant-aware)
-- [x] Invoice lifecycle (Draft → Sent → Paid → Overdue)
-- [x] Invoice metadata: branch, creator, customer info
+- [x] Tenant registration & management ✅
+- [x] User registration & JWT authentication ✅
+- [x] Role-based access (Owner, Admin, Manager, Attendant) ✅
+- [x] Invoice CRUD (tenant-aware) ✅ **Sprint 2**
+- [x] Invoice lifecycle (Draft → Sent → Paid → Overdue) ✅ **Sprint 2**
+- [x] Invoice metadata: branch, creator, customer info ✅ **Sprint 2**
+- [x] CSV/JSON exports ✅ **Sprint 2**
+- [x] Integration tests ✅ **Sprint 2**
 - [ ] Audit logging
-- [ ] CSV/JSON exports
 - [ ] Analytics & reporting endpoints (e.g., revenue by branch, overdue invoices)
 - [ ] Caching & background workers for heavy tasks
 
@@ -47,17 +48,18 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 
 This project follows a **phased + sprint-based roadmap**:
 
-1. **Phase 0**: Planning & Documentation
+1. **Phase 0**: Planning & Documentation ✅
    - ERD, Use Case, Architecture diagrams
    - System & Product Requirements Docs
 
-2. **Phase 1**: Authentication & Tenant Isolation
+2. **Phase 1**: Authentication & Tenant Isolation ✅
    - Tenant model, JWT auth, RBAC
 
-3. **Phase 2**: Core Business Module (Invoices)
+3. **Phase 2**: Core Business Module (Invoices) ✅ **COMPLETED**
    - Invoice schema (branch, customer, creator)
    - Invoice CRUD & lifecycle
-   - Export endpoints
+   - Export endpoints (CSV/JSON)
+   - **Integration tests** ✅
 
 4. **Phase 3**: Analytics & Reporting
    - Invoice metrics APIs, caching, scheduled tasks
@@ -67,6 +69,9 @@ This project follows a **phased + sprint-based roadmap**:
 
 6. **Phase 5**: Final Showcase (Polish & Deployment)
    - Demo video, blog post, deployment guides
+
+**Current Status:** ✅ Phase 2 Complete (Tag: `v0.2.0-sprint-2`)  
+**Next:** Phase 3 - Analytics & Reporting
 
 ---
 
@@ -297,6 +302,15 @@ pytest tests/test_auth.py -v
 - `PUT /api/v1/users/{id}` - Update user (Admin+)
 - `DELETE /api/v1/users/{id}` - Delete user (Owner only)
 
+**Invoice Management:** ✨ **NEW in Sprint 2**
+- `POST /api/v1/invoices/` - Create new invoice
+- `GET /api/v1/invoices/` - List invoices with filters
+- `GET /api/v1/invoices/{id}` - Get invoice by ID
+- `PUT /api/v1/invoices/{id}` - Update draft invoice (Manager+)
+- `PATCH /api/v1/invoices/{id}/status` - Update invoice status (Manager+)
+- `DELETE /api/v1/invoices/{id}` - Delete draft invoice (Admin+)
+- `GET /api/v1/invoices/export/invoices` - Export invoices (CSV/JSON)
+
 **Comprehensive Documentation:**
 - [API Structure Overview](docs/API_STRUCTURE.md) - Complete API documentation
 - [Authentication Guide](docs/authentication.md) - Auth implementation details
@@ -356,12 +370,14 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 
 The project includes comprehensive test coverage:
 
-- **76+ tests** covering all core functionality
+- **109 tests** covering all core functionality ✨ **Updated**
 - **Test files:**
-  - `test_auth.py` - Authentication endpoints
-  - `test_users.py` - User management
-  - `test_tenants.py` - Tenant CRUD operations
-  - `test_tenant_isolation.py` - Multi-tenant isolation
+  - `test_auth.py` - Authentication endpoints (14 tests)
+  - `test_users.py` - User management (18 tests)
+  - `test_tenants.py` - Tenant CRUD operations (11 tests)
+  - `test_tenant_isolation.py` - Multi-tenant isolation (11 tests)
+  - `test_invoices.py` - Invoice management (45 tests) ✨ **NEW**
+  - `test_integration.py` - End-to-end workflows (10 tests) ✨ **NEW**
 
 **Coverage includes:**
 - ✅ User registration and authentication
@@ -370,6 +386,9 @@ The project includes comprehensive test coverage:
 - ✅ Tenant isolation
 - ✅ CRUD operations
 - ✅ Soft deletion (GDPR compliance)
+- ✅ Invoice lifecycle management ✨ **NEW**
+- ✅ Export functionality (CSV/JSON) ✨ **NEW**
+- ✅ End-to-end integration workflows ✨ **NEW**
 
 See [Testing Documentation](tests/README.md) for details.
 
