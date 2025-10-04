@@ -9,6 +9,12 @@ from app.models.invoice import Invoice as InvoiceModel, InvoiceStatus
 from app.models.user import User
 from app.schemas.analytics import InvoiceSummary, RevenueByStatus
 from app.core.deps import get_current_user
+from app.core.cache import (
+    get_cache,
+    set_cache,
+    cache_key,
+    invalidate_tenant_cache
+)
 
 router = APIRouter()
 
@@ -33,8 +39,16 @@ def get_invoice_summary(
 
     Permissions: All authenticated users can view analytics
     for their tenant.
+
+    Note: Results are cached for 5 minutes for performance.
     """
     tenant_id = current_user.tenant_id
+
+    # Check cache first
+    cache_key_name = cache_key(tenant_id, "invoice_summary")
+    cached_result = get_cache(cache_key_name)
+    if cached_result:
+        return InvoiceSummary(**cached_result)
 
     # Get total invoice count
     total_invoices = db.query(InvoiceModel).filter(
@@ -89,7 +103,7 @@ def get_invoice_summary(
     ).scalar()
     overdue_amount = Decimal(str(overdue_amount_result or 0))
 
-    return InvoiceSummary(
+    result = InvoiceSummary(
         total_invoices=total_invoices,
         draft_count=draft_count,
         sent_count=sent_count,
@@ -99,6 +113,16 @@ def get_invoice_summary(
         pending_amount=pending_amount,
         overdue_amount=overdue_amount
     )
+
+    # Cache the result for 5 minutes (300 seconds)
+    result_dict = result.model_dump()
+    # Convert Decimal to string for JSON serialization
+    result_dict["total_revenue"] = str(result_dict["total_revenue"])
+    result_dict["pending_amount"] = str(result_dict["pending_amount"])
+    result_dict["overdue_amount"] = str(result_dict["overdue_amount"])
+    set_cache(cache_key_name, result_dict, expiry=300)
+
+    return result
 
 
 @router.get("/revenue-by-status", response_model=List[RevenueByStatus])
@@ -113,8 +137,16 @@ def get_revenue_by_status(
 
     Permissions: All authenticated users can view analytics
     for their tenant.
+
+    Note: Results are cached for 5 minutes for performance.
     """
     tenant_id = current_user.tenant_id
+
+    # Check cache first
+    cache_key_name = cache_key(tenant_id, "revenue_by_status")
+    cached_result = get_cache(cache_key_name)
+    if cached_result:
+        return [RevenueByStatus(**item) for item in cached_result]
 
     # Query revenue by status
     results = db.query(
@@ -136,5 +168,16 @@ def get_revenue_by_status(
                 total_amount=Decimal(str(total_amount or 0))
             )
         )
+
+    # Cache the result for 5 minutes
+    result_list = [
+        {
+            "status": item.status,
+            "count": item.count,
+            "total_amount": str(item.total_amount)
+        }
+        for item in revenue_by_status
+    ]
+    set_cache(cache_key_name, result_list, expiry=300)
 
     return revenue_by_status

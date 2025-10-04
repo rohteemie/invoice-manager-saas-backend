@@ -23,6 +23,7 @@ from app.schemas.invoice import (
     InvoiceStatusUpdate
 )
 from app.core.deps import get_current_user, require_role
+from app.core.cache import invalidate_tenant_cache
 
 router = APIRouter()
 
@@ -111,6 +112,10 @@ def create_invoice(
             db.add(item)
         db.commit()
         db.refresh(db_invoice)
+
+        # Invalidate analytics cache for this tenant
+        invalidate_tenant_cache(current_user.tenant_id, "*")
+
         return db_invoice
     except IntegrityError as e:
         db.rollback()
@@ -238,6 +243,10 @@ def update_invoice(
 
     db.commit()
     db.refresh(invoice)
+
+    # Invalidate analytics cache for this tenant
+    invalidate_tenant_cache(current_user.tenant_id, "*")
+
     return invoice
 
 
@@ -299,6 +308,10 @@ def update_invoice_status(
 
     db.commit()
     db.refresh(invoice)
+
+    # Invalidate analytics cache for this tenant
+    invalidate_tenant_cache(current_user.tenant_id, "*")
+
     return invoice
 
 
@@ -331,6 +344,10 @@ def delete_invoice(
 
     db.delete(invoice)
     db.commit()
+
+    # Invalidate analytics cache for this tenant
+    invalidate_tenant_cache(current_user.tenant_id, "*")
+
     return {"message": "Invoice deleted successfully"}
 
 
