@@ -70,16 +70,17 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 **Goal:** Add value-added insights on invoices.
 **Sprints:**
 
-- [ ] Sprint 3.1: Tenant-level invoice summary (total revenue, overdue count)
+- [x] Sprint 3.1: Tenant-level invoice summary (total revenue, overdue count)
   **Effort:** M | **Core** | **Depends on:** Phase 2
-- [ ] Sprint 3.2: Caching with Redis for reports
+- [x] Sprint 3.2: Caching with Redis for reports
   **Effort:** M | **Nice-to-have** | **Depends on:** 3.1
-- [ ] Sprint 3.3: Background worker (Celery/RQ) for overdue invoice checks
+- [x] Sprint 3.3: Background worker (Celery/RQ) for overdue invoice checks
   **Effort:** M | **Nice-to-have** | **Depends on:** 2.2
-- [ ] Performance benchmarks
+- [x] Performance benchmarks
   **Effort:** S | **Core** | **Depends on:** 3.1
 
-**Tech Stack:** FastAPI, Redis, Celery/RQ
+**Tech Stack:** FastAPI, Redis, Celery
+**Status:** ✅ **PHASE 3 COMPLETE** - Tag: `v0.3.0-sprint-3`
 
 ---
 
