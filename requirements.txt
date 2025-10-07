@@ -7,6 +7,7 @@ sqlalchemy
 python-jose
 pydantic-settings
 pymysql
+psycopg2-binary
 cryptography
 alembic
 python-multipart
