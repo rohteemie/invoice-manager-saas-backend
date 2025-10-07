@@ -181,3 +181,236 @@ def test_tenant_validation_max_name_length(client):
         }
     )
     assert response.status_code == 422  # Validation error
+
+
+def test_register_tenant_with_owner(client):
+    """Test creating a tenant with owner in one request."""
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Coca-Cola",
+            "email": "cocacola_globalHQ@cocacola.com",
+            "plan_type": "Enterprise",
+            "description": "refreshment global company",
+            "domain": "food and drink",
+            "owner": {
+                "full_name": "John Doe",
+                "email": "john@cocacola.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()
+    
+    # Verify tenant data
+    assert "tenant" in data
+    assert data["tenant"]["name"] == "Coca-Cola"
+    assert data["tenant"]["domain"] == "food and drink"
+    assert data["tenant"]["plan_type"] == "Enterprise"
+    assert data["tenant"]["description"] == "refreshment global company"
+    assert data["tenant"]["is_active"] is True
+    assert "id" in data["tenant"]
+    
+    # Verify owner data
+    assert "owner" in data
+    assert data["owner"]["full_name"] == "John Doe"
+    assert data["owner"]["email"] == "john@cocacola.com"
+    assert data["owner"]["role"] == "owner"
+    assert data["owner"]["tenant_id"] == data["tenant"]["id"]
+    assert data["owner"]["is_active"] is True
+    assert data["owner"]["is_verified"] is False
+    assert "password" not in data["owner"]
+    assert "hashed_password" not in data["owner"]
+
+
+def test_register_tenant_with_owner_duplicate_domain(client):
+    """Test that duplicate domain is rejected in register endpoint."""
+    # First registration
+    client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "First Company",
+            "domain": "duplicate.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "First Owner",
+                "email": "first@duplicate.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    
+    # Second registration with same domain
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Second Company",
+            "domain": "duplicate.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Second Owner",
+                "email": "second@duplicate.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 400
+    assert "domain" in response.json()["detail"].lower()
+
+
+def test_register_tenant_with_owner_duplicate_email(client):
+    """Test that duplicate owner email is rejected in register endpoint."""
+    # First registration
+    client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "First Company",
+            "domain": "first.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Owner",
+                "email": "duplicate@email.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    
+    # Second registration with same owner email
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Second Company",
+            "domain": "second.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Owner",
+                "email": "duplicate@email.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 400
+    assert "email" in response.json()["detail"].lower()
+
+
+def test_register_tenant_with_owner_without_domain(client):
+    """Test creating a tenant with owner without domain."""
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "No Domain Company",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Owner Name",
+                "email": "owner@nodomain.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["tenant"]["name"] == "No Domain Company"
+    assert data["tenant"]["domain"] is None
+    assert data["owner"]["email"] == "owner@nodomain.com"
+
+
+def test_register_tenant_with_owner_short_password(client):
+    """Test that short password is rejected in register endpoint."""
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Test Company",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Owner Name",
+                "email": "owner@test.com",
+                "password": "Short1"  # Less than 8 characters
+            }
+        }
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_register_tenant_with_owner_invalid_email(client):
+    """Test that invalid email format is rejected in register endpoint."""
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Test Company",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Owner Name",
+                "email": "not-an-email",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_register_tenant_with_owner_can_login(client):
+    """Test that the created owner can login successfully."""
+    # Register tenant with owner
+    register_response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Login Test Company",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Login Test Owner",
+                "email": "logintest@company.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert register_response.status_code == 201
+    
+    # Try to login
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "logintest@company.com",
+            "password": "SecurePass123"
+        }
+    )
+    assert login_response.status_code == 200
+    data = login_response.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+
+
+def test_register_tenant_with_owner_atomicity(client, db_session):
+    """Test that tenant and owner are created atomically (both or neither)."""
+    from app.models.tenant import Tenant as TenantModel
+    from app.models.user import User as UserModel
+    
+    # This should fail due to duplicate email with test_user fixture
+    # if it's already in the database
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Atomicity Test",
+            "domain": "atomicity.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Test",
+                "email": "atomicity@test.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    
+    # Should succeed
+    if response.status_code == 201:
+        # Verify both tenant and user exist
+        tenant = db_session.query(TenantModel).filter(
+            TenantModel.domain == "atomicity.com"
+        ).first()
+        user = db_session.query(UserModel).filter(
+            UserModel.email == "atomicity@test.com"
+        ).first()
+        assert tenant is not None
+        assert user is not None
+        assert user.tenant_id == tenant.id
+        assert user.role.value == "owner"

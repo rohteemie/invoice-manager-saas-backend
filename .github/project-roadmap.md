@@ -49,18 +49,19 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 **Goal:** Deliver the tenant-aware invoice management system.
 **Sprints:**
 
-- [ ] Sprint 2.1: Invoice schema (branch, customer info, creator details)
+- [x] Sprint 2.1: Invoice schema (branch, customer info, creator details)
   **Effort:** M | **Core** | **Depends on:** Phase 1
-- [ ] Sprint 2.2: Invoice CRUD + lifecycle (Draft → Sent → Paid → Overdue)
+- [x] Sprint 2.2: Invoice CRUD + lifecycle (Draft → Sent → Paid → Overdue)
   **Effort:** M | **Core** | **Depends on:** 2.1
-- [ ] Sprint 2.3: Tenant-aware query enforcement
+- [x] Sprint 2.3: Tenant-aware query enforcement
   **Effort:** S | **Core** | **Depends on:** 2.2
-- [ ] Sprint 2.4: CSV/JSON export endpoints
+- [x] Sprint 2.4: CSV/JSON export endpoints
   **Effort:** S | **Nice-to-have** | **Depends on:** 2.2
-- [ ] Integration tests
+- [x] Integration tests ✅ **COMPLETED**
   **Effort:** S | **Core** | **Depends on:** All above
 
 **Tech Stack:** FastAPI, SQLAlchemy, Pandas (for export)
+**Status:** ✅ **PHASE 2 COMPLETE** - Tag: `v0.2.0-sprint-2`
 
 ---
 
@@ -69,16 +70,17 @@ The roadmap blends **traditional planning** with **iterative sprints**, showcasi
 **Goal:** Add value-added insights on invoices.
 **Sprints:**
 
-- [ ] Sprint 3.1: Tenant-level invoice summary (total revenue, overdue count)
+- [x] Sprint 3.1: Tenant-level invoice summary (total revenue, overdue count)
   **Effort:** M | **Core** | **Depends on:** Phase 2
-- [ ] Sprint 3.2: Caching with Redis for reports
+- [x] Sprint 3.2: Caching with Redis for reports
   **Effort:** M | **Nice-to-have** | **Depends on:** 3.1
-- [ ] Sprint 3.3: Background worker (Celery/RQ) for overdue invoice checks
+- [x] Sprint 3.3: Background worker (Celery/RQ) for overdue invoice checks
   **Effort:** M | **Nice-to-have** | **Depends on:** 2.2
-- [ ] Performance benchmarks
+- [x] Performance benchmarks
   **Effort:** S | **Core** | **Depends on:** 3.1
 
-**Tech Stack:** FastAPI, Redis, Celery/RQ
+**Tech Stack:** FastAPI, Redis, Celery
+**Status:** ✅ **PHASE 3 COMPLETE** - Tag: `v0.3.0-sprint-3`
 
 ---
 
@@ -131,8 +133,7 @@ Progress will be tracked via:
 - [ ] GitHub Issues (one per sprint)
 - [ ] GitHub Project board (Kanban view)
 
----
-## 📬 Feedback & Iteration
+---## 📬 Feedback & Iteration
 
 We welcome feedback on this roadmap and the project as a whole. Please feel free to reach out via:
 
@@ -141,5 +142,3 @@ We welcome feedback on this roadmap and the project as a whole. Please feel free
 - Comments on this document
 
 Your input is invaluable in helping us improve and adapt the project to better meet user needs.
----
-```

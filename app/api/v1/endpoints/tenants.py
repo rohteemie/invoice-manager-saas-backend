@@ -5,7 +5,9 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
 from app.models.tenant import Tenant as TenantModel
-from app.schemas.tenant import Tenant, TenantCreate, TenantUpdate
+from app.models.user import User as UserModel, UserRole
+from app.schemas.tenant import Tenant, TenantCreate, TenantUpdate, TenantRegister, TenantWithOwner
+from app.core.security import get_password_hash
 
 router = APIRouter()
 
@@ -41,6 +43,90 @@ def create_tenant(
         raise HTTPException(
             status_code=400,
             detail="Failed to create tenant. Domain may already exist."
+        )
+
+
+@router.post("/register", response_model=TenantWithOwner, status_code=201)
+def register_tenant_with_owner(
+    tenant_register: TenantRegister,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new tenant with its first owner user in a single transaction.
+
+    This endpoint simplifies the onboarding process by creating both
+    a tenant and its owner user atomically. This ensures:
+    - No tenant exists without an owner
+    - No dangling users without a tenant
+    - Consistent data state
+    """
+    # Check if tenant domain already exists, but only if domain is not None
+    if tenant_register.domain is not None:
+        existing_tenant = db.query(TenantModel).filter(
+            TenantModel.domain == tenant_register.domain
+        ).first()
+        if existing_tenant:
+            raise HTTPException(
+                status_code=400,
+                detail="A tenant with this domain already exists"
+            )
+
+    # Check if owner email already exists
+    existing_user = db.query(UserModel).filter(
+        UserModel.email == tenant_register.owner.email
+    ).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="A user with this email already exists"
+        )
+
+    # Create tenant and owner in a transaction
+    try:
+        # Create tenant
+        tenant_data = tenant_register.model_dump(exclude={'owner'})
+        db_tenant = TenantModel(**tenant_data)
+        db.add(db_tenant)
+        db.flush()  # Flush to get tenant.id without committing
+
+        # Create owner user
+        hashed_password = get_password_hash(tenant_register.owner.password)
+        db_owner = UserModel(
+            email=tenant_register.owner.email,
+            full_name=tenant_register.owner.full_name,
+            hashed_password=hashed_password,
+            role=UserRole.OWNER,
+            tenant_id=db_tenant.id,
+            is_active=True,
+            is_verified=False
+        )
+        db.add(db_owner)
+
+        # Commit both together
+        db.commit()
+        db.refresh(db_tenant)
+        db.refresh(db_owner)
+
+        # Return combined response
+        return {
+            "tenant": db_tenant,
+            "owner": {
+                "id": db_owner.id,
+                "email": db_owner.email,
+                "full_name": db_owner.full_name,
+                "role": db_owner.role.value,
+                "tenant_id": db_owner.tenant_id,
+                "is_active": db_owner.is_active,
+                "is_verified": db_owner.is_verified,
+                "created_at": db_owner.created_at,
+                "updated_at": db_owner.updated_at
+            }
+        }
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to create tenant and owner. Domain or email may already exist."
         )
 
 

@@ -47,11 +47,13 @@ The system implements a hierarchical role-based access control:
 ## Authentication Endpoints
 
 ### Register User
+
 **POST** `/api/v1/auth/register`
 
 Register a new user in the system.
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -65,17 +67,20 @@ Register a new user in the system.
 **Response:** User object without password
 
 ### Login
+
 **POST** `/api/v1/auth/login`
 
 Authenticate user and receive JWT tokens.
 
 **Request Body (Form Data):**
-```
+
+```bash
 username=user@example.com
 password=SecurePassword123
 ```
 
 **Response:**
+
 ```json
 {
   "access_token": "eyJhbGc...",
@@ -85,6 +90,7 @@ password=SecurePassword123
 ```
 
 ### Refresh Token
+
 **POST** `/api/v1/auth/refresh?refresh_token={token}`
 
 Get new access and refresh tokens using a valid refresh token.
@@ -96,35 +102,42 @@ Get new access and refresh tokens using a valid refresh token.
 All user management endpoints require authentication.
 
 ### Get Current User
+
 **GET** `/api/v1/users/me`
 
 Get information about the currently authenticated user.
 
 **Headers:**
-```
+
+```bash
 Authorization: Bearer {access_token}
 ```
 
 ### List Users
+
 **GET** `/api/v1/users/`
 
 List all users in the current tenant. Requires Admin or Owner role.
 
 **Query Parameters:**
+
 - `skip`: Number of records to skip (default: 0)
 - `limit`: Maximum number of records (default: 100)
 
 ### Get User by ID
+
 **GET** `/api/v1/users/{user_id}`
 
 Get a specific user by ID. Requires Admin or Owner role.
 
 ### Update User
+
 **PUT** `/api/v1/users/{user_id}`
 
 Update user information. Requires Admin or Owner role.
 
 **Request Body:**
+
 ```json
 {
   "full_name": "Updated Name",
@@ -135,6 +148,7 @@ Update user information. Requires Admin or Owner role.
 ```
 
 ### Delete User (Soft Delete)
+
 **DELETE** `/api/v1/users/{user_id}`
 
 Deactivate a user (GDPR-compliant soft delete). Requires Owner role.
@@ -142,23 +156,27 @@ Deactivate a user (GDPR-compliant soft delete). Requires Owner role.
 ## Security Features
 
 ### Password Security
+
 - Passwords are hashed using bcrypt
 - Minimum password length: 8 characters
 - Passwords are never stored in plain text
 - Passwords are never returned in API responses
 
 ### JWT Tokens
+
 - Access tokens expire in 30 minutes (configurable)
 - Refresh tokens expire in 7 days (configurable)
 - Tokens include user ID, tenant ID, and role
 - Tokens are signed with a secret key
 
 ### Data Isolation
+
 - All user queries are automatically filtered by tenant_id
 - Users can only access data from their own tenant
 - Cross-tenant access is prevented at the database level
 
 ### GDPR Compliance
+
 - Soft delete implementation (right-to-be-forgotten)
 - User data can be deactivated instead of permanently deleted
 - Audit trail is maintained for compliance
@@ -181,6 +199,7 @@ def admin_endpoint(
 ```
 
 Role hierarchy ensures that higher roles can access lower-role endpoints:
+
 - Owner can access Admin, Manager, and Attendant endpoints
 - Admin can access Manager and Attendant endpoints
 - Manager can access Attendant endpoints
@@ -201,6 +220,7 @@ REFRESH_TOKEN_EXPIRATION=10080  # minutes (7 days)
 ## Testing the Authentication Flow
 
 ### 1. Create a Tenant
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/tenants/ \
   -H "Content-Type: application/json" \
@@ -211,6 +231,7 @@ curl -X POST http://localhost:8000/api/v1/tenants/ \
 ```
 
 ### 2. Register a User
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -224,6 +245,7 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 ```
 
 ### 3. Login
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -231,6 +253,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 ```
 
 ### 4. Use the Access Token
+
 ```bash
 curl -X GET http://localhost:8000/api/v1/users/me \
   -H "Authorization: Bearer {access_token}"
@@ -246,6 +269,7 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 - **400 Bad Request**: Invalid input data
 
 ### Example Error Response
+
 ```json
 {
   "detail": "Could not validate credentials"

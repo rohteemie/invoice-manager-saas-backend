@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -14,6 +15,10 @@ class Settings(BaseSettings):
         validation_alias="REFRESH_TOKEN_EXPIRATION"
         )
     DATABASE_URL: str = Field(..., validation_alias="DATABASE_URL")
+    REDIS_URL: Optional[str] = Field(
+        None,
+        validation_alias="REDIS_URL"
+    )
     API_V1_STR: str = "/api/v1"
 
     model_config = {

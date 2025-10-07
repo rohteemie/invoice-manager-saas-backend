@@ -4,7 +4,7 @@
 
 This document provides a visual overview of the implemented API structure.
 
-```
+```bash
 Multi-Tenant SaaS Backend API
 │
 ├── / (Root)
@@ -32,7 +32,7 @@ Multi-Tenant SaaS Backend API
 
 ## Role Hierarchy
 
-```
+```bash
 ┌─────────────────────────────────────┐
 │            OWNER                    │
 │  - Full tenant management           │
@@ -64,7 +64,7 @@ Multi-Tenant SaaS Backend API
 
 ## Authentication Flow
 
-```
+```bash
 ┌──────────┐
 │  Client  │
 └────┬─────┘
@@ -119,7 +119,7 @@ Multi-Tenant SaaS Backend API
 
 ## Data Model Relationships
 
-```
+```bash
 ┌──────────────────┐
 │     Tenant       │
 │  - id (PK)       │
@@ -147,7 +147,7 @@ Multi-Tenant SaaS Backend API
 
 ## Security Layers
 
-```
+```bash
 ┌─────────────────────────────────────────────┐
 │         Client Request                      │
 └──────────────────┬──────────────────────────┘
@@ -187,7 +187,7 @@ Multi-Tenant SaaS Backend API
 
 ## Token Lifecycle
 
-```
+```bash
 ┌─────────────────┐
 │  Login Success  │
 └────────┬────────┘
@@ -223,7 +223,7 @@ Multi-Tenant SaaS Backend API
 
 ## File Structure
 
-```
+```bash
 app/
 ├── models/
 │   ├── __init__.py (registers User & Tenant)
