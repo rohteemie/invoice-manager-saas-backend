@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 class TenantBase(BaseModel):
@@ -40,3 +40,26 @@ class TenantInDB(TenantBase):
 
 class Tenant(TenantInDB):
     pass
+
+
+# Schema for owner user info in combined registration
+class OwnerCreate(BaseModel):
+    full_name: str = Field(..., min_length=1, max_length=100,
+                           description="Owner's full name")
+    email: EmailStr = Field(..., description="Owner's email address")
+    password: str = Field(..., min_length=8, max_length=100,
+                          description="Owner password (min 8 characters)")
+
+
+# Schema for combined tenant + owner registration request
+class TenantRegister(TenantBase):
+    owner: OwnerCreate = Field(..., description="Owner user information")
+
+
+# Schema for combined tenant + owner response
+class TenantWithOwner(BaseModel):
+    tenant: Tenant
+    owner: dict  # We'll return owner info without sensitive data
+
+    class Config:
+        from_attributes = True
