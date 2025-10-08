@@ -72,6 +72,7 @@ This brings the database schema up to date with the latest version.
 
 💡 You can also upgrade to a specific version:
 
+```bash
 alembic upgrade <revision_id>
 
 ### 3️⃣ Roll Back Migrations
