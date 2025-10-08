@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Base class config for CityWide."""
+""" Base class config For all models """
 from sqlalchemy import Column, String, DateTime
 from sqlalchemy.orm import declarative_base
 from datetime import datetime

@@ -1,3 +1,3 @@
-from app.models.tenant import Tenant  # noqa: F401
-from app.models.user import User, UserRole  # noqa: F401
-from app.models.invoice import Invoice, InvoiceItem, InvoiceStatus  # noqa: F401
+from .tenant import Tenant  # noqa: F401
+from .user import User, UserRole  # noqa: F401
+from .invoice import Invoice, InvoiceItem, InvoiceStatus  # noqa: F401
