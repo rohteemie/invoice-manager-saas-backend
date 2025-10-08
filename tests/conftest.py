@@ -29,6 +29,15 @@ TestingSessionLocal = sessionmaker(
 )
 
 
+@pytest.fixture(scope="function", autouse=True)
+def disable_rate_limit():
+    """Disable rate limiting for tests."""
+    from app.core.rate_limit import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
+
+
 @pytest.fixture(scope="function")
 def db_session():
     """

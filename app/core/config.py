@@ -19,6 +19,14 @@ class Settings(BaseSettings):
         None,
         validation_alias="REDIS_URL"
     )
+    SENTRY_DSN: Optional[str] = Field(
+        None,
+        validation_alias="SENTRY_DSN"
+    )
+    ENVIRONMENT: str = Field(
+        "development",
+        validation_alias="ENVIRONMENT"
+    )
     API_V1_STR: str = "/api/v1"
 
     model_config = {

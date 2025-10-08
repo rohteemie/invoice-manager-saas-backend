@@ -6,7 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from app.db.session import get_db
 from app.models.tenant import Tenant as TenantModel
 from app.models.user import User as UserModel, UserRole
-from app.schemas.tenant import Tenant, TenantCreate, TenantUpdate, TenantRegister, TenantWithOwner
+from app.schemas.tenant import (
+    Tenant, TenantCreate, TenantUpdate, TenantRegister, TenantWithOwner
+)
 from app.core.security import get_password_hash
 
 router = APIRouter()
@@ -126,7 +128,10 @@ def register_tenant_with_owner(
         db.rollback()
         raise HTTPException(
             status_code=400,
-            detail="Failed to create tenant and owner. Domain or email may already exist."
+            detail=(
+                "Failed to create tenant and owner. "
+                "Domain or email may already exist."
+            )
         )
 
 
