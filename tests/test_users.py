@@ -2,7 +2,6 @@
 Test suite for User Management endpoints.
 Tests user retrieval, updates, role-based access control, and soft deletion.
 """
-import pytest
 
 
 def test_get_current_user(client, auth_headers):

@@ -2,7 +2,6 @@
 Test configuration and fixtures.
 Provides database setup, test client, and common fixtures for all tests.
 """
-import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -27,6 +26,15 @@ TestingSessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def disable_rate_limit():
+    """Disable rate limiting for tests."""
+    from app.core.rate_limit import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
 
 
 @pytest.fixture(scope="function")

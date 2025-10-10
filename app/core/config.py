@@ -13,11 +13,23 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRATION: int = Field(
         60 * 24 * 7,
         validation_alias="REFRESH_TOKEN_EXPIRATION"
-        )
+    )
     DATABASE_URL: str = Field(..., validation_alias="DATABASE_URL")
     REDIS_URL: Optional[str] = Field(
         None,
         validation_alias="REDIS_URL"
+    )
+    SENTRY_DSN: Optional[str] = Field(
+        None,
+        validation_alias="SENTRY_DSN"
+    )
+    ENVIRONMENT: str = Field(
+        "development",
+        validation_alias="ENVIRONMENT"
+    )
+    RATE_LIMIT_RETRY_AFTER_FALLBACK: str = Field(
+        "60",
+        validation_alias="RATE_LIMIT_RETRY_AFTER_FALLBACK"
     )
     API_V1_STR: str = "/api/v1"
 

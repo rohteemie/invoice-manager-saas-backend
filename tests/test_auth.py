@@ -2,7 +2,6 @@
 Test suite for Authentication endpoints.
 Tests user registration, login, token refresh, and JWT token handling.
 """
-import pytest
 from jose import jwt
 from app.core.config import settings
 

@@ -1,5 +1,11 @@
 # FastAPI Multi-Tenant Invoicing SaaS Backend
 
+[![CI/CD Pipeline](https://github.com/rohteemie/multi-tenant-saas-backend/workflows/Backend%20CI%2FCD%20Pipeline/badge.svg)](https://github.com/rohteemie/multi-tenant-saas-backend/actions)
+[![Tests](https://img.shields.io/badge/tests-144%20passed-brightgreen)](tests/)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)](https://fastapi.tiangolo.com)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A portfolio project showcasing the design and implementation of a **multi-tenant SaaS backend** for **invoice management**.
 Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Docker**.
 
@@ -22,9 +28,11 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - **Cache / Queue:** Redis ✅, Celery ✅
 - **Containerization:** Docker, Docker Compose
 - **Testing:** Pytest
-- **CI/CD:** GitHub Actions (planned)
+- **CI/CD:** GitHub Actions ✅ **Sprint 4**
 - **Auth:** JWT Authentication, OAuth2PasswordBearer
-- **Migrations:** Alembic (planned)
+- **Monitoring:** Sentry ✅, Prometheus ✅ **Sprint 4**
+- **Rate Limiting:** SlowAPI + Redis ✅ **Sprint 4**
+- **Migrations:** Alembic
 
 ---
 
@@ -41,6 +49,10 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Analytics & reporting endpoints ✅ **Sprint 3**
 - [x] Caching with Redis for performance ✅ **Sprint 3**
 - [x] Background workers for automated tasks ✅ **Sprint 3**
+- [x] CI/CD pipeline with GitHub Actions ✅ **Sprint 4**
+- [x] Structured logging & monitoring ✅ **Sprint 4**
+- [x] Rate limiting & request throttling ✅ **Sprint 4**
+- [x] Health checks & metrics endpoints ✅ **Sprint 4**
 - [ ] Audit logging
 
 ---
@@ -68,14 +80,17 @@ This project follows a **phased + sprint-based roadmap**:
    - Background workers (Celery) for scheduled tasks
    - Performance benchmarks
 
-5. **Phase 4**: Reliability & Scalability
-   - CI/CD pipelines, monitoring, rate limiting
+5. **Phase 4**: Reliability & Scalability ✅ **COMPLETED**
+   - CI/CD pipelines with GitHub Actions
+   - Structured logging & monitoring (Sentry, Prometheus)
+   - Rate limiting & request throttling
+   - Health checks & metrics
 
 6. **Phase 5**: Final Showcase (Polish & Deployment)
    - Demo video, blog post, deployment guides
 
-**Current Status:** ✅ Phase 3 Complete (Tag: `v0.3.0-sprint-3`)
-**Next:** Phase 4 - Reliability & Scalability
+**Current Status:** ✅ Phase 4 Complete (Tag: `v0.4.0-sprint-4`)
+**Next:** Phase 5 - Final Showcase & Deployment
 
 ---
 
@@ -94,7 +109,8 @@ This project follows a **phased + sprint-based roadmap**:
 │                      API Gateway (FastAPI)                  │
 │  - Authentication (JWT)                                     │
 │  - Request Validation (Pydantic)                            │
-│  - Rate Limiting (planned)                                  │
+│  - Rate Limiting ✅ **Sprint 4**                            │
+│  - Logging & Monitoring ✅ **Sprint 4**                     │
 └───────────────────────────┬─────────────────────────────────┘
                             │
             ┌───────────────┼───────────────┐
@@ -103,7 +119,7 @@ This project follows a **phased + sprint-based roadmap**:
     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
     │   Tenant     │ │     User     │ │   Invoice    │
     │  Management  │ │  Management  │ │  Management  │
-    │              │ │   (+ RBAC)   │ │   (planned)  │
+    │              │ │   (+ RBAC)   │ │      ✅      │
     └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
            │                │                │
            └────────────────┼────────────────┘
@@ -310,7 +326,7 @@ pytest tests/test_auth.py -v
 - `PUT /api/v1/users/{id}` - Update user (Admin+)
 - `DELETE /api/v1/users/{id}` - Delete user (Owner only)
 
-**Invoice Management:** ✨ **NEW in Sprint 2**
+**Invoice Management:** ✨ **Sprint 2**
 
 - `POST /api/v1/invoices/` - Create new invoice
 - `GET /api/v1/invoices/` - List invoices with filters
@@ -320,11 +336,26 @@ pytest tests/test_auth.py -v
 - `DELETE /api/v1/invoices/{id}` - Delete draft invoice (Admin+)
 - `GET /api/v1/invoices/export/invoices` - Export invoices (CSV/JSON)
 
+**Analytics & Reporting:** ✨ **Sprint 3**
+
+- `GET /api/v1/analytics/invoice-summary` - Invoice summary statistics
+- `GET /api/v1/analytics/revenue-by-status` - Revenue breakdown by status
+
+**Monitoring & Health:** ✨ **Sprint 4**
+
+- `GET /health` - Health check endpoint
+- `GET /metrics` - Prometheus metrics endpoint
+- `GET /docs` - Swagger UI documentation
+- `GET /redoc` - ReDoc documentation
+
 **Comprehensive Documentation:**
 
 - [API Structure Overview](docs/API_STRUCTURE.md) - Complete API documentation
 - [Authentication Guide](docs/authentication.md) - Auth implementation details
-- [Endpoint Documentation](app/api/v1/endpoints/README.md) - Detailed endpoint specs
+- [CI/CD Pipeline](docs/ci_cd_pipeline.md) - GitHub Actions workflow ✨ **Sprint 4**
+- [Logging & Monitoring](docs/logging_monitoring.md) - Observability guide ✨ **Sprint 4**
+- [Rate Limiting](docs/rate_limiting.md) - Rate limit configuration ✨ **Sprint 4**
+- [Sprint Summaries](docs/) - Sprint implementation details
 
 ### Example Usage
 
@@ -365,7 +396,7 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 
 - [System Requirements Document (SRD)](docs/srs_technical_design.md) - Technical specifications
 - [Product Requirements Document (PRD)](docs/product_requirement.md) - Business requirements
-- [Sprint 1.2 Summary](docs/sprint_1.2_summary.md) - Latest implementation summary
+- [Sprint Summaries](docs/) - Implementation summaries for all sprints
 
 ### Diagrams
 
@@ -386,14 +417,19 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 
 The project includes comprehensive test coverage:
 
-- **109 tests** covering all core functionality ✨ **Updated**
+- **144 tests** covering all core functionality ✨ **Updated Sprint 4**
 - **Test files:**
   - `test_auth.py` - Authentication endpoints (14 tests)
   - `test_users.py` - User management (18 tests)
   - `test_tenants.py` - Tenant CRUD operations (11 tests)
   - `test_tenant_isolation.py` - Multi-tenant isolation (11 tests)
-  - `test_invoices.py` - Invoice management (45 tests) ✨ **NEW**
-  - `test_integration.py` - End-to-end workflows (10 tests) ✨ **NEW**
+  - `test_invoices.py` - Invoice management (45 tests)
+  - `test_integration.py` - End-to-end workflows (10 tests)
+  - `test_analytics.py` - Analytics endpoints (7 tests) ✨ **Sprint 3**
+  - `test_performance.py` - Performance benchmarks (6 tests) ✨ **Sprint 3**
+  - `test_background_tasks.py` - Celery tasks (7 tests) ✨ **Sprint 3**
+  - `test_monitoring.py` - Health & metrics (3 tests) ✨ **Sprint 4**
+  - `test_rate_limiting.py` - Rate limiting (3 tests) ✨ **Sprint 4**
 
 **Coverage includes:**
 
@@ -403,9 +439,13 @@ The project includes comprehensive test coverage:
 - ✅ Tenant isolation
 - ✅ CRUD operations
 - ✅ Soft deletion (GDPR compliance)
-- ✅ Invoice lifecycle management ✨ **NEW**
-- ✅ Export functionality (CSV/JSON) ✨ **NEW**
-- ✅ End-to-end integration workflows ✨ **NEW**
+- ✅ Invoice lifecycle management
+- ✅ Export functionality (CSV/JSON)
+- ✅ End-to-end integration workflows
+- ✅ Analytics & reporting ✨ **Sprint 3**
+- ✅ Background tasks & caching ✨ **Sprint 3**
+- ✅ Monitoring & health checks ✨ **Sprint 4**
+- ✅ Rate limiting ✨ **Sprint 4**
 
 See [Testing Documentation](tests/README.md) for details.
 
@@ -413,24 +453,24 @@ See [Testing Documentation](tests/README.md) for details.
 
 ## 🚦 Next Steps
 
-**Immediate (Phase 2):**
+**Completed:**
 
-- [x] Implement invoice CRUD and lifecycle
-- [x] Add invoice metadata (branch, customer, creator)
-- [ ] Implement Alembic migrations for production
+- [x] Implement invoice CRUD and lifecycle ✅
+- [x] Add invoice metadata (branch, customer, creator) ✅
+- [x] Analytics & reporting endpoints ✅
+- [x] CSV/JSON export functionality ✅
+- [x] Caching with Redis ✅
+- [x] Background workers (Celery) ✅
+- [x] CI/CD pipeline with GitHub Actions ✅
+- [x] Monitoring and logging ✅
+- [x] Rate limiting and performance optimization ✅
 
-**Short-term (Phase 3):**
+**Next (Phase 5):**
 
-- [ ] Analytics & reporting endpoints
-- [ ] CSV/JSON export functionality
-- [ ] Caching with Redis
-
-**Long-term (Phase 4-5):**
-
-- [ ] CI/CD pipeline with GitHub Actions
-- [ ] Monitoring and logging
-- [ ] Rate limiting and performance optimization
 - [ ] Production deployment guide
+- [ ] Demo video and blog post
+- [ ] Final polish and documentation review
+- [ ] Implement Alembic migrations for production
 
 ---
 

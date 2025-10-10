@@ -2,7 +2,6 @@
 Test suite for Tenant CRUD operations.
 Tests tenant creation, retrieval, updates, and soft deletion.
 """
-import pytest
 
 
 def test_create_tenant(client):
@@ -196,13 +195,13 @@ def test_register_tenant_with_owner(client):
             "owner": {
                 "full_name": "John Doe",
                 "email": "john@cocacola.com",
-                "password": "SecurePass123"
+                "password": "TestPassword123!"
             }
         }
     )
     assert response.status_code == 201
     data = response.json()
-    
+
     # Verify tenant data
     assert "tenant" in data
     assert data["tenant"]["name"] == "Coca-Cola"
@@ -211,7 +210,7 @@ def test_register_tenant_with_owner(client):
     assert data["tenant"]["description"] == "refreshment global company"
     assert data["tenant"]["is_active"] is True
     assert "id" in data["tenant"]
-    
+
     # Verify owner data
     assert "owner" in data
     assert data["owner"]["full_name"] == "John Doe"
@@ -240,7 +239,7 @@ def test_register_tenant_with_owner_duplicate_domain(client):
             }
         }
     )
-    
+
     # Second registration with same domain
     response = client.post(
         "/api/v1/tenants/register",
@@ -275,7 +274,7 @@ def test_register_tenant_with_owner_duplicate_email(client):
             }
         }
     )
-    
+
     # Second registration with same owner email
     response = client.post(
         "/api/v1/tenants/register",
@@ -365,7 +364,7 @@ def test_register_tenant_with_owner_can_login(client):
         }
     )
     assert register_response.status_code == 201
-    
+
     # Try to login
     login_response = client.post(
         "/api/v1/auth/login",
@@ -384,7 +383,7 @@ def test_register_tenant_with_owner_atomicity(client, db_session):
     """Test that tenant and owner are created atomically (both or neither)."""
     from app.models.tenant import Tenant as TenantModel
     from app.models.user import User as UserModel
-    
+
     # This should fail due to duplicate email with test_user fixture
     # if it's already in the database
     response = client.post(
@@ -400,7 +399,7 @@ def test_register_tenant_with_owner_atomicity(client, db_session):
             }
         }
     )
-    
+
     # Should succeed
     if response.status_code == 201:
         # Verify both tenant and user exist

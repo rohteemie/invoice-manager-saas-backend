@@ -16,7 +16,7 @@ SessionLocal = scoped_session(
         autocommit=False,
         autoflush=False,
         expire_on_commit=False
-        )
+    )
 )
 
 

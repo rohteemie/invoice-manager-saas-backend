@@ -90,8 +90,7 @@ def test_invoice_summary_performance_small_dataset(
     # If Redis is not available, times will be similar
     if second_request_time < first_request_time:
         improvement = (
-            (first_request_time - second_request_time) /
-            first_request_time * 100
+            (first_request_time - second_request_time) / first_request_time * 100
         )
         print(f"Cache improvement: {improvement:.1f}%")
 

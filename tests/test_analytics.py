@@ -1,9 +1,8 @@
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from decimal import Decimal
 
-from app.models.invoice import Invoice, InvoiceItem, InvoiceStatus
+from app.models.invoice import Invoice, InvoiceStatus
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.core.security import get_password_hash

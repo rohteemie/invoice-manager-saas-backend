@@ -2,8 +2,6 @@
 Test suite for Invoice CRUD operations and lifecycle management.
 Tests invoice creation, retrieval, updates, status transitions, and deletion.
 """
-import pytest
-from decimal import Decimal
 
 
 def test_create_invoice(client, auth_headers):
@@ -703,16 +701,6 @@ def test_export_invoices_with_status_filter(client, auth_headers,
                                             manager_auth_headers):
     """Test exporting invoices with status filter."""
     # Create invoices with different statuses
-    draft_response = client.post(
-        "/api/v1/invoices/",
-        json={
-            "customer_name": "Draft Customer",
-            "issue_date": "2024-01-15",
-            "items": [{"description": "Item", "quantity": 1,
-                       "unit_price": 100}]
-        },
-        headers=auth_headers
-    )
 
     sent_response = client.post(
         "/api/v1/invoices/",

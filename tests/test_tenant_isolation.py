@@ -3,7 +3,6 @@ Test suite for Tenant Isolation.
 Tests that users can only access data from their own tenant.
 Validates cross-tenant data isolation at the API level.
 """
-import pytest
 
 
 def test_user_cannot_see_other_tenant_users(

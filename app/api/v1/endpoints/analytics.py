@@ -13,8 +13,8 @@ from app.core.cache import (
     get_cache,
     set_cache,
     cache_key,
-    invalidate_tenant_cache
 )
+# invalidate_tenant_cache is removed as it is unused
 
 router = APIRouter()
 

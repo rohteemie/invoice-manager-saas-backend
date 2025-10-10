@@ -2,7 +2,6 @@ from app.models.general_model import Gen_Model, Base
 from sqlalchemy import Column, String, Numeric, ForeignKey, Enum, Text
 from sqlalchemy.orm import relationship
 import enum
-from datetime import datetime
 
 
 class InvoiceStatus(str, enum.Enum):

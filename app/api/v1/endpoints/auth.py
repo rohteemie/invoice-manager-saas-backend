@@ -2,25 +2,26 @@
 Authentication endpoints for user registration, login, and token refresh.
 Implements JWT-based authentication with secure password handling.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.db.session import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import (
-    UserCreate, User, Token, UserLogin
-)
+from app.schemas.user import UserCreate, User, Token
 from app.core.security import (
     verify_password, get_password_hash,
     create_access_token, create_refresh_token, decode_token
 )
+from app.core.rate_limit import limiter
 
 router = APIRouter()
 
 
 @router.post("/register", response_model=User, status_code=201)
+@limiter.limit("5/minute")
 def register(
+    request: Request,
     user_in: UserCreate,
     db: Session = Depends(get_db)
 ):
@@ -63,7 +64,9 @@ def register(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("10/minute")
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
@@ -111,7 +114,9 @@ def login(
 
 
 @router.post("/refresh", response_model=Token)
+@limiter.limit("20/minute")
 def refresh_token(
+    request: Request,
     refresh_token: str,
     db: Session = Depends(get_db)
 ):
