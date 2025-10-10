@@ -8,7 +8,6 @@ This module contains comprehensive integration tests that validate:
 - Real-world user journeys and business scenarios
 """
 
-import pytest
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -24,7 +23,7 @@ class TestInvoiceLifecycleIntegration:
     ):
         """
         Test complete invoice lifecycle: registration → login → create → send → pay.
-        
+
         This simulates a real business workflow where:
         1. A new user registers
         2. User logs in
@@ -46,7 +45,7 @@ class TestInvoiceLifecycleIntegration:
         assert register_response.status_code == 201
         user_data = register_response.json()
         assert user_data["email"] == "workflow.manager@testcompany.com"
-        
+
         # Step 2: Login with the new user
         login_response = client.post(
             "/api/v1/auth/login",
@@ -58,7 +57,7 @@ class TestInvoiceLifecycleIntegration:
         assert login_response.status_code == 200
         token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         # Step 3: Create a draft invoice
         invoice_data = {
             "customer_name": "John Doe",
@@ -80,7 +79,7 @@ class TestInvoiceLifecycleIntegration:
             ],
             "notes": "Thank you for your business"
         }
-        
+
         create_response = client.post(
             "/api/v1/invoices/",
             json=invoice_data,
@@ -91,7 +90,7 @@ class TestInvoiceLifecycleIntegration:
         invoice_id = invoice["id"]
         assert invoice["status"] == "draft"
         assert invoice["total_amount"] == "450.00"
-        
+
         # Step 4: Send the invoice (status transition)
         send_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
@@ -101,7 +100,7 @@ class TestInvoiceLifecycleIntegration:
         assert send_response.status_code == 200
         sent_invoice = send_response.json()
         assert sent_invoice["status"] == "sent"
-        
+
         # Step 5: Mark invoice as paid
         pay_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
@@ -117,7 +116,7 @@ class TestInvoiceLifecycleIntegration:
         assert paid_invoice["status"] == "paid"
         assert paid_invoice["paid_at"] is not None
         assert paid_invoice["payment_method"] == "credit_card"
-        
+
         # Step 6: Verify invoice cannot be modified after paid
         update_response = client.put(
             f"/api/v1/invoices/{invoice_id}",
@@ -134,7 +133,7 @@ class TestInvoiceLifecycleIntegration:
     ):
         """
         Test invoice overdue workflow.
-        
+
         Simulates:
         1. Create invoice with past due date
         2. Send invoice
@@ -157,7 +156,7 @@ class TestInvoiceLifecycleIntegration:
                 }
             ]
         }
-        
+
         create_response = client.post(
             "/api/v1/invoices/",
             json=invoice_data,
@@ -165,7 +164,7 @@ class TestInvoiceLifecycleIntegration:
         )
         assert create_response.status_code == 201
         invoice_id = create_response.json()["id"]
-        
+
         # Send invoice
         send_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
@@ -173,7 +172,7 @@ class TestInvoiceLifecycleIntegration:
             headers=manager_auth_headers
         )
         assert send_response.status_code == 200
-        
+
         # Mark as overdue
         overdue_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
@@ -182,7 +181,7 @@ class TestInvoiceLifecycleIntegration:
         )
         assert overdue_response.status_code == 200
         assert overdue_response.json()["status"] == "overdue"
-        
+
         # Pay overdue invoice
         pay_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
@@ -209,7 +208,7 @@ class TestMultiTenantIntegration:
     ):
         """
         Test that invoices created by different tenants are properly isolated.
-        
+
         Verifies:
         1. Each tenant can create invoices
         2. Tenants cannot see each other's invoices
@@ -229,7 +228,7 @@ class TestMultiTenantIntegration:
         )
         assert response1.status_code == 201
         invoice1 = response1.json()
-        
+
         # Tenant 2 creates invoice
         invoice2_data = {
             "customer_name": "Customer B",
@@ -244,12 +243,12 @@ class TestMultiTenantIntegration:
         )
         assert response2.status_code == 201
         invoice2 = response2.json()
-        
+
         # Verify invoices are different
         assert invoice1["id"] != invoice2["id"]
         # Note: Invoice numbers may be the same across tenants in the current implementation
         # This is acceptable as long as they're unique within each tenant
-        
+
         # Tenant 1 lists invoices - should only see their own
         list1_response = client.get(
             "/api/v1/invoices/",
@@ -260,7 +259,7 @@ class TestMultiTenantIntegration:
         tenant1_ids = [inv["id"] for inv in tenant1_invoices]
         assert invoice1["id"] in tenant1_ids
         assert invoice2["id"] not in tenant1_ids
-        
+
         # Tenant 2 lists invoices - should only see their own
         list2_response = client.get(
             "/api/v1/invoices/",
@@ -271,7 +270,7 @@ class TestMultiTenantIntegration:
         tenant2_ids = [inv["id"] for inv in tenant2_invoices]
         assert invoice2["id"] in tenant2_ids
         assert invoice1["id"] not in tenant2_ids
-        
+
         # Tenant 1 cannot access Tenant 2's invoice
         access_response = client.get(
             f"/api/v1/invoices/{invoice2['id']}",
@@ -299,7 +298,7 @@ class TestMultiTenantIntegration:
                 },
                 headers=headers
             )
-        
+
         # Export for tenant 1
         export1_response = client.get(
             "/api/v1/invoices/export/invoices?format=json",
@@ -307,7 +306,7 @@ class TestMultiTenantIntegration:
         )
         assert export1_response.status_code == 200
         export1_data = export1_response.json()
-        
+
         # Export for tenant 2
         export2_response = client.get(
             "/api/v1/invoices/export/invoices?format=json",
@@ -315,7 +314,7 @@ class TestMultiTenantIntegration:
         )
         assert export2_response.status_code == 200
         export2_data = export2_response.json()
-        
+
         # Verify exports contain different data
         assert export1_data != export2_data
         assert len(export1_data) > 0
@@ -333,7 +332,7 @@ class TestRoleBasedWorkflows:
     ):
         """
         Test invoice workflow with different user roles.
-        
+
         Workflow:
         1. Attendant creates draft invoice
         2. Attendant cannot send invoice (insufficient permissions)
@@ -343,7 +342,7 @@ class TestRoleBasedWorkflows:
         """
         from app.models.user import User, UserRole
         from app.core.security import get_password_hash
-        
+
         # Create users with different roles
         attendant = User(
             email="attendant.workflow@testcompany.com",
@@ -374,26 +373,26 @@ class TestRoleBasedWorkflows:
         )
         db_session.add_all([attendant, manager, owner])
         db_session.commit()
-        
+
         # Get auth tokens
         attendant_token = client.post(
             "/api/v1/auth/login",
             data={"username": attendant.email, "password": "TestPassword123"}
         ).json()["access_token"]
         attendant_headers = {"Authorization": f"Bearer {attendant_token}"}
-        
+
         manager_token = client.post(
             "/api/v1/auth/login",
             data={"username": manager.email, "password": "TestPassword123"}
         ).json()["access_token"]
         manager_headers = {"Authorization": f"Bearer {manager_token}"}
-        
+
         owner_token = client.post(
             "/api/v1/auth/login",
             data={"username": owner.email, "password": "TestPassword123"}
         ).json()["access_token"]
         owner_headers = {"Authorization": f"Bearer {owner_token}"}
-        
+
         # Step 1: Attendant creates draft invoice
         invoice_data = {
             "customer_name": "Customer X",
@@ -408,7 +407,7 @@ class TestRoleBasedWorkflows:
         )
         assert create_response.status_code == 201
         invoice_id = create_response.json()["id"]
-        
+
         # Step 2: Attendant tries to send invoice (should fail)
         send_attempt = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
@@ -416,7 +415,7 @@ class TestRoleBasedWorkflows:
             headers=attendant_headers
         )
         assert send_attempt.status_code == 403
-        
+
         # Step 3: Manager sends invoice (should succeed)
         send_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
@@ -424,14 +423,14 @@ class TestRoleBasedWorkflows:
             headers=manager_headers
         )
         assert send_response.status_code == 200
-        
+
         # Step 4: Manager tries to delete sent invoice (should fail)
         delete_attempt = client.delete(
             f"/api/v1/invoices/{invoice_id}",
             headers=manager_headers
         )
         assert delete_attempt.status_code in [400, 403]  # Either forbidden or bad request
-        
+
         # Step 5: Owner deletes invoice (should succeed if owner has permission)
         # Note: Based on current implementation, only draft invoices can be deleted
         # So we create a new draft invoice for this test
@@ -441,7 +440,7 @@ class TestRoleBasedWorkflows:
             headers=attendant_headers
         )
         draft_id = draft_response.json()["id"]
-        
+
         delete_response = client.delete(
             f"/api/v1/invoices/{draft_id}",
             headers=owner_headers
@@ -461,7 +460,7 @@ class TestBusinessScenarios:
     ):
         """
         Test tracking invoices by branch for performance analysis.
-        
+
         Scenario:
         1. Create invoices for different branches
         2. Filter invoices by branch
@@ -469,7 +468,7 @@ class TestBusinessScenarios:
         """
         branches = ["Branch A", "Branch B", "Branch C"]
         branch_invoices = {branch: [] for branch in branches}
-        
+
         # Create invoices for each branch
         for branch in branches:
             for i in range(3):
@@ -493,7 +492,7 @@ class TestBusinessScenarios:
                 )
                 assert response.status_code == 201
                 branch_invoices[branch].append(response.json())
-        
+
         # Verify we can retrieve and filter invoices
         all_invoices_response = client.get(
             "/api/v1/invoices/",
@@ -501,11 +500,11 @@ class TestBusinessScenarios:
         )
         assert all_invoices_response.status_code == 200
         all_invoices = all_invoices_response.json()
-        
+
         # Verify each branch has invoices
         for branch in branches:
             branch_specific = [
-                inv for inv in all_invoices 
+                inv for inv in all_invoices
                 if inv.get("branch_id") == branch  # Updated to use branch_id
             ]
             assert len(branch_specific) == 3
@@ -517,14 +516,14 @@ class TestBusinessScenarios:
     ):
         """
         Test tracking invoice history for a specific customer.
-        
+
         Scenario:
         1. Create multiple invoices for same customer
         2. Retrieve invoices for that customer
         3. Track customer payment patterns
         """
         customer_email = "repeat.customer@example.com"
-        
+
         # Create multiple invoices for same customer
         invoice_ids = []
         for i in range(3):
@@ -547,7 +546,7 @@ class TestBusinessScenarios:
             )
             assert response.status_code == 201
             invoice_ids.append(response.json()["id"])
-        
+
         # Retrieve all invoices
         all_invoices_response = client.get(
             "/api/v1/invoices/",
@@ -555,14 +554,14 @@ class TestBusinessScenarios:
         )
         assert all_invoices_response.status_code == 200
         all_invoices = all_invoices_response.json()
-        
+
         # Filter by customer email
         customer_invoices = [
-            inv for inv in all_invoices 
+            inv for inv in all_invoices
             if inv["customer_email"] == customer_email
         ]
         assert len(customer_invoices) == 3
-        
+
         # Verify all invoice IDs are present
         customer_invoice_ids = [inv["id"] for inv in customer_invoices]
         for invoice_id in invoice_ids:
@@ -576,7 +575,7 @@ class TestBusinessScenarios:
     ):
         """
         Test exporting invoices with various filters.
-        
+
         Scenario:
         1. Create invoices with different statuses and dates
         2. Export with status filter
@@ -586,7 +585,7 @@ class TestBusinessScenarios:
         # Create invoices with different statuses
         statuses = ["draft", "sent", "paid"]
         invoice_ids_by_status = {status: [] for status in statuses}
-        
+
         # Create draft invoices
         for i in range(2):
             response = client.post(
@@ -600,7 +599,7 @@ class TestBusinessScenarios:
                 headers=auth_headers
             )
             invoice_ids_by_status["draft"].append(response.json()["id"])
-        
+
         # Create and send invoices
         for i in range(2):
             response = client.post(
@@ -621,7 +620,7 @@ class TestBusinessScenarios:
                 headers=manager_auth_headers
             )
             invoice_ids_by_status["sent"].append(invoice_id)
-        
+
         # Export with status filter
         draft_export = client.get(
             "/api/v1/invoices/export/invoices?format=json&status=draft",
@@ -631,7 +630,7 @@ class TestBusinessScenarios:
         draft_data = draft_export.json()
         assert len(draft_data) == 2
         assert all(inv["status"] == "draft" for inv in draft_data)
-        
+
         sent_export = client.get(
             "/api/v1/invoices/export/invoices?format=json&status=sent",
             headers=auth_headers
@@ -652,7 +651,7 @@ class TestDataConsistency:
     ):
         """
         Test that invoice items are properly created and maintained.
-        
+
         Verifies:
         1. Items are created with invoice
         2. Item totals are calculated correctly
@@ -680,7 +679,7 @@ class TestDataConsistency:
                 }
             ]
         }
-        
+
         # Create invoice
         create_response = client.post(
             "/api/v1/invoices/",
@@ -690,24 +689,24 @@ class TestDataConsistency:
         assert create_response.status_code == 201
         invoice = create_response.json()
         invoice_id = invoice["id"]
-        
+
         # Verify items
         assert len(invoice["items"]) == 3
-        
+
         # Verify individual item calculations
         item_a = next(item for item in invoice["items"] if item["description"] == "Product A")
         assert Decimal(item_a["total_price"]) == Decimal("100.00")  # 2 * 50
-        
+
         item_b = next(item for item in invoice["items"] if item["description"] == "Product B")
         assert Decimal(item_b["total_price"]) == Decimal("225.00")  # 3 * 75
-        
+
         item_c = next(item for item in invoice["items"] if item["description"] == "Service C")
         assert Decimal(item_c["total_price"]) == Decimal("200.00")  # 1 * 200
-        
+
         # Verify total amount
         expected_total = Decimal("100.00") + Decimal("225.00") + Decimal("200.00")
         assert Decimal(invoice["total_amount"]) == expected_total
-        
+
         # Retrieve invoice and verify items are still there
         get_response = client.get(
             f"/api/v1/invoices/{invoice_id}",
@@ -738,7 +737,7 @@ class TestDataConsistency:
                 }
             ]
         }
-        
+
         create_response = client.post(
             "/api/v1/invoices/",
             json=invoice_data,
@@ -747,7 +746,7 @@ class TestDataConsistency:
         invoice_id = create_response.json()["id"]
         original_total = create_response.json()["total_amount"]
         assert Decimal(original_total) == Decimal("100.00")
-        
+
         # Update invoice with new items
         update_data = {
             "items": [
@@ -763,7 +762,7 @@ class TestDataConsistency:
                 }
             ]
         }
-        
+
         update_response = client.put(
             f"/api/v1/invoices/{invoice_id}",
             json=update_data,
@@ -771,7 +770,7 @@ class TestDataConsistency:
         )
         assert update_response.status_code == 200
         updated_invoice = update_response.json()
-        
+
         # Verify new total
         expected_total = Decimal("150.00") + Decimal("50.00")  # (2*75) + (1*50)
         assert Decimal(updated_invoice["total_amount"]) == expected_total

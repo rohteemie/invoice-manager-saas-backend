@@ -1,8 +1,6 @@
 """
 Tests for monitoring endpoints (health check and metrics).
 """
-import pytest
-from fastapi.testclient import TestClient
 
 
 def test_health_check(client):

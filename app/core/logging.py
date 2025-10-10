@@ -2,12 +2,10 @@
 Logging configuration and middleware for the application.
 """
 import logging
-import json
 import time
 from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.core.config import settings
 
 # Configure structured logging
 logging.basicConfig(

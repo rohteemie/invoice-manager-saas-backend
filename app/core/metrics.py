@@ -4,7 +4,6 @@ Prometheus metrics configuration.
 from prometheus_client import Counter, Histogram, Gauge, generate_latest
 from prometheus_client import CONTENT_TYPE_LATEST
 from fastapi import Response
-import time
 
 # Define metrics
 http_requests_total = Counter(

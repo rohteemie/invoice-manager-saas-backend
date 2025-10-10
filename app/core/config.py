@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRATION: int = Field(
         60 * 24 * 7,
         validation_alias="REFRESH_TOKEN_EXPIRATION"
-        )
+    )
     DATABASE_URL: str = Field(..., validation_alias="DATABASE_URL")
     REDIS_URL: Optional[str] = Field(
         None,

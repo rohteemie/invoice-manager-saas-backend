@@ -44,15 +44,15 @@ app = FastAPI(
     contact={
         "name": "Rotimi Owolabi",
         "url": "https://github.com/rohteemie/multi-tenant-saas-backend",
-        "email": "contact@rotimiowolabi.dev"
+        "email": "rotimijournal@outlook.com"
     },
     license_info={
         "name": "MIT License",
         "url": "https://opensource.org/licenses/MIT"
     },
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url="/docs",
     redoc_url="/redoc",
+    docs_url="/docs",
     lifespan=lifespan
 )
 

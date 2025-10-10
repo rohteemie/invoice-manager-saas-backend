@@ -1,6 +1,6 @@
 [flake8]
 max-line-length = 88
-exclude = 
+exclude =
     .git,
     __pycache__,
     .venv,
@@ -11,10 +11,11 @@ exclude =
     .tox,
     build,
     dist,
-    *.egg-info
-ignore = 
-    E203,  # whitespace before ':'
-    W503,  # line break before binary operator
-    E501   # line too long (handled by black)
+    *.egg-info,
+    .ENV
+ignore =
+    E203,
+    W503,
+    E501
 per-file-ignores =
     __init__.py:F401

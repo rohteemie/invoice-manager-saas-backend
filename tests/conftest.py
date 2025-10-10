@@ -2,7 +2,6 @@
 Test configuration and fixtures.
 Provides database setup, test client, and common fixtures for all tests.
 """
-import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine

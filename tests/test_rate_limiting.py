@@ -1,8 +1,6 @@
 """
 Tests for rate limiting functionality.
 """
-import pytest
-from fastapi.testclient import TestClient
 from app.core.rate_limit import limiter
 
 

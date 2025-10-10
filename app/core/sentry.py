@@ -34,6 +34,8 @@ def init_sentry():
 def filter_transactions(event, hint):
     """Filter out health checks and metrics from Sentry."""
     # Don't send health check or metrics requests
-    if event.get("request", {}).get("url", "").endswith(("/health", "/metrics")):
+    if event.get("request", {}).get("url", "").endswith(
+        ("/health", "/metrics")
+    ):
         return None
     return event
