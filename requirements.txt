@@ -21,4 +21,3 @@ celery==5.3.4
 sentry-sdk[fastapi]==1.39.1
 prometheus-client==0.19.0
 slowapi==0.1.9
-black==23.12.1

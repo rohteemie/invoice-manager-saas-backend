@@ -56,6 +56,8 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
         },
         headers={
             "Retry-After": str(exc.detail.split("Retry in ")[1].split(" ")[0])
-            if "Retry in" in exc.detail else str(settings.RATE_LIMIT_RETRY_AFTER_FALLBACK)
+            if "Retry in" in exc.detail else str(
+                settings.RATE_LIMIT_RETRY_AFTER_FALLBACK
+            )
         }
     )
