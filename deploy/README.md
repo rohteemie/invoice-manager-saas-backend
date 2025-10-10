@@ -154,7 +154,7 @@ sudo journalctl -u multi-tenant-saas -f
 
 # Application logs
 tail -f /var/log/multi-tenant-saas/access.log
-trace -f /var/log/multi-tenant-saas/error.log
+tail -f /var/log/multi-tenant-saas/error.log
 ```
 
 ### Restart Services
