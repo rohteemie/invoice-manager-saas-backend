@@ -212,3 +212,7 @@ init.sql
 # Database files
 *.db
 test.db
+
+# Deployment files
+server_connect.sh
+deploy.env
