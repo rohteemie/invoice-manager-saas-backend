@@ -79,7 +79,6 @@ pip install -r requirements.txt
 
 # Run database migrations
 echo "Running database migrations..."
-source $VENV_DIR/bin/activate
 alembic upgrade head
 
 # Create systemd service
