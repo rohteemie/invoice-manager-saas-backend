@@ -194,7 +194,8 @@ def test_register_tenant_with_owner(client):
             "domain": "food and drink",
             "owner": {
                 "full_name": "John Doe",
-                "email": "john@cocacola.com"
+                "email": "john@cocacola.com",
+                "password": "TestPassword123!"
             }
         }
     )
