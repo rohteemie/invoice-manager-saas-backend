@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         "development",
         validation_alias="ENVIRONMENT"
     )
+    RATE_LIMIT_RETRY_AFTER_FALLBACK: str = Field(
+        "60",
+        validation_alias="RATE_LIMIT_RETRY_AFTER_FALLBACK"
+    )
     API_V1_STR: str = "/api/v1"
 
     model_config = {
