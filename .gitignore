@@ -209,6 +209,10 @@ development_document.txt
 init.sql
 .ENV
 
+# Deployment configuration (contains sensitive server info)
+deploy/deploy.env
+server_connect.sh
+
 # Database files
 *.db
 test.db
