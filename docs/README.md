@@ -6,47 +6,6 @@ This directory contains comprehensive documentation for the Multi-Tenant SaaS Ba
 
 ## Directory Structure
 
-## Deployment Documentation
-
-Production deployment is now standardized and automated:
-
-- Primary guide: see `deploy/README.md` for end-to-end steps
-- One-command deploy: `./deploy/deploy.sh` (after configuring `deploy/deploy.env`)
-- Production service: `deploy/multi-tenant-saas.service` (systemd)
-- Reverse proxy: `deploy/nginx.conf` (security headers + rate limiting)
-- Health check utilities: `deploy/health_check.sh`
-
-This work aligns with Sprint 4 (Deployment Infrastructure) and introduces no API or DB breaking changes.
-
-## Changelog (latest)
-
-Date: 2025-10-10
-
-Summary of changes in this iteration:
-
-- Added production deployment infrastructure under `deploy/`:
-        - `deploy.sh` for automated rsync + setup + service start
-        - `server_setup.sh` for Python 3.11, venv, requirements, Alembic migrations, Nginx, systemd
-        - `multi-tenant-saas.service` systemd unit for Uvicorn
-        - `nginx.conf` with security headers, gzip, and basic rate limiting
-        - `health_check.sh` for service and HTTP health probes
-        - `deploy.env.template` with environment-driven configuration
-- Hardened secrets handling: no hard-coded IPs or credentials; added `deploy/deploy.env` to `.gitignore`
-- Improved `server_connect.sh`: safe `.env` transfer with overwrite prompt, connection checks, resilient updates
-- Documentation updates: this README “Deployment Documentation” and “Changelog” sections; `deploy/README.md` expanded
-
-Breaking changes: None
-
-Issues addressed:
-
-- Lack of production deployment automation and guidance
-- Risk of committing sensitive deployment details
-- Inconsistent server bootstrap and service management
-
-Roadmap mapping:
-
-- Sprint 4: Production Deployment Infrastructure – completed core automation, service management, and reverse proxy setup
-
 ```bash
 docs/
 ├── API_STRUCTURE.md            # Visual API structure and endpoint overview
@@ -54,9 +13,6 @@ docs/
 ├── product_requirement.md      # Product Requirements Document (PRD)
 ├── srs_technical_design.md     # System Requirements Document (SRD)
 ├── sprint_1.2_summary.md       # Sprint 1.2 implementation summary
-├── sprint_2_summary.md         # Sprint 2 implementation summary
-├── sprint_3_summary.md         # Sprint 3 implementation summary
-├── sprint_4_summary.md         # Sprint 4 deployment infrastructure summary
 ├── activity_diagram.png        # Invoice workflow activity diagram
 ├── api_sequence_diagram.png    # API request/response sequence
 ├── erd_diagram.png             # Entity Relationship Diagram
@@ -204,78 +160,6 @@ docs/
 - GDPR compliance (soft deletes)
 
 **Audience:** Project managers, developers, stakeholders
-
----
-
-#### Sprint 2 Summary (`sprint_2_summary.md`)
-
-**Purpose:** Implementation summary for Tenant Management + Invoice System sprint.
-
-**Key Sections:**
-
-- Tenant management system implementation
-- Complete invoice lifecycle management
-- Role-based access control (4 roles)
-- Invoice status workflow
-- Testing coverage and validation
-
-**Highlights:**
-
-- Multi-tenant architecture
-- Invoice CRUD operations
-- Status-based workflow (Draft → Sent → Paid/Overdue)
-- 109 comprehensive tests
-- Role-based permissions
-
-**Audience:** Project managers, developers, stakeholders
-
----
-
-#### Sprint 3 Summary (`sprint_3_summary.md`)
-
-**Purpose:** Implementation summary for Analytics & Reporting + Background Tasks sprint.
-
-**Key Sections:**
-
-- Analytics endpoints with tenant isolation
-- Redis caching for performance (64% improvement)
-- Celery background workers
-- Performance benchmarks
-- Cache invalidation strategies
-
-**Highlights:**
-
-- Invoice analytics with aggregations
-- Redis caching system
-- Automated overdue invoice processing
-- 130 total tests passing
-- Sub-100ms analytics response times
-
-**Audience:** Project managers, developers, stakeholders
-
----
-
-#### Sprint 4 Summary (`sprint_4_summary.md`)
-
-**Purpose:** Implementation summary for Production Deployment Infrastructure sprint.
-
-**Key Sections:**
-
-- Automated deployment system
-- Production-ready configurations
-- Security hardening
-- Health monitoring
-- Comprehensive documentation
-
-**Highlights:**
-
-- One-command deployment (`./deploy/deploy.sh`)
-- SystemD service with 4 Uvicorn workers
-- Nginx reverse proxy with security headers
-- Configuration management system
-- Complete deployment documentation
-
-**Audience:** DevOps engineers, system administrators, developers
 
 ---
 
