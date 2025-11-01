@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
-from typing import Optional
+from typing import Optional, List
 
 
 class Settings(BaseSettings):
@@ -32,6 +32,10 @@ class Settings(BaseSettings):
         validation_alias="RATE_LIMIT_RETRY_AFTER_FALLBACK"
     )
     API_V1_STR: str = "/api/v1"
+    CORS_ORIGINS: List[str] = Field(
+        ["*"],
+        validation_alias="CORS_ORIGINS"
+    )
 
     model_config = {
         "env_file": ".env",
