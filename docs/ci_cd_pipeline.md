@@ -45,6 +45,7 @@ The pipeline runs on:
 - Cache pip dependencies
 - Install project dependencies
 - Create `.env` file with test configuration
+- **Run Alembic migrations** (upgrade to head)
 - Run Alembic migrations check
 - Execute pytest test suite (138+ tests)
 
@@ -54,7 +55,7 @@ The pipeline runs on:
 - `SECRET_KEY`: Test JWT secret
 - `PROJECT_NAME`: Application name
 
-**Exit Criteria**: All tests must pass
+**Exit Criteria**: All tests must pass, including successful migration execution
 
 ### 3. Docker Build & Push
 
@@ -78,6 +79,28 @@ The pipeline runs on:
 
 **Registry**: `ghcr.io/<username>/multi-tenant-saas-backend`
 
+### 4. Deploy (Example)
+
+**Purpose**: Demonstrate automated deployment with database migrations
+
+**Conditions**:
+- Only runs after build stage passes
+- Only on push to `main` branch
+- Configured as example (commented out sensitive parts)
+
+**Steps**:
+- Set up Python 3.11
+- Install Alembic and dependencies
+- **Run database migrations** on production database
+- Deploy application (example placeholder)
+
+**Environment Variables**:
+- `DATABASE_URL`: Production database connection (from secrets)
+
+**Security Note**: Actual deployment requires configuring `DATABASE_URL` secret in repository settings.
+
+**Exit Criteria**: Migrations must complete successfully before deployment proceeds
+
 ## Configuration Files
 
 ### .flake8
@@ -98,9 +121,10 @@ Editor configuration for consistent formatting:
 
 ### Dockerfile
 
-Multi-stage Docker build:
-- Builder stage: Install dependencies
+Multi-stage Docker build with migration support:
+- Builder stage: Install dependencies (including Alembic)
 - Final stage: Minimal runtime image
+- **Entrypoint script**: Runs migrations before app starts
 - Health check: `/health` endpoint
 - Port: 8000
 
@@ -111,7 +135,12 @@ Multi-stage Docker build:
 For Docker push (automatically available):
 - `GITHUB_TOKEN`: Automatically provided by GitHub Actions
 
-### Future Deployment Secrets (Optional)
+### For Production Deployment (Required)
+
+To enable automated migrations and deployment:
+- `DATABASE_URL`: Production database connection string (e.g., `postgresql://user:pass@host:5432/dbname`)
+
+### Optional Deployment Secrets
 
 If deploying to cloud platforms:
 - `DOCKERHUB_TOKEN`: Docker Hub authentication
@@ -234,6 +263,8 @@ Enable debug logging in workflow:
 - [ ] Automatic changelog generation
 - [ ] Slack/Discord notifications
 - [ ] Blue-green deployment strategy
+- [x] **Automated database migrations in CI/CD** ✅
+- [x] **Docker entrypoint with migration support** ✅
 
 ## Monitoring
 
@@ -269,6 +300,6 @@ Set up GitHub Actions notifications for:
 
 ---
 
-**Last Updated**: Phase 4 - Sprint 4.1  
-**Pipeline Version**: 1.0.0  
-**Status**: ✅ Active
+**Last Updated**: Phase 4 - Sprint 4.9  
+**Pipeline Version**: 2.0.0  
+**Status**: ✅ Active with Automated Migrations

@@ -10,6 +10,9 @@ This directory contains comprehensive documentation for the Multi-Tenant SaaS Ba
 docs/
 ├── API_STRUCTURE.md            # Visual API structure and endpoint overview
 ├── authentication.md           # User authentication & authorization guide
+├── alembic_setup.md            # Database migration setup guide
+├── ci_cd_pipeline.md           # CI/CD pipeline documentation
+├── deployment.md               # Deployment guide with migration automation
 ├── product_requirement.md      # Product Requirements Document (PRD)
 ├── srs_technical_design.md     # System Requirements Document (SRD)
 ├── sprint_1.2_summary.md       # Sprint 1.2 implementation summary
@@ -102,6 +105,66 @@ docs/
 - Testing checklist
 
 **Audience:** Developers, API consumers, testers
+
+---
+
+#### Database Migration Guide (`alembic_setup.md`)
+
+**Purpose:** Setup and usage guide for Alembic database migrations.
+
+**Key Sections:**
+
+- Initial setup
+- Creating new migrations
+- Applying migrations
+- Rolling back migrations
+- Best practices
+- Environment configuration
+
+**Audience:** Developers, DevOps engineers
+
+---
+
+#### CI/CD Pipeline Documentation (`ci_cd_pipeline.md`)
+
+**Purpose:** Continuous Integration and Deployment pipeline documentation.
+
+**Key Sections:**
+
+- Pipeline architecture
+- Workflow stages (lint, test, build, deploy)
+- GitHub Actions configuration
+- Migration automation
+- Docker build process
+- Environment variables and secrets
+
+**Audience:** DevOps engineers, developers
+
+---
+
+#### Deployment Guide (`deployment.md`)
+
+**Purpose:** Comprehensive deployment guide with automated migrations.
+
+**Key Sections:**
+
+- Migration automation in CI/CD
+- Docker deployment with entrypoint
+- Manual server deployment
+- Environment configuration
+- Troubleshooting guide
+- Best practices and checklists
+
+**Contents:**
+
+- GitHub Actions workflow examples
+- Docker entrypoint script usage
+- Server setup procedures
+- Database URL configuration
+- Migration rollback procedures
+- Production deployment checklist
+
+**Audience:** DevOps engineers, system administrators, developers
 
 ---
 
@@ -253,8 +316,10 @@ docs/
 
 1. Read [README.md](../README.md) for project overview
 2. Review [srs_technical_design.md](srs_technical_design.md) for architecture
-3. Study [API_STRUCTURE.md](API_STRUCTURE.md) for endpoint details
-4. Check [authentication.md](authentication.md) for auth implementation
+3. Check [deployment.md](deployment.md) for deployment setup
+4. Study [alembic_setup.md](alembic_setup.md) for database migrations
+5. Review [API_STRUCTURE.md](API_STRUCTURE.md) for endpoint details
+6. Check [authentication.md](authentication.md) for auth implementation
 
 **Development Workflow:**
 
@@ -461,8 +526,9 @@ Live API documentation:
 
 **Technical:**
 
-- Database migration guide (when Alembic is added)
-- Deployment guide (Docker, Kubernetes)
+- ~~Database migration guide (when Alembic is added)~~ ✅ Completed: `alembic_setup.md`
+- ~~Deployment guide (Docker, Kubernetes)~~ ✅ Completed: `deployment.md`
+- ~~CI/CD documentation~~ ✅ Completed: `ci_cd_pipeline.md`
 - Performance tuning guide
 - Monitoring and logging guide
 
