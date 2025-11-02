@@ -201,7 +201,7 @@ def verify_email(
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already verified"
+            detail="Email is already verified. You can now log in to your account."
         )
     
     # Mark user as verified and clear token
