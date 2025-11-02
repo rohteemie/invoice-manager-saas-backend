@@ -36,6 +36,11 @@ class Settings(BaseSettings):
         ["*"],
         validation_alias="CORS_ORIGINS"
     )
+    # Email configuration
+    EMAIL_VERIFICATION_BASE_URL: Optional[str] = Field(
+        "https://yourapp.com",
+        validation_alias="EMAIL_VERIFICATION_BASE_URL"
+    )
 
     model_config = {
         "env_file": ".env",

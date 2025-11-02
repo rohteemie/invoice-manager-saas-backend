@@ -9,7 +9,9 @@ from app.models.user import User as UserModel, UserRole
 from app.schemas.tenant import (
     Tenant, TenantCreate, TenantUpdate, TenantRegister, TenantWithOwner
 )
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, generate_verification_token
+from app.core.email import send_verification_email
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -91,6 +93,9 @@ def register_tenant_with_owner(
         db.add(db_tenant)
         db.flush()  # Flush to get tenant.id without committing
 
+        # Generate verification token
+        verification_token = generate_verification_token()
+
         # Create owner user
         hashed_password = get_password_hash(tenant_register.owner.password)
         db_owner = UserModel(
@@ -100,7 +105,8 @@ def register_tenant_with_owner(
             role=UserRole.OWNER,
             tenant_id=db_tenant.id,
             is_active=True,
-            is_verified=False
+            is_verified=False,
+            verification_token=verification_token
         )
         db.add(db_owner)
 
@@ -108,6 +114,14 @@ def register_tenant_with_owner(
         db.commit()
         db.refresh(db_tenant)
         db.refresh(db_owner)
+
+        # Send verification email
+        send_verification_email(
+            email=db_owner.email,
+            token=verification_token,
+            full_name=db_owner.full_name,
+            base_url=settings.EMAIL_VERIFICATION_BASE_URL
+        )
 
         # Return combined response
         return {
