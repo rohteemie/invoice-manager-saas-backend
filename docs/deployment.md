@@ -49,6 +49,8 @@ The CI/CD pipeline (`.github/workflows/backend.yml`) now includes automatic migr
 
 This ensures migrations are tested against the test database before deployment.
 
+> **Note**: The test stage uses SQLite for fast testing. For production-grade CI testing, consider using PostgreSQL service containers to catch database-specific migration issues. See the PostgreSQL service already configured in the test job for reference.
+
 #### Deploy Stage (Example)
 
 ```yaml
@@ -70,6 +72,16 @@ Configure these secrets in your repository settings (`Settings > Secrets and var
 | `DATABASE_URL` | Production database connection string | `postgresql://user:pass@host:5432/dbname` |
 | `REDIS_URL` | Redis connection string (optional) | `redis://host:6379/0` |
 | `SECRET_KEY` | JWT secret key for production | (generate with `openssl rand -hex 32`) |
+
+### Required GitHub Variables
+
+To enable the deployment job, configure this variable (`Settings > Secrets and variables > Actions > Variables`):
+
+| Variable Name | Description | Value |
+|--------------|-------------|-------|
+| `DEPLOYMENT_ENABLED` | Enable automated deployment job | `true` |
+
+> **Note**: The deploy job in the workflow is configured as an example. Set `DEPLOYMENT_ENABLED` to `true` only when you're ready to enable automated production deployments.
 
 ### Viewing Migration Logs
 

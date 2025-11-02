@@ -2,7 +2,8 @@
 # Docker entrypoint script for Multi-Tenant SaaS Backend
 # This script runs database migrations before starting the application
 
-set -e
+set -e  # Exit on error
+set -u  # Exit on undefined variable
 
 echo "🚀 Starting Multi-Tenant SaaS Backend..."
 

@@ -169,7 +169,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     # This is an example deploy job showing how to run migrations
-    # Only runs on main branch AND if DATABASE_URL secret is configured
+    # Only runs on main branch AND if DEPLOYMENT_ENABLED variable is set to 'true'
+    # To enable: Go to Settings > Variables > New repository variable
+    # Name: DEPLOYMENT_ENABLED, Value: true
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOYMENT_ENABLED == 'true'
 
     steps:
@@ -192,8 +194,9 @@ jobs:
           echo "✅ Migrations completed successfully"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        # Note: Set DEPLOYMENT_ENABLED variable to 'true' in repository settings
-        # and configure DATABASE_URL secret for actual deployment
+        # Note: Configure these in repository settings:
+        # 1. Variables > DEPLOYMENT_ENABLED = 'true' (to enable this job)
+        # 2. Secrets > DATABASE_URL = your production database URL
 
       # - name: Deploy to production
       #   run: |
