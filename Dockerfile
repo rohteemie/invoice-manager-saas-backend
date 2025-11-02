@@ -29,15 +29,15 @@ RUN apt-get update && apt-get install -y \
 # Copy Python packages from builder
 COPY --from=builder /root/.local /root/.local
 
+# Copy entrypoint script first (before application code)
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Copy application code
 COPY . .
 
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
-
-# Copy and make entrypoint script executable
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
 
 # Expose port
 EXPOSE 8000
