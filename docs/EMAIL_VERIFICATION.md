@@ -1,8 +1,31 @@
 # Email Verification Feature
 
+## 🔔 Latest Updates
+
+**Version 2.0 - Enhanced Features:**
+- ✅ **Token Expiration**: Tokens now expire after 24 hours (configurable)
+- ✅ **Resend Email**: New endpoint to resend verification emails
+- ✅ **HTML Emails**: Beautiful, responsive HTML email templates
+- ✅ **Better Error Messages**: User-friendly error messages for all scenarios
+- ✅ **Comprehensive Tests**: 11 tests covering all features and edge cases
+
+**Frontend Developers:** See [FRONTEND_EMAIL_VERIFICATION.md](FRONTEND_EMAIL_VERIFICATION.md) for complete integration guide with examples.
+
+---
+
 ## Overview
 
 The email verification feature ensures that new tenant owners verify their email address upon registration. This improves security, prevents fake signups, and ensures that only verified owners can access their tenant dashboard.
+
+## Key Features
+
+1. **Secure Token Generation**: Cryptographically secure, URL-safe tokens
+2. **Token Expiration**: Configurable expiration time (default 24 hours)
+3. **Single-Use Tokens**: Tokens are deleted after successful verification
+4. **HTML Email Templates**: Professional, responsive email design
+5. **Resend Functionality**: Users can request new verification emails
+6. **Rate Limiting**: Protection against abuse
+7. **Frontend-Friendly**: Clear API responses and error messages
 
 ## Implementation Details
 
@@ -10,22 +33,24 @@ The email verification feature ensures that new tenant owners verify their email
 
 **User Model** (`app/models/user.py`):
 - Added `verification_token` field (String, nullable, indexed) to store the unique verification token
+- Added `verification_token_expires_at` field (DateTime, nullable) to track token expiration
 
-**Migration**: `migrations/versions/add_verification_token.py`
-- Adds the `verification_token` column to the `users` table
-- Creates an index on `verification_token` for efficient lookups
+**Migrations**:
+- `migrations/versions/add_verification_token.py` - Adds verification_token column
+- `migrations/versions/add_token_expiration.py` - Adds verification_token_expires_at column
 
 ### Backend Components
 
 #### 1. Token Generation (`app/core/security.py`)
 
 ```python
-def generate_verification_token() -> str:
-    """Generate a secure random token for email verification."""
+def generate_verification_token() -> tuple[str, datetime]:
+    """Generate a secure random token for email verification with expiration."""
 ```
 
 - Uses `secrets.token_urlsafe(32)` to generate cryptographically secure tokens
-- Returns a URL-safe string suitable for email links
+- Returns a tuple of (token, expiration_datetime)
+- Expiration time is configurable via `EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS`
 
 #### 2. Email Service (`app/core/email.py`)
 
@@ -38,21 +63,23 @@ def send_verification_email(
 ) -> bool:
 ```
 
-- Sends verification email to the new owner
-- Currently logs the email content (placeholder for actual email service integration)
-- In production, integrate with services like SendGrid, AWS SES, or similar
+- Sends verification email using SendGrid API v3
+- Includes both plain text and HTML versions
+- HTML template is professionally styled and responsive
+- Links expire in 24 hours (configurable)
+- Uses httpx for HTTP requests (no heavy SDK dependency)
 
 #### 3. Configuration (`app/core/config.py`)
 
-Added `EMAIL_VERIFICATION_BASE_URL` setting:
+Added email verification settings:
 ```python
-EMAIL_VERIFICATION_BASE_URL: Optional[str] = Field(
-    "https://yourapp.com",
-    validation_alias="EMAIL_VERIFICATION_BASE_URL"
-)
+EMAIL_VERIFICATION_BASE_URL: Optional[str] = "https://yourapp.com"
+SENDGRID_API_KEY: Optional[str] = None
+EMAILS_FROM: Optional[str] = None
+EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS: int = 24
 ```
 
-Set via environment variable to configure the base URL for verification links.
+Set via environment variables to configure the email service.
 
 ### API Endpoints
 
@@ -97,15 +124,53 @@ POST /api/v1/auth/verify-email?token={verification_token}
 ```
 
 **Error Responses**:
-- `400 Bad Request`: Invalid or expired token
+- `400 Bad Request`: Invalid token
+- `400 Bad Request`: Token expired (prompt user to request new one)
 - `400 Bad Request`: Email already verified
 
 **Behavior**:
 1. Looks up user by verification token
 2. Validates token exists and user not already verified
-3. Sets `user.is_verified = True`
-4. Clears `user.verification_token` (sets to `None`)
-5. Returns success message
+3. Checks if token has expired
+4. Sets `user.is_verified = True`
+5. Clears `user.verification_token` and `user.verification_token_expires_at`
+6. Returns success message
+
+#### 3. Resend Verification Email (`POST /api/v1/auth/resend-verification-email`)
+
+**New endpoint** for requesting a new verification email.
+
+**Request**:
+```http
+POST /api/v1/auth/resend-verification-email
+Content-Type: application/json
+
+{
+  "email": "owner@example.com"
+}
+```
+
+**Success Response** (200):
+```json
+{
+  "message": "Verification email has been resent. Please check your inbox.",
+  "email": "owner@example.com"
+}
+```
+
+**Error Responses**:
+- `400 Bad Request`: Email already verified
+- `429 Too Many Requests`: Rate limit exceeded (3 per hour)
+
+**Behavior**:
+1. Finds user by email
+2. Checks if user is already verified
+3. Generates new verification token with expiration
+4. Updates user record with new token
+5. Sends new verification email
+6. Returns success message
+
+**Security**: Doesn't reveal whether email exists in the system for non-existent emails.
 
 ## Usage Flow
 
@@ -201,14 +266,29 @@ pytest tests/ -v
 
 ### Test Coverage
 
-The implementation includes 6 comprehensive tests:
+The implementation includes 11 comprehensive tests covering all features:
 
+**Core Functionality:**
 1. **test_register_tenant_generates_verification_token**: Verifies token generation on registration
 2. **test_verify_email_with_valid_token**: Tests successful email verification
 3. **test_verify_email_with_invalid_token**: Tests error handling for invalid tokens
 4. **test_verify_email_already_verified**: Tests preventing duplicate verification
 5. **test_verification_token_is_unique**: Ensures each user gets a unique token
 6. **test_owner_can_login_before_verification**: Confirms login works before verification
+
+**Token Expiration:**
+7. **test_token_has_expiration**: Verifies tokens have expiration timestamps
+8. **test_verify_email_with_expired_token**: Tests rejection of expired tokens
+
+**Resend Functionality:**
+9. **test_resend_verification_email**: Tests resending verification email
+10. **test_resend_for_verified_user_fails**: Tests that verified users can't resend
+11. **test_resend_for_nonexistent_email**: Tests security of resend endpoint
+
+**Test Results:**
+```
+======================== 11 passed, 30 warnings in 3.32s ========================
+```
 
 ## Configuration
 
@@ -219,11 +299,17 @@ Add to `.env` file:
 ```env
 # Email Verification Configuration
 EMAIL_VERIFICATION_BASE_URL=https://yourapp.com
+SENDGRID_API_KEY=your-sendgrid-api-key
+EMAILS_FROM=noreply@yourapp.com
+EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS=24
 ```
 
 For development/testing:
 ```env
-EMAIL_VERIFICATION_BASE_URL=http://localhost:3000
+EMAIL_VERIFICATION_BASE_URL=http://localhost:5173
+SENDGRID_API_KEY=test-key
+EMAILS_FROM=test@example.com
+EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS=24
 ```
 
 ## Security Considerations
@@ -231,25 +317,48 @@ EMAIL_VERIFICATION_BASE_URL=http://localhost:3000
 1. **Token Security**:
    - Uses `secrets.token_urlsafe()` for cryptographically secure tokens
    - Tokens are URL-safe and sufficiently long (32 bytes = 43 characters)
+   - Each token is unique per user
 
 2. **Token Storage**:
    - Tokens are indexed for efficient lookup
    - Tokens are cleared after successful verification
+   - Expiration timestamps prevent indefinite token validity
 
 3. **Token Validation**:
    - Validates token exists in database
    - Checks user is not already verified
+   - Verifies token has not expired
    - Prevents token reuse
 
 4. **Rate Limiting**:
-   - Verification endpoint is rate-limited (10/minute)
-   - Prevents brute-force token guessing
+   - Verification endpoint: 10 requests/minute
+   - Resend endpoint: 3 requests/hour
+   - Prevents brute-force token guessing and spam
 
-## Future Enhancements
+5. **Email Privacy**:
+   - Resend endpoint doesn't reveal whether email exists
+   - Non-existent emails receive generic success message
+   - Prevents user enumeration attacks
 
-### 1. Email Service Integration
+6. **Token Expiration**:
+   - Tokens expire after 24 hours (configurable)
+   - Expired tokens cannot be used for verification
+   - Reduces attack window for compromised tokens
 
-Replace the logging placeholder with actual email sending:
+## Frontend Integration
+
+**Frontend developers should refer to [FRONTEND_EMAIL_VERIFICATION.md](FRONTEND_EMAIL_VERIFICATION.md) for:**
+- Complete API documentation with examples
+- TypeScript/React implementation examples
+- Error handling best practices
+- UI/UX recommendations
+- Testing guidance
+
+## Production Deployment
+
+### SendGrid Integration
+
+The email service is production-ready and uses SendGrid API v3:
 
 ```python
 # Example: SendGrid integration
