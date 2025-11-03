@@ -210,13 +210,13 @@ Before deploying to production:
 
 ## Documentation Links
 
-- [Full Documentation](../docs/email_verification.md)
+- [Full Documentation](email_verification.md)
 - [API Documentation](http://localhost:8000/docs)
 - [Test Suite](../tests/test_email_verification.py)
 
 ## Need Help?
 
-- Check the [full documentation](../docs/email_verification.md)
+- Check the [full documentation](email_verification.md)
 - View API docs at `/docs` or `/redoc`
 - Run the test suite for examples
 - Check server logs for detailed error messages

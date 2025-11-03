@@ -2,6 +2,9 @@
 Test suite for Email Verification functionality.
 Tests email verification token generation, verification, and edge cases.
 """
+from datetime import datetime, timedelta
+from jose import jwt
+from app.core.config import settings
 from app.core.security import create_email_verification_token, verify_email_verification_token
 
 
@@ -95,10 +98,6 @@ def test_verify_email_invalid_token(client):
 def test_verify_email_expired_token(client):
     """Test email verification with expired token."""
     # Create a token with a past expiration time
-    from datetime import datetime, timedelta
-    from jose import jwt
-    from app.core.config import settings
-
     expire = datetime.utcnow() - timedelta(hours=1)  # Expired 1 hour ago
     to_encode = {
         "sub": "test@example.com",
@@ -120,10 +119,6 @@ def test_verify_email_expired_token(client):
 
 def test_verify_email_wrong_token_type(client):
     """Test email verification with wrong token type."""
-    from datetime import datetime, timedelta
-    from jose import jwt
-    from app.core.config import settings
-
     expire = datetime.utcnow() + timedelta(hours=1)
     to_encode = {
         "sub": "test@example.com",
