@@ -4,6 +4,7 @@ Implements secure authentication following OWASP best practices.
 """
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+import secrets
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from app.core.config import settings
@@ -118,3 +119,13 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except JWTError:
         return None
+
+
+def generate_verification_token() -> str:
+    """
+    Generate a secure random token for email verification.
+    
+    Returns:
+        A URL-safe random token string
+    """
+    return secrets.token_urlsafe(32)

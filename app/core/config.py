@@ -36,6 +36,20 @@ class Settings(BaseSettings):
         ["*"],
         validation_alias="CORS_ORIGINS"
     )
+    # Email configuration
+    EMAIL_VERIFICATION_BASE_URL: Optional[str] = Field(
+        "https://yourapp.com",
+        validation_alias="EMAIL_VERIFICATION_BASE_URL"
+    )
+    # SendGrid / Email settings
+    SENDGRID_API_KEY: Optional[str] = Field(
+        None,
+        validation_alias="SENDGRID_API_KEY"
+    )
+    EMAILS_FROM: Optional[str] = Field(
+        None,
+        validation_alias="EMAILS_FROM"
+    )
 
     model_config = {
         "env_file": ".env",

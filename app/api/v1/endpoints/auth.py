@@ -164,3 +164,54 @@ def refresh_token(
         "refresh_token": new_refresh_token,
         "token_type": "bearer"
     }
+
+
+@router.post("/verify-email")
+@limiter.limit("10/minute")
+def verify_email(
+    request: Request,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify user email with verification token.
+    
+    - Validates the verification token
+    - Marks user as verified
+    - Clears the verification token
+    
+    Args:
+        token: The verification token sent via email
+    
+    Returns:
+        Success message with user details
+    """
+    # Find user by verification token
+    user = db.query(UserModel).filter(
+        UserModel.verification_token == token
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token"
+        )
+    
+    # Check if user is already verified
+    if user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already verified. You can now log in to your account."
+        )
+    
+    # Mark user as verified and clear token
+    user.is_verified = True
+    user.verification_token = None
+    db.commit()
+    db.refresh(user)
+    
+    return {
+        "message": "Email verified successfully",
+        "email": user.email,
+        "is_verified": user.is_verified
+    }
