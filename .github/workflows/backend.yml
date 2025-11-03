@@ -108,6 +108,9 @@ jobs:
           REFRESH_TOKEN_EXPIRATION=10080
           DATABASE_URL=sqlite:///./test.db
           REDIS_URL=redis://localhost:6379/0
+          SENDGRID_API_KEY=test_sendgrid_key_for_ci
+          EMAILS_FROM=noreply@example.com
+          EMAIL_VERIFICATION_BASE_URL=https://example.com
           EOF
 
       - name: Run Alembic migrations

@@ -124,7 +124,7 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
 def generate_verification_token() -> str:
     """
     Generate a secure random token for email verification.
-    
+
     Returns:
         A URL-safe random token string
     """

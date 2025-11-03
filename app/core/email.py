@@ -3,9 +3,6 @@ Email service for sending verification and notification emails.
 """
 import logging
 from typing import Optional
-import logging
-import json
-from typing import Optional
 
 import httpx
 
@@ -49,11 +46,16 @@ def send_verification_email(
     sender = settings.EMAILS_FROM
 
     if not sg_api_key or not sender:
-        logger.warning("SendGrid not configured (missing SENDGRID_API_KEY or EMAILS_FROM). Email not sent.")
+        logger.warning(
+            "SendGrid not configured "
+            "(missing SENDGRID_API_KEY or EMAILS_FROM). Email not sent."
+        )
         return False
 
     if base_url is None:
-        base_url = settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+        base_url = (
+            settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+        )
 
     verification_link = f"{base_url.rstrip('/')}/verify-email?token={token}"
 
@@ -70,7 +72,8 @@ def send_verification_email(
                 "type": "text/plain",
                 "value": (
                     f"Hello {full_name},\n\n"
-                    "Thank you for registering! Please verify your email by clicking the link below:\n\n"
+                    "Thank you for registering! "
+                    "Please verify your email by clicking the link below:\n\n"
                     f"{verification_link}\n\n"
                     "If you didn't register, please ignore this email.\n"
                 ),
@@ -104,5 +107,10 @@ def send_verification_email(
         return False
 
     except httpx.RequestError as exc:
-        logger.error("Error sending verification email to %s: %s", email, str(exc), exc_info=True)
+        logger.error(
+            "Error sending verification email to %s: %s",
+            email,
+            str(exc),
+            exc_info=True
+        )
         return False

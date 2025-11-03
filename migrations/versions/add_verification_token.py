@@ -17,12 +17,44 @@ depends_on = None
 
 
 def upgrade():
-    # Add verification_token column to users table
-    op.add_column('users', sa.Column('verification_token', sa.String(length=255), nullable=True))
-    op.create_index(op.f('ix_users_verification_token'), 'users', ['verification_token'], unique=False)
+    # Add verification_token column to users table if it doesn't exist
+    # This handles cases where the table was created with the new model
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
+    # Check if users table exists
+    if 'users' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('users')]
+
+        if 'verification_token' not in columns:
+            op.add_column(
+                'users',
+                sa.Column(
+                    'verification_token',
+                    sa.String(length=255),
+                    nullable=True
+                )
+            )
+            op.create_index(
+                op.f('ix_users_verification_token'),
+                'users',
+                ['verification_token'],
+                unique=False
+            )
 
 
 def downgrade():
     # Remove verification_token column and index
-    op.drop_index(op.f('ix_users_verification_token'), table_name='users')
-    op.drop_column('users', 'verification_token')
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
+    # Check if users table exists
+    if 'users' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('users')]
+
+        if 'verification_token' in columns:
+            op.drop_index(
+                op.f('ix_users_verification_token'),
+                table_name='users'
+            )
+            op.drop_column('users', 'verification_token')
