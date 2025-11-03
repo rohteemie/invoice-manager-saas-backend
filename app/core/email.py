@@ -3,9 +3,6 @@ Email service for sending verification and notification emails.
 """
 import logging
 from typing import Optional
-import logging
-import json
-from typing import Optional
 
 import httpx
 

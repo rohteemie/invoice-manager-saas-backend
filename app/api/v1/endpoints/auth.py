@@ -2,6 +2,7 @@
 Authentication endpoints for user registration, login, and token refresh.
 Implements JWT-based authentication with secure password handling.
 """
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -191,8 +192,6 @@ def verify_email(
     Returns:
         Success message with user details
     """
-    from datetime import datetime
-    
     # Find user by verification token
     user = db.query(UserModel).filter(
         UserModel.verification_token == token
@@ -258,8 +257,6 @@ def resend_verification_email(
     Returns:
         Success message
     """
-    from datetime import datetime
-    
     # Find user by email
     user = db.query(UserModel).filter(
         UserModel.email == resend_request.email

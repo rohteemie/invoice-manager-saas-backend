@@ -128,7 +128,6 @@ def generate_verification_token() -> tuple[str, datetime]:
     Returns:
         Tuple of (token string, expiration datetime)
     """
-    from app.core.config import settings
     token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(
         hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS
