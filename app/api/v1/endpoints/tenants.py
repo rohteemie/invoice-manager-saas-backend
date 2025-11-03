@@ -93,8 +93,8 @@ def register_tenant_with_owner(
         db.add(db_tenant)
         db.flush()  # Flush to get tenant.id without committing
 
-        # Generate verification token
-        verification_token = generate_verification_token()
+        # Generate verification token with expiration
+        verification_token, token_expires_at = generate_verification_token()
 
         # Create owner user
         hashed_password = get_password_hash(tenant_register.owner.password)
@@ -106,7 +106,8 @@ def register_tenant_with_owner(
             tenant_id=db_tenant.id,
             is_active=True,
             is_verified=False,
-            verification_token=verification_token
+            verification_token=verification_token,
+            verification_token_expires_at=token_expires_at
         )
         db.add(db_owner)
 

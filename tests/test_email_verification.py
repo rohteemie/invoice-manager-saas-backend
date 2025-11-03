@@ -3,6 +3,7 @@ Test suite for Email Verification feature.
 Tests email verification token generation, sending, and verification.
 """
 import pytest
+from datetime import datetime, timedelta
 
 
 def test_register_tenant_generates_verification_token(client, db_session):
@@ -212,3 +213,172 @@ def test_owner_can_login_before_verification(client):
     data = login_response.json()
     assert "access_token" in data
     assert "refresh_token" in data
+
+
+def test_token_has_expiration(client, db_session):
+    """Test that verification tokens have an expiration date."""
+    from app.models.user import User as UserModel
+    
+    # Register a tenant
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Token Expiry Test Company",
+            "domain": "tokenexpiry.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Token Expiry Owner",
+                "email": "tokenexpiry@test.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 201
+    
+    # Get user and check token expiration
+    user = db_session.query(UserModel).filter(
+        UserModel.email == "tokenexpiry@test.com"
+    ).first()
+    assert user.verification_token_expires_at is not None
+    # Token should expire in the future (within 25 hours)
+    assert user.verification_token_expires_at > datetime.utcnow()
+    assert user.verification_token_expires_at < datetime.utcnow() + timedelta(hours=25)
+
+
+def test_verify_email_with_expired_token(client, db_session):
+    """Test that expired tokens are rejected."""
+    from app.models.user import User as UserModel
+    
+    # Register a tenant
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Expired Token Company",
+            "domain": "expiredtoken.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Expired Token Owner",
+                "email": "expiredtoken@test.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 201
+    
+    # Get user and manually expire the token
+    user = db_session.query(UserModel).filter(
+        UserModel.email == "expiredtoken@test.com"
+    ).first()
+    token = user.verification_token
+    
+    # Set token expiration to the past
+    user.verification_token_expires_at = datetime.utcnow() - timedelta(hours=1)
+    db_session.commit()
+    
+    # Try to verify with expired token
+    verify_response = client.post(
+        f"/api/v1/auth/verify-email?token={token}"
+    )
+    
+    assert verify_response.status_code == 400
+    data = verify_response.json()
+    assert "expired" in data["detail"].lower()
+
+
+def test_resend_verification_email(client, db_session):
+    """Test resending verification email generates new token."""
+    from app.models.user import User as UserModel
+    
+    # Register a tenant
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Resend Test Company",
+            "domain": "resendtest.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Resend Test Owner",
+                "email": "resend@test.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 201
+    
+    # Get original token
+    user = db_session.query(UserModel).filter(
+        UserModel.email == "resend@test.com"
+    ).first()
+    original_token = user.verification_token
+    
+    # Resend verification email
+    resend_response = client.post(
+        "/api/v1/auth/resend-verification-email",
+        json={"email": "resend@test.com"}
+    )
+    
+    assert resend_response.status_code == 200
+    data = resend_response.json()
+    assert "resent" in data["message"].lower()
+    
+    # Check that token was updated
+    db_session.refresh(user)
+    assert user.verification_token != original_token
+    assert user.verification_token is not None
+
+
+def test_resend_for_verified_user_fails(client, db_session):
+    """Test that resending verification email for verified user fails."""
+    from app.models.user import User as UserModel
+    
+    # Register and verify a tenant
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Already Verified Resend Company",
+            "domain": "alreadyverifiedresend.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Already Verified Owner",
+                "email": "alreadyverifiedresend@test.com",
+                "password": "SecurePass123"
+            }
+        }
+    )
+    assert response.status_code == 201
+    
+    # Get token and verify
+    user = db_session.query(UserModel).filter(
+        UserModel.email == "alreadyverifiedresend@test.com"
+    ).first()
+    token = user.verification_token
+    
+    # Verify email
+    verify_response = client.post(
+        f"/api/v1/auth/verify-email?token={token}"
+    )
+    assert verify_response.status_code == 200
+    
+    # Try to resend verification email
+    resend_response = client.post(
+        "/api/v1/auth/resend-verification-email",
+        json={"email": "alreadyverifiedresend@test.com"}
+    )
+    
+    assert resend_response.status_code == 400
+    data = resend_response.json()
+    assert "already verified" in data["detail"].lower()
+
+
+def test_resend_for_nonexistent_email(client):
+    """Test that resending for non-existent email doesn't reveal user existence."""
+    # Try to resend for non-existent email
+    resend_response = client.post(
+        "/api/v1/auth/resend-verification-email",
+        json={"email": "nonexistent@test.com"}
+    )
+    
+    # Should succeed (don't reveal if email exists)
+    assert resend_response.status_code == 200
+    data = resend_response.json()
+    assert "If the email exists" in data["message"]

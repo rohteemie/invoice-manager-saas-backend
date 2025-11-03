@@ -121,11 +121,16 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def generate_verification_token() -> str:
+def generate_verification_token() -> tuple[str, datetime]:
     """
-    Generate a secure random token for email verification.
+    Generate a secure random token for email verification with expiration.
     
     Returns:
-        A URL-safe random token string
+        Tuple of (token string, expiration datetime)
     """
-    return secrets.token_urlsafe(32)
+    from app.core.config import settings
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(
+        hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS
+    )
+    return token, expires_at
