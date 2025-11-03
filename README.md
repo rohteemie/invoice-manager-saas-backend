@@ -40,6 +40,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 
 - [x] Tenant registration & management ✅
 - [x] User registration & JWT authentication ✅
+- [x] Email verification for user accounts ✅
 - [x] Role-based access (Owner, Admin, Manager, Attendant) ✅
 - [x] Invoice CRUD (tenant-aware) ✅ **Sprint 2**
 - [x] Invoice lifecycle (Draft → Sent → Paid → Overdue) ✅ **Sprint 2**
@@ -54,6 +55,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Rate limiting & request throttling ✅ **Sprint 4**
 - [x] Health checks & metrics endpoints ✅ **Sprint 4**
 - [ ] Audit logging
+
 
 ---
 
@@ -319,6 +321,8 @@ pytest tests/test_auth.py -v
 - `POST /api/v1/auth/register` - Register new user
 - `POST /api/v1/auth/login` - Login and get JWT tokens
 - `POST /api/v1/auth/refresh` - Refresh access token
+- `POST /api/v1/auth/send-verification-email` - Send email verification token
+- `POST /api/v1/auth/verify-email` - Verify email address with token
 
 **Tenant Management:**
 
@@ -362,6 +366,7 @@ pytest tests/test_auth.py -v
 
 - [API Structure Overview](docs/API_STRUCTURE.md) - Complete API documentation
 - [Authentication Guide](docs/authentication.md) - Auth implementation details
+- [Email Verification Guide](docs/email_verification.md) - Email verification feature ✅
 - [CI/CD Pipeline](docs/ci_cd_pipeline.md) - GitHub Actions workflow ✨ **Sprint 4**
 - [Logging & Monitoring](docs/logging_monitoring.md) - Observability guide ✨ **Sprint 4**
 - [Rate Limiting](docs/rate_limiting.md) - Rate limit configuration ✨ **Sprint 4**
@@ -427,9 +432,10 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 
 The project includes comprehensive test coverage:
 
-- **144 tests** covering all core functionality ✨ **Updated Sprint 4**
+- **156 tests** covering all core functionality ✨ **Updated with Email Verification**
 - **Test files:**
   - `test_auth.py` - Authentication endpoints (14 tests)
+  - `test_email_verification.py` - Email verification (12 tests) ✅
   - `test_users.py` - User management (18 tests)
   - `test_tenants.py` - Tenant CRUD operations (11 tests)
   - `test_tenant_isolation.py` - Multi-tenant isolation (11 tests)

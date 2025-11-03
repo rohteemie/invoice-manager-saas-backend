@@ -11,7 +11,8 @@ from app.models.user import User as UserModel
 from app.schemas.user import UserCreate, User, Token
 from app.core.security import (
     verify_password, get_password_hash,
-    create_access_token, create_refresh_token, decode_token
+    create_access_token, create_refresh_token, decode_token,
+    create_email_verification_token, verify_email_verification_token
 )
 from app.core.rate_limit import limiter
 
@@ -163,4 +164,84 @@ def refresh_token(
         "access_token": new_access_token,
         "refresh_token": new_refresh_token,
         "token_type": "bearer"
+    }
+
+
+@router.post("/send-verification-email")
+@limiter.limit("3/hour")
+def send_verification_email(
+    request: Request,
+    email: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Send email verification link to user's email.
+
+    - Generates a verification token valid for 24 hours
+    - Returns the token (in production, this would be sent via email)
+    - Rate limited to prevent abuse
+    """
+    user = db.query(UserModel).filter(UserModel.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    if user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already verified"
+        )
+
+    verification_token = create_email_verification_token(email)
+
+    # In production, send email with verification link here
+    # For now, return the token for testing purposes
+    return {
+        "message": "Verification email sent",
+        "verification_token": verification_token,
+        "note": "In production, this token would be sent via email"
+    }
+
+
+@router.post("/verify-email")
+@limiter.limit("10/hour")
+def verify_email(
+    request: Request,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify user's email using the verification token.
+
+    - Validates the verification token
+    - Marks user as verified in the database
+    - Returns success message
+    """
+    email = verify_email_verification_token(token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token"
+        )
+
+    user = db.query(UserModel).filter(UserModel.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    if user.is_verified:
+        return {
+            "message": "Email already verified"
+        }
+
+    user.is_verified = True
+    db.commit()
+
+    return {
+        "message": "Email verified successfully",
+        "email": email
     }

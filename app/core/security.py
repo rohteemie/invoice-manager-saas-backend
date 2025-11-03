@@ -118,3 +118,51 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except JWTError:
         return None
+
+
+def create_email_verification_token(email: str) -> str:
+    """
+    Create a JWT token for email verification.
+
+    Args:
+        email: User's email address to verify
+
+    Returns:
+        Encoded JWT token for email verification
+    """
+    expire = datetime.utcnow() + timedelta(hours=24)  # 24 hour expiration
+    to_encode = {
+        "sub": email,
+        "type": "email_verification",
+        "exp": expire
+    }
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm="HS256"
+    )
+    return encoded_jwt
+
+
+def verify_email_verification_token(token: str) -> Optional[str]:
+    """
+    Verify and decode an email verification token.
+
+    Args:
+        token: JWT token to verify
+
+    Returns:
+        Email address if token is valid, None otherwise
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=["HS256"]
+        )
+        if payload.get("type") != "email_verification":
+            return None
+        email: str = payload.get("sub")
+        return email
+    except JWTError:
+        return None
