@@ -1,5 +1,5 @@
 from app.models.general_model import Gen_Model, Base
-from sqlalchemy import Column, String, Boolean, ForeignKey, Enum
+from sqlalchemy import Column, String, Boolean, ForeignKey, Enum, DateTime
 import enum
 
 
@@ -26,6 +26,8 @@ class User(Gen_Model, Base):
         tenant_id: Associated tenant for data isolation
         is_active: Soft delete flag for GDPR right-to-be-forgotten
         is_verified: Email verification status
+        verification_token: Token for email verification
+        verification_token_expires_at: Expiration time for verification token
     """
     __tablename__ = "users"
 
@@ -37,6 +39,8 @@ class User(Gen_Model, Base):
                        index=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    verification_token = Column(String(255), nullable=True, index=True)
+    verification_token_expires_at = Column(DateTime, nullable=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

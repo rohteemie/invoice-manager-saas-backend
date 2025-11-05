@@ -4,6 +4,7 @@ Implements secure authentication following OWASP best practices.
 """
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+import secrets
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from app.core.config import settings
@@ -118,3 +119,17 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except JWTError:
         return None
+
+
+def generate_verification_token() -> tuple[str, datetime]:
+    """
+    Generate a secure random token for email verification with expiration.
+    
+    Returns:
+        Tuple of (token string, expiration datetime)
+    """
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(
+        hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS
+    )
+    return token, expires_at
