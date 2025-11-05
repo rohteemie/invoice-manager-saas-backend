@@ -46,18 +46,23 @@ def send_verification_email(
     sender = settings.EMAILS_FROM
 
     if not sg_api_key or not sender:
-        logger.warning("SendGrid not configured (missing SENDGRID_API_KEY or EMAILS_FROM). Email not sent.")
+        logger.warning(
+            "SendGrid not configured (missing SENDGRID_KEY or EMAILS_FROM).\
+                Email not sent."
+        )
         return False
 
     if base_url is None:
-        base_url = settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+        base_url = settings.EMAIL_VERIFICATION_BASE_URL or \
+            "http://localhost:5173"
 
     verification_link = f"{base_url.rstrip('/')}/verify-email?token={token}"
 
     # Plain text content
     plain_text = (
         f"Hello {full_name},\n\n"
-        "Thank you for registering! Please verify your email by clicking the link below:\n\n"
+        "Thank you for registering!\
+            Please verify your email by clicking the link below:\n\n"
         f"{verification_link}\n\n"
         "This link will expire in 24 hours.\n\n"
         "If you didn't register, please ignore this email.\n"
@@ -71,31 +76,40 @@ def send_verification_email(
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px;">
-            <h1 style="color: #2c3e50; margin-bottom: 20px;">Welcome to {settings.PROJECT_NAME}!</h1>
-            <p style="font-size: 16px; margin-bottom: 20px;">Hello {full_name},</p>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6;
+    color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f8f9fa; padding: 30px;
+        border-radius: 10px;">
+            <h1 style="color: #2c3e50; margin-bottom: 20px;">
+            Welcome to {settings.PROJECT_NAME}!</h1>
             <p style="font-size: 16px; margin-bottom: 20px;">
-                Thank you for registering! To complete your registration and activate your account, 
+            Hello {full_name},</p>
+            <p style="font-size: 16px; margin-bottom: 20px;">
+                Thank you for registering!
+                To complete your registration and activate your account,
                 please verify your email address by clicking the button below:
             </p>
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{verification_link}" 
-                   style="background-color: #3498db; color: white; padding: 14px 28px; text-decoration: none; 
-                          border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+                <a href="{verification_link}"
+                   style="background-color: #3498db; color: white;
+                   padding: 14px 28px;
+                   text-decoration: none; border-radius: 5px; font-size: 16px;
+                   font-weight: bold; display: inline-block;">
                     Verify Email Address
                 </a>
             </div>
             <p style="font-size: 14px; color: #666; margin-top: 20px;">
                 Or copy and paste this link into your browser:
             </p>
-            <p style="font-size: 14px; color: #3498db; word-break: break-all; background-color: #f0f0f0; padding: 10px; border-radius: 5px;">
+            <p style="font-size: 14px; color: #3498db; word-break: break-all;
+            background-color: #f0f0f0; padding: 10px; border-radius: 5px;">
                 {verification_link}
             </p>
             <p style="font-size: 14px; color: #e74c3c; margin-top: 20px;">
                 ⚠️ This link will expire in 24 hours.
             </p>
-            <p style="font-size: 14px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="font-size: 14px; color: #666; margin-top: 30px;
+            padding-top: 20px; border-top: 1px solid #ddd;">
                 If you didn't create an account, please ignore this email.
             </p>
         </div>
@@ -149,5 +163,8 @@ def send_verification_email(
         return False
 
     except httpx.RequestError as exc:
-        logger.error("Error sending verification email to %s: %s", email, str(exc), exc_info=True)
+        logger.error(
+            "Error sending verification email to %s: %s", email,
+            str(exc), exc_info=True
+        )
         return False

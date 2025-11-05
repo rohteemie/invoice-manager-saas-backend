@@ -180,15 +180,15 @@ def verify_email(
 ):
     """
     Verify user email with verification token.
-    
+
     - Validates the verification token
     - Checks token expiration
     - Marks user as verified
     - Clears the verification token
-    
+
     Args:
         token: The verification token sent via email
-    
+
     Returns:
         Success message with user details
     """
@@ -196,34 +196,39 @@ def verify_email(
     user = db.query(UserModel).filter(
         UserModel.verification_token == token
     ).first()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification token"
         )
-    
+
     # Check if user is already verified
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is already verified. You can now log in to your account."
+            detail="Email is already verified.\
+                You can now log in to your account."
         )
-    
+
     # Check if token has expired
-    if user.verification_token_expires_at and user.verification_token_expires_at < datetime.utcnow():
+    if (
+            user.verification_token_expires_at
+            and user.verification_token_expires_at < datetime.now()
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has expired. Please request a new verification email."
+            detail="Verification token has expired.\
+                Please request a new verification email."
         )
-    
+
     # Mark user as verified and clear token
     user.is_verified = True
     user.verification_token = None
     user.verification_token_expires_at = None
     db.commit()
     db.refresh(user)
-    
+
     return {
         "message": "Email verified successfully",
         "email": user.email,
@@ -245,15 +250,15 @@ def resend_verification_email(
 ):
     """
     Resend verification email to user.
-    
+
     - Finds user by email
     - Checks if user is already verified
     - Generates new verification token
     - Sends new verification email
-    
+
     Args:
         resend_request: Email address to resend verification
-    
+
     Returns:
         Success message
     """
@@ -261,29 +266,30 @@ def resend_verification_email(
     user = db.query(UserModel).filter(
         UserModel.email == resend_request.email
     ).first()
-    
+
     if not user:
         # Don't reveal whether user exists for security
         return {
-            "message": "If the email exists in our system, a verification email will be sent.",
+            "message": "If the email exists in our system,\
+                a verification email will be sent.",
             "email": resend_request.email
         }
-    
+
     # Check if user is already verified
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email is already verified. You can log in to your account."
         )
-    
+
     # Generate new verification token
     verification_token, token_expires_at = generate_verification_token()
-    
+
     # Update user with new token
     user.verification_token = verification_token
     user.verification_token_expires_at = token_expires_at
     db.commit()
-    
+
     # Send verification email
     send_verification_email(
         email=user.email,
@@ -291,8 +297,9 @@ def resend_verification_email(
         full_name=user.full_name,
         base_url=settings.EMAIL_VERIFICATION_BASE_URL
     )
-    
+
     return {
-        "message": "Verification email has been resent. Please check your inbox.",
+        "message": "Verification email has been resent.\
+        Please check your inbox.",
         "email": user.email
     }
