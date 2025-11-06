@@ -27,10 +27,10 @@ def test_cors_preflight_request(client):
             "Access-Control-Request-Headers": "content-type",
         }
     )
-    
+
     # Check that preflight request is successful
     assert response.status_code == 200
-    
+
     # Verify CORS headers are present
     assert "access-control-allow-origin" in response.headers
     assert "access-control-allow-methods" in response.headers
@@ -48,7 +48,7 @@ def test_cors_actual_request_headers(client):
             "Origin": "http://frontend"
         }
     )
-    
+
     # Check that the response includes CORS headers
     assert response.status_code == 200
     assert "access-control-allow-origin" in response.headers
@@ -67,7 +67,7 @@ def test_cors_allows_credentials(client):
             "Access-Control-Request-Method": "POST",
         }
     )
-    
+
     # Verify that credentials are allowed
     assert "access-control-allow-credentials" in response.headers
     assert response.headers["access-control-allow-credentials"] == "true"
@@ -83,6 +83,6 @@ def test_cors_with_different_origin(client):
             "Origin": "http://localhost:3000"
         }
     )
-    
+
     assert response.status_code == 200
     assert "access-control-allow-origin" in response.headers

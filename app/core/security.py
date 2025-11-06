@@ -3,7 +3,7 @@ Security utilities for password hashing and JWT token management.
 Implements secure authentication following OWASP best practices.
 """
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import secrets
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -121,10 +121,10 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def generate_verification_token() -> tuple[str, datetime]:
+def generate_verification_token() -> Tuple[str, datetime]:
     """
     Generate a secure random token for email verification with expiration.
-    
+
     Returns:
         Tuple of (token string, expiration datetime)
     """

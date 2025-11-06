@@ -2,10 +2,12 @@
 Test configuration and fixtures.
 Provides database setup, test client, and common fixtures for all tests.
 """
+import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from app.main import app
 from app.db.session import get_db
 from app.models.general_model import Base
@@ -13,10 +15,15 @@ from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.core.security import get_password_hash
 
-
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite:///./test.db"
 
+# Ensure application modules pick up test DATABASE_URL before they are imported
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["TESTING"] = "1"
+
+
+# Create engine bound to same TEST_DATABASE_URL used by app settings
 engine = create_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False}
