@@ -3,7 +3,17 @@ Authentication endpoints for user registration, login, and token refresh.
 Implements JWT-based authentication with secure password handling.
 """
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+import logging
+import os
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    Request,
+    Response,
+)
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +31,7 @@ from app.core.email import send_verification_email
 from app.core.config import settings
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=User, status_code=201)
@@ -28,7 +39,8 @@ router = APIRouter()
 def register(
     request: Request,
     user_in: UserCreate,
-    db: Session = Depends(get_db)
+    response: Response,
+    db: Session = Depends(get_db),
 ):
     """
     Register a new user.
@@ -54,17 +66,52 @@ def register(
             full_name=user_in.full_name,
             hashed_password=hashed_password,
             role=user_in.role,
-            tenant_id=user_in.tenant_id
+            tenant_id=user_in.tenant_id,
         )
+
+        # Generate verification token and expiration and attach to user
+        verification_token, token_expires_at = (
+            generate_verification_token()
+        )
+        db_user.verification_token = verification_token
+        db_user.verification_token_expires_at = token_expires_at
+
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+
+        # Build verification link for use in the email and in debug
+        base = settings.EMAIL_VERIFICATION_BASE_URL or ""
+        verification_link = (
+            f"{base.rstrip('/')}/verify-email?token={verification_token}"
+        )
+
+        # Send verification email (best as background task in prod)
+        sent = send_verification_email(
+            email=db_user.email,
+            token=verification_token,
+            full_name=db_user.full_name,
+            base_url=settings.EMAIL_VERIFICATION_BASE_URL,
+        )
+
+        if not sent:
+            logger.warning(
+                "Verification email not sent for %s", db_user.email
+            )
+
+        # For non-production or test runs, expose the link in a header
+        env = os.environ.get("TESTING") or settings.ENVIRONMENT
+        if env and env != "production":
+            response.headers["X-Verification-Link"] = verification_link
+
         return db_user
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to create user. Email may already exist."
+            detail=(
+                "Failed to create user. Email may already exist."
+            ),
         )
 
 
