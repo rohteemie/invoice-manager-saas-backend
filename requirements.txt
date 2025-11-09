@@ -21,5 +21,5 @@ celery==5.3.4
 sentry-sdk[fastapi]==1.39.1
 prometheus-client==0.19.0
 slowapi==0.1.9
-weasyprint>=62.3
+weasyprint>=61.2,<62
 jinja2==3.1.2
