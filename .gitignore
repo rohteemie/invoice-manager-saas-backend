@@ -216,3 +216,4 @@ test.db
 # Deployment files
 server_connect.sh
 deploy.env
+run.sh
