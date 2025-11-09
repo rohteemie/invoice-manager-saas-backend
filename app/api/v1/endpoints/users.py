@@ -84,6 +84,7 @@ def update_user(
     - Requires Admin or Owner role
     - Enforces tenant-based access control
     - Cannot update password through this endpoint
+    - Cannot change owner role or assign owner role to any user
     """
     user = db.query(UserModel).filter(
         UserModel.id == user_id,
@@ -97,6 +98,25 @@ def update_user(
         )
 
     update_data = user_update.model_dump(exclude_unset=True)
+
+    # Validate role changes
+    if "role" in update_data:
+        new_role = update_data["role"]
+
+        # Prevent changing an owner's role
+        if user.role == UserRole.OWNER:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Owner role cannot be changed via API"
+            )
+
+        # Prevent assigning owner role to any user
+        if new_role == UserRole.OWNER:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot assign owner role via API"
+            )
+
     for field, value in update_data.items():
         setattr(user, field, value)
 
@@ -118,6 +138,7 @@ def delete_user(
     - Sets is_active to False instead of hard delete
     - Enforces tenant-based access control
     - Maintains audit trail
+    - Cannot delete own account or another owner
     """
     if user_id == current_user.id:
         raise HTTPException(
@@ -134,6 +155,13 @@ def delete_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
+        )
+
+    # Prevent owner from deleting another owner
+    if user.role == UserRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete another owner account"
         )
 
     user.is_active = False
