@@ -44,6 +44,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Invoice CRUD (tenant-aware) ✅ **Sprint 2**
 - [x] Invoice lifecycle (Draft → Sent → Paid → Overdue) ✅ **Sprint 2**
 - [x] Invoice metadata: branch, creator, customer info ✅ **Sprint 2**
+- [x] Invoice PDF generation (on-demand) ✅ **NEW**
 - [x] CSV/JSON exports ✅ **Sprint 2**
 - [x] Integration tests ✅ **Sprint 2**
 - [x] Analytics & reporting endpoints ✅ **Sprint 3**
@@ -344,6 +345,7 @@ pytest tests/test_auth.py -v
 - `PUT /api/v1/invoices/{id}` - Update draft invoice (Manager+)
 - `PATCH /api/v1/invoices/{id}/status` - Update invoice status (Manager+)
 - `DELETE /api/v1/invoices/{id}` - Delete draft invoice (Admin+)
+- `GET /api/v1/invoices/{id}/pdf` - Download invoice as PDF ✨ **NEW**
 - `GET /api/v1/invoices/export/invoices` - Export invoices (CSV/JSON)
 
 **Analytics & Reporting:** ✨ **Sprint 3**
@@ -362,6 +364,7 @@ pytest tests/test_auth.py -v
 
 - [API Structure Overview](docs/API_STRUCTURE.md) - Complete API documentation
 - [Authentication Guide](docs/authentication.md) - Auth implementation details
+- [PDF Generation Guide](docs/PDF_GENERATION.md) - Invoice PDF generation ✨ **NEW**
 - [CI/CD Pipeline](docs/ci_cd_pipeline.md) - GitHub Actions workflow ✨ **Sprint 4**
 - [Logging & Monitoring](docs/logging_monitoring.md) - Observability guide ✨ **Sprint 4**
 - [Rate Limiting](docs/rate_limiting.md) - Rate limit configuration ✨ **Sprint 4**
