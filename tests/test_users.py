@@ -33,18 +33,14 @@ def test_get_current_user_invalid_token(client):
     assert response.status_code == 401
 
 
-def test_list_users_as_admin(client, admin_auth_headers, test_user, test_admin):
-    """Test that admin can list users in their tenant."""
+def test_list_users_as_admin_forbidden(client, admin_auth_headers, test_user, test_admin):
+    """Test that admin cannot list users (requires Owner role)."""
     response = client.get(
         "/api/v1/users/",
         headers=admin_auth_headers
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) >= 2  # At least test_user and test_admin
-    emails = [u["email"] for u in data]
-    assert "owner@testcompany.com" in emails
-    assert "admin@testcompany.com" in emails
+    assert response.status_code == 403
+    assert "insufficient" in response.json()["detail"].lower()
 
 
 def test_list_users_as_owner(client, auth_headers):
@@ -87,16 +83,14 @@ def test_list_users_pagination(client, auth_headers, test_admin, test_manager):
     assert len(data) == 1
 
 
-def test_get_user_by_id_as_admin(client, admin_auth_headers, test_user):
-    """Test that admin can get user by ID."""
+def test_get_user_by_id_as_admin_forbidden(client, admin_auth_headers, test_user):
+    """Test that admin cannot get user by ID (requires Owner role)."""
     response = client.get(
         f"/api/v1/users/{test_user.id}",
         headers=admin_auth_headers
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["id"] == test_user.id
-    assert data["email"] == test_user.email
+    assert response.status_code == 403
+    assert "insufficient" in response.json()["detail"].lower()
 
 
 def test_get_user_by_id_as_owner(client, auth_headers, test_admin):
@@ -129,8 +123,8 @@ def test_get_user_not_found(client, auth_headers):
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_update_user_as_admin(client, admin_auth_headers, test_attendant):
-    """Test that admin can update user information."""
+def test_update_user_as_admin_forbidden(client, admin_auth_headers, test_attendant):
+    """Test that admin cannot update user information (requires Owner role)."""
     response = client.put(
         f"/api/v1/users/{test_attendant.id}",
         headers=admin_auth_headers,
@@ -139,10 +133,8 @@ def test_update_user_as_admin(client, admin_auth_headers, test_attendant):
             "role": "manager"
         }
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["full_name"] == "Updated Attendant Name"
-    assert data["role"] == "manager"
+    assert response.status_code == 403
+    assert "insufficient" in response.json()["detail"].lower()
 
 
 def test_update_user_as_owner(client, auth_headers, test_manager):
@@ -283,21 +275,21 @@ def test_role_hierarchy_owner_highest(client, auth_headers, test_admin, test_man
     assert response.status_code == 200
 
 
-def test_role_hierarchy_admin_can_manage_users(client, admin_auth_headers, test_manager):
-    """Test that admin can manage users but not delete them."""
-    # Admin can list users
+def test_role_hierarchy_admin_cannot_manage_users(client, admin_auth_headers, test_manager):
+    """Test that admin cannot manage users (only owners can)."""
+    # Admin cannot list users
     response = client.get("/api/v1/users/", headers=admin_auth_headers)
-    assert response.status_code == 200
+    assert response.status_code == 403
 
-    # Admin can update users
+    # Admin cannot update users
     response = client.put(
         f"/api/v1/users/{test_manager.id}",
         headers=admin_auth_headers,
         json={"full_name": "Updated by Admin"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 403
 
-    # Admin cannot delete users
+    # Admin cannot delete users (already tested, but included for completeness)
     response = client.delete(
         f"/api/v1/users/{test_manager.id}",
         headers=admin_auth_headers
