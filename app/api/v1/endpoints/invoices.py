@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal
@@ -24,6 +24,7 @@ from app.schemas.invoice import (
 )
 from app.core.deps import get_current_user, require_role
 from app.core.cache import invalidate_tenant_cache
+from app.services.pdf_generator import get_pdf_generator, PDFGenerationError
 
 router = APIRouter()
 
@@ -349,6 +350,59 @@ def delete_invoice(
     invalidate_tenant_cache(current_user.tenant_id, "*")
 
     return {"message": "Invoice deleted successfully"}
+
+
+@router.get("/{invoice_id}/pdf")
+def download_invoice_pdf(
+    invoice_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate and download invoice as PDF.
+
+    Permissions: All authenticated users can download invoices in their tenant.
+
+    This endpoint generates a professional PDF document on-demand from the
+    database without storing the file. The PDF is always generated fresh,
+    reflecting the current state of the invoice data.
+
+    Returns:
+        PDF file with Content-Disposition: inline for browser display
+    """
+    # Fetch invoice with items
+    invoice = db.query(InvoiceModel).filter(
+        InvoiceModel.id == invoice_id,
+        InvoiceModel.tenant_id == current_user.tenant_id
+    ).first()
+
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Generate PDF
+    try:
+        pdf_generator = get_pdf_generator()
+        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice)
+    except PDFGenerationError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate PDF: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error generating PDF: {str(e)}"
+        )
+
+    # Return PDF response
+    filename = f"invoice_{invoice.invoice_number}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"'
+        }
+    )
 
 
 @router.get("/export/invoices")
