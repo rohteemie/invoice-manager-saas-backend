@@ -219,6 +219,11 @@ def delete_tenant(
 ):
     """
     Delete a tenant (soft delete by setting is_active to False).
+
+    Note: This endpoint should not be accessible to organization owners.
+    Organization deletion requires contacting the technical team/developer
+    organization. This endpoint exists for administrative/system-level
+    operations only.
     """
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:

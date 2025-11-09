@@ -30,13 +30,13 @@ def get_current_user_info(
 def list_users(
     skip: int = 0,
     limit: int = 100,
-    current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
+    current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
     """
     List all users in the current tenant.
 
-    - Requires Admin or Owner role
+    - Requires Owner role
     - Returns only users from same tenant (data isolation)
     - Supports pagination
     """
@@ -49,13 +49,13 @@ def list_users(
 @router.get("/{user_id}", response_model=User)
 def get_user(
     user_id: str,
-    current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
+    current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
     """
     Get a specific user by ID.
 
-    - Requires Admin or Owner role
+    - Requires Owner role
     - Enforces tenant-based access control
     """
     user = db.query(UserModel).filter(
@@ -75,16 +75,17 @@ def get_user(
 def update_user(
     user_id: str,
     user_update: UserUpdate,
-    current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
+    current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
     """
     Update user information.
 
-    - Requires Admin or Owner role
+    - Requires Owner role (only owners can update users)
     - Enforces tenant-based access control
     - Cannot update password through this endpoint
     - Cannot change owner role or assign owner role to any user
+    - Owners can upgrade roles for other non-owner users
     """
     user = db.query(UserModel).filter(
         UserModel.id == user_id,

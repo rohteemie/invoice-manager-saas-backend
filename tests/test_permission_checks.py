@@ -45,7 +45,7 @@ def test_cannot_change_user_role_to_owner(client, auth_headers, test_admin, db_s
 
 
 def test_cannot_change_owner_role_as_admin(client, admin_auth_headers, test_user, db_session):
-    """Test that admin cannot change owner's role."""
+    """Test that admin cannot change owner's role (admin cannot access user update endpoint)."""
     response = client.put(
         f"/api/v1/users/{test_user.id}",
         headers=admin_auth_headers,
@@ -54,7 +54,7 @@ def test_cannot_change_owner_role_as_admin(client, admin_auth_headers, test_user
         }
     )
     assert response.status_code == 403
-    assert "owner role cannot be changed" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["detail"].lower()
     
     # Verify role was not changed
     db_session.refresh(test_user)
@@ -123,8 +123,8 @@ def test_owner_can_update_non_owner_roles(client, auth_headers, test_manager, db
     assert test_manager.role.value == "admin"
 
 
-def test_admin_can_update_non_owner_roles(client, admin_auth_headers, test_manager, db_session):
-    """Test that admin can update non-owner roles (except to owner)."""
+def test_admin_cannot_update_users(client, admin_auth_headers, test_manager, db_session):
+    """Test that admin cannot update non-owner roles (only owners can)."""
     response = client.put(
         f"/api/v1/users/{test_manager.id}",
         headers=admin_auth_headers,
@@ -132,15 +132,16 @@ def test_admin_can_update_non_owner_roles(client, admin_auth_headers, test_manag
             "role": "attendant"
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 403
+    assert "insufficient" in response.json()["detail"].lower()
     
-    # Verify role was changed
+    # Verify role was not changed
     db_session.refresh(test_manager)
-    assert test_manager.role.value == "attendant"
+    assert test_manager.role.value == "manager"
 
 
 def test_admin_cannot_assign_owner_role(client, admin_auth_headers, test_attendant, db_session):
-    """Test that admin cannot assign owner role to any user."""
+    """Test that admin cannot assign owner role to any user (admin cannot access user update endpoint)."""
     response = client.put(
         f"/api/v1/users/{test_attendant.id}",
         headers=admin_auth_headers,
@@ -149,7 +150,7 @@ def test_admin_cannot_assign_owner_role(client, admin_auth_headers, test_attenda
         }
     )
     assert response.status_code == 403
-    assert "cannot assign owner role" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["detail"].lower()
     
     # Verify role was not changed
     db_session.refresh(test_attendant)
