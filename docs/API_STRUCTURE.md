@@ -24,10 +24,10 @@ Multi-Tenant SaaS Backend API
 │
 └── /api/v1/users (User Management)
     ├── GET    /me - Get current user info (Authenticated)
-    ├── GET    /   - List users in tenant (Admin+)
-    ├── GET    /{user_id} - Get user by ID (Admin+)
-    ├── PUT    /{user_id} - Update user (Admin+)
-    └── DELETE /{user_id} - Soft delete user (Owner)
+    ├── GET    /   - List users in tenant (Owner only)
+    ├── GET    /{user_id} - Get user by ID (Owner only)
+    ├── PUT    /{user_id} - Update user (Owner only)
+    └── DELETE /{user_id} - Soft delete user (Owner only)
 ```
 
 ## Role Hierarchy
@@ -36,14 +36,16 @@ Multi-Tenant SaaS Backend API
 ┌─────────────────────────────────────┐
 │            OWNER                    │
 │  - Full tenant management           │
-│  - Delete users                     │
+│  - Manage all users (CRUD)          │
+│  - Delete users (except self/owners)│
+│  - Cannot delete organization       │
 │  - All admin privileges             │
 └─────────────┬───────────────────────┘
               │
 ┌─────────────▼───────────────────────┐
 │            ADMIN                    │
-│  - Manage users                     │
 │  - Full business operations         │
+│  - Cannot manage users              │
 │  - All manager privileges           │
 └─────────────┬───────────────────────┘
               │
@@ -61,6 +63,27 @@ Multi-Tenant SaaS Backend API
 │  - Basic operations only            │
 └─────────────────────────────────────┘
 ```
+
+## Account Management Rules
+
+### User Deletion Rules
+- **Only owners** can delete user accounts
+- Owners **cannot delete themselves**
+- Owners **cannot delete other owners**
+- Non-owners cannot delete any accounts
+- Deletion requires contacting technical team for owners
+
+### User Update Rules
+- **Only owners** can update user information
+- Non-owners cannot edit their own or others' details
+- Owners can upgrade roles for non-owner users
+- Owner role cannot be changed via API
+- Owner role cannot be assigned via API
+
+### Organization Deletion Rules
+- Owners **cannot delete their organization**
+- Organization deletion requires contacting the technical team/developer organization
+- This ensures data integrity and prevents accidental deletions
 
 ## Authentication Flow
 
