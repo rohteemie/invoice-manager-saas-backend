@@ -2,6 +2,7 @@
 Email service for sending verification and notification emails.
 """
 import logging
+import base64
 from typing import Optional
 
 import httpx
@@ -165,6 +166,154 @@ def send_verification_email(
     except httpx.RequestError as exc:
         logger.error(
             "Error sending verification email to %s: %s", email,
+            str(exc), exc_info=True
+        )
+        return False
+
+
+def send_invoice_email(
+    email: str,
+    customer_name: str,
+    invoice_number: str,
+    pdf_bytes: bytes,
+    total_amount: str,
+) -> bool:
+    """
+    Send an invoice PDF via email using SendGrid's Web API v3.
+
+    This function sends an invoice PDF as an email attachment to the customer.
+    It reads the SendGrid API key and sender address from settings.
+
+    Args:
+        email: Customer email address
+        customer_name: Customer full name
+        invoice_number: Invoice number for reference
+        pdf_bytes: PDF file content as bytes
+        total_amount: Formatted total amount (e.g., "$250.00")
+
+    Returns:
+        True if send request was accepted by SendGrid, False otherwise.
+    """
+    sg_api_key = settings.SENDGRID_API_KEY
+    sender = settings.EMAILS_FROM
+
+    if not sg_api_key or not sender:
+        logger.warning(
+            "SendGrid not configured (missing SENDGRID_KEY or EMAILS_FROM). "
+            "Email not sent."
+        )
+        return False
+
+    # Plain text content
+    plain_text = (
+        f"Dear {customer_name},\n\n"
+        f"Thank you for your business!\n\n"
+        f"Please find attached your invoice {invoice_number} "
+        f"for the amount of {total_amount}.\n\n"
+        "If you have any questions, please don't hesitate to contact us.\n\n"
+        "Best regards,\n"
+        f"{settings.PROJECT_NAME}"
+    )
+
+    # HTML content with styling
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6;
+    color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f8f9fa; padding: 30px;
+        border-radius: 10px;">
+            <h1 style="color: #2c3e50; margin-bottom: 20px;">
+            Invoice from {settings.PROJECT_NAME}</h1>
+            <p style="font-size: 16px; margin-bottom: 20px;">
+            Dear {customer_name},</p>
+            <p style="font-size: 16px; margin-bottom: 20px;">
+                Thank you for your business! Please find attached your invoice
+                <strong>{invoice_number}</strong> for the amount of
+                <strong>{total_amount}</strong>.
+            </p>
+            <p style="font-size: 16px; margin-bottom: 20px;">
+                If you have any questions about this invoice, please don't
+                hesitate to contact us.
+            </p>
+            <p style="font-size: 14px; color: #666; margin-top: 30px;
+            padding-top: 20px; border-top: 1px solid #ddd;">
+                Best regards,<br>
+                {settings.PROJECT_NAME}
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
+    # Encode PDF as base64 for SendGrid attachment
+    pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+
+    payload = {
+        "personalizations": [
+            {
+                "to": [{"email": email}],
+                "subject": (
+                    f"Invoice {invoice_number} from {settings.PROJECT_NAME}"
+                ),
+            }
+        ],
+        "from": {"email": sender},
+        "content": [
+            {
+                "type": "text/plain",
+                "value": plain_text,
+            },
+            {
+                "type": "text/html",
+                "value": html_content,
+            }
+        ],
+        "attachments": [
+            {
+                "content": pdf_base64,
+                "type": "application/pdf",
+                "filename": f"invoice_{invoice_number}.pdf",
+                "disposition": "attachment"
+            }
+        ]
+    }
+
+    headers = {
+        "Authorization": f"Bearer {sg_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    sendgrid_url = "https://api.sendgrid.com/v3/mail/send"
+
+    try:
+        # Use a short timeout and do not stream large responses
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(sendgrid_url, headers=headers, json=payload)
+
+        if resp.status_code in (200, 202):
+            logger.info(
+                "Invoice email queued/sent for %s (invoice: %s)",
+                email, invoice_number
+            )
+            return True
+
+        # Log non-sensitive parts of the error
+        logger.warning(
+            "Failed to send invoice email to %s. status=%s response=%s",
+            email,
+            resp.status_code,
+            resp.text[:1000],
+        )
+        return False
+
+    except httpx.RequestError as exc:
+        logger.error(
+            "Error sending invoice email to %s: %s", email,
             str(exc), exc_info=True
         )
         return False

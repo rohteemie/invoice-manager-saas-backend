@@ -895,3 +895,254 @@ def test_export_json_includes_items(client, auth_headers):
     assert test_invoice["items"][0]["description"] == "Item A"
     assert test_invoice["items"][0]["quantity"] == 2.0
     assert test_invoice["items"][0]["unit_price"] == 50.0
+
+
+def test_send_invoice_success(client, manager_auth_headers, mocker):
+    """Test successfully sending an invoice via email."""
+    # Mock the email sending function
+    mock_send_email = mocker.patch(
+        'app.api.v1.endpoints.invoices.send_invoice_email',
+        return_value=True
+    )
+
+    # Create a draft invoice with customer email
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "customer_email": "john@example.com",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product A",
+                    "quantity": 2,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=manager_auth_headers
+    )
+    assert response.status_code == 201
+    invoice_id = response.json()["id"]
+
+    # Send the invoice
+    response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=manager_auth_headers
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "sent"
+    assert data["id"] == invoice_id
+
+    # Verify email was sent
+    assert mock_send_email.called
+    call_args = mock_send_email.call_args[1]
+    assert call_args["email"] == "john@example.com"
+    assert call_args["customer_name"] == "John Doe"
+    assert "invoice_number" in call_args
+    assert isinstance(call_args["pdf_bytes"], bytes)
+
+
+def test_send_invoice_without_email(client, manager_auth_headers):
+    """Test that sending an invoice without customer email fails."""
+    # Create a draft invoice without customer email
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Jane Doe",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Service",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=manager_auth_headers
+    )
+    assert response.status_code == 201
+    invoice_id = response.json()["id"]
+
+    # Try to send the invoice
+    response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=manager_auth_headers
+    )
+
+    assert response.status_code == 400
+    assert "email" in response.json()["detail"].lower()
+    assert "download" in response.json()["detail"].lower()
+
+
+def test_send_invoice_not_draft(client, manager_auth_headers, mocker):
+    """Test that only draft invoices can be sent."""
+    # Mock the email sending function
+    mocker.patch(
+        'app.api.v1.endpoints.invoices.send_invoice_email',
+        return_value=True
+    )
+
+    # Create and send an invoice
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "customer_email": "john@example.com",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=manager_auth_headers
+    )
+    invoice_id = response.json()["id"]
+
+    # Send the invoice once
+    response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=manager_auth_headers
+    )
+    assert response.status_code == 200
+
+    # Try to send it again
+    response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=manager_auth_headers
+    )
+
+    assert response.status_code == 400
+    assert "DRAFT" in response.json()["detail"]
+
+
+def test_send_invoice_not_found(client, manager_auth_headers):
+    """Test sending a non-existent invoice."""
+    response = client.post(
+        "/api/v1/invoices/nonexistent-id/send",
+        headers=manager_auth_headers
+    )
+
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_send_invoice_attendant_permission(client, attendant_auth_headers):
+    """Test that attendants cannot send invoices."""
+    # Create a draft invoice
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "customer_email": "john@example.com",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=attendant_auth_headers
+    )
+    invoice_id = response.json()["id"]
+
+    # Try to send as attendant (should fail - requires manager role)
+    response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=attendant_auth_headers
+    )
+
+    assert response.status_code == 403
+
+
+def test_send_invoice_email_failure(client, manager_auth_headers, mocker):
+    """Test handling of email sending failure."""
+    # Mock the email sending function to fail
+    mocker.patch(
+        'app.api.v1.endpoints.invoices.send_invoice_email',
+        return_value=False
+    )
+
+    # Create a draft invoice with customer email
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "customer_email": "john@example.com",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=manager_auth_headers
+    )
+    invoice_id = response.json()["id"]
+
+    # Try to send the invoice
+    response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=manager_auth_headers
+    )
+
+    assert response.status_code == 500
+    assert "email" in response.json()["detail"].lower()
+
+    # Invoice should still be in draft status
+    response = client.get(
+        f"/api/v1/invoices/{invoice_id}",
+        headers=manager_auth_headers
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "draft"
+
+
+def test_send_invoice_tenant_isolation(
+    client,
+    manager_auth_headers,
+    second_tenant_auth_headers,
+    mocker
+):
+    """Test that users can't send invoices from other tenants."""
+    # Mock the email sending function
+    mocker.patch(
+        'app.api.v1.endpoints.invoices.send_invoice_email',
+        return_value=True
+    )
+
+    # Create an invoice in first tenant
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "customer_email": "john@example.com",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=manager_auth_headers
+    )
+    invoice_id = response.json()["id"]
+
+    # Try to send it as second tenant user
+    response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=second_tenant_auth_headers
+    )
+
+    assert response.status_code == 404

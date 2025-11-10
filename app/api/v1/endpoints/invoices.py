@@ -27,6 +27,7 @@ from app.schemas.invoice import (
 from app.core.deps import get_current_user, require_role
 from app.core.cache import invalidate_tenant_cache
 from app.services.pdf_generator import get_pdf_generator, PDFGenerationError
+from app.core.email import send_invoice_email
 
 router = APIRouter()
 
@@ -441,6 +442,111 @@ def download_invoice_pdf(
             "Content-Disposition": f'inline; filename="{filename}"'
         }
     )
+
+
+@router.post("/{invoice_id}/send", response_model=Invoice)
+def send_invoice(
+    invoice_id: str,
+    current_user: User = Depends(require_role(UserRole.MANAGER)),
+    db: Session = Depends(get_db)
+):
+    """
+    Send invoice PDF to customer via email.
+
+    Permissions: Manager and above can send invoices.
+
+    This endpoint:
+    1. Validates that the invoice exists and belongs to the tenant
+    2. Checks that the invoice is in DRAFT status
+    3. Verifies that the customer email is available
+    4. Generates the invoice PDF
+    5. Sends the PDF via email to the customer
+    6. Updates the invoice status to SENT
+    7. Returns the updated invoice
+
+    Returns:
+        Updated invoice with status SENT
+
+    Raises:
+        404: Invoice not found
+        400: Invoice not in DRAFT status
+        400: Customer email missing
+        500: PDF generation or email sending failure
+    """
+    # Fetch invoice with items
+    invoice = db.query(InvoiceModel).filter(
+        InvoiceModel.id == invoice_id,
+        InvoiceModel.tenant_id == current_user.tenant_id
+    ).first()
+
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Only draft invoices can be sent
+    if invoice.status != InvoiceStatus.DRAFT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only DRAFT invoices can be sent. "
+                   f"Current status: {invoice.status.value}"
+        )
+
+    # Customer email is required
+    if not invoice.customer_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Customer email is not available. "
+                   "Please add a customer email to the invoice or "
+                   "download the PDF manually."
+        )
+
+    # Generate PDF
+    try:
+        pdf_generator = get_pdf_generator()
+        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice)
+    except PDFGenerationError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate PDF: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error generating PDF: {str(e)}"
+        )
+
+    # Format total amount for email
+    currency_symbol = {
+        Currency.USD: "$",
+        Currency.GBP: "£",
+        Currency.EUR: "€",
+        Currency.NGN: "₦"
+    }.get(invoice.currency, "$")
+    total_amount = f"{currency_symbol}{invoice.total_amount:,.2f}"
+
+    # Send email with PDF
+    email_sent = send_invoice_email(
+        email=invoice.customer_email,
+        customer_name=invoice.customer_name,
+        invoice_number=invoice.invoice_number,
+        pdf_bytes=pdf_bytes,
+        total_amount=total_amount
+    )
+
+    if not email_sent:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send invoice email. Please try again later."
+        )
+
+    # Update invoice status to SENT
+    invoice.status = InvoiceStatus.SENT
+    db.commit()
+    db.refresh(invoice)
+
+    # Invalidate analytics cache for this tenant
+    invalidate_tenant_cache(current_user.tenant_id, "*")
+
+    return invoice
 
 
 @router.get("/export/invoices")
