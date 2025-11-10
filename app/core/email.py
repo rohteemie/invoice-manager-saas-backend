@@ -3,6 +3,7 @@ Email service for sending verification and notification emails.
 """
 import logging
 import base64
+import html
 from typing import Optional
 
 import httpx
@@ -199,8 +200,8 @@ def send_invoice_email(
 
     if not sg_api_key or not sender:
         logger.warning(
-            "SendGrid not configured (missing SENDGRID_KEY or EMAILS_FROM). "
-            "Email not sent."
+            "SendGrid not configured (missing SENDGRID_API_KEY or "
+            "EMAILS_FROM). Email not sent."
         )
         return False
 
@@ -228,13 +229,13 @@ def send_invoice_email(
         <div style="background-color: #f8f9fa; padding: 30px;
         border-radius: 10px;">
             <h1 style="color: #2c3e50; margin-bottom: 20px;">
-            Invoice from {settings.PROJECT_NAME}</h1>
+            Invoice from {html.escape(settings.PROJECT_NAME)}</h1>
             <p style="font-size: 16px; margin-bottom: 20px;">
-            Dear {customer_name},</p>
+            Dear {html.escape(customer_name)},</p>
             <p style="font-size: 16px; margin-bottom: 20px;">
                 Thank you for your business! Please find attached your invoice
-                <strong>{invoice_number}</strong> for the amount of
-                <strong>{total_amount}</strong>.
+                <strong>{html.escape(invoice_number)}</strong> for the amount
+                of <strong>{html.escape(total_amount)}</strong>.
             </p>
             <p style="font-size: 16px; margin-bottom: 20px;">
                 If you have any questions about this invoice, please don't
@@ -243,7 +244,7 @@ def send_invoice_email(
             <p style="font-size: 14px; color: #666; margin-top: 30px;
             padding-top: 20px; border-top: 1px solid #ddd;">
                 Best regards,<br>
-                {settings.PROJECT_NAME}
+                {html.escape(settings.PROJECT_NAME)}
             </p>
         </div>
     </body>

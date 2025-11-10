@@ -8,6 +8,7 @@ from datetime import datetime
 import csv
 import io
 import json
+import logging
 
 from app.db.session import get_db
 from app.models.invoice import (
@@ -30,6 +31,7 @@ from app.services.pdf_generator import get_pdf_generator, PDFGenerationError
 from app.core.email import send_invoice_email
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def generate_invoice_number(db: Session, tenant_id: str) -> str:
@@ -533,9 +535,16 @@ def send_invoice(
     )
 
     if not email_sent:
+        logger.error(
+            "Failed to send invoice email for invoice %s to %s",
+            invoice.invoice_number,
+            invoice.customer_email
+        )
         raise HTTPException(
             status_code=500,
-            detail="Failed to send invoice email. Please try again later."
+            detail="Failed to send invoice email. Please check the server "
+                   "logs for details or verify SendGrid is properly "
+                   "configured."
         )
 
     # Update invoice status to SENT
