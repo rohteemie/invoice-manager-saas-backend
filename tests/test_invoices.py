@@ -1146,3 +1146,62 @@ def test_send_invoice_tenant_isolation(
     )
 
     assert response.status_code == 404
+
+
+def test_send_invoice_pdf_matches_download(client, manager_auth_headers, mocker):
+    """Test that the PDF sent via email is identical to the downloaded PDF."""
+    # Variable to capture the PDF bytes sent via email
+    sent_pdf_bytes = None
+    
+    def mock_send_email(**kwargs):
+        nonlocal sent_pdf_bytes
+        sent_pdf_bytes = kwargs['pdf_bytes']
+        return True
+    
+    mocker.patch(
+        'app.api.v1.endpoints.invoices.send_invoice_email',
+        side_effect=mock_send_email
+    )
+
+    # Create a draft invoice with customer email
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "customer_email": "john@example.com",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product A",
+                    "quantity": 2,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=manager_auth_headers
+    )
+    assert response.status_code == 201
+    invoice_id = response.json()["id"]
+
+    # Download the PDF
+    download_response = client.get(
+        f"/api/v1/invoices/{invoice_id}/pdf",
+        headers=manager_auth_headers
+    )
+    assert download_response.status_code == 200
+    downloaded_pdf_bytes = download_response.content
+
+    # Send the invoice (which triggers PDF generation and email)
+    send_response = client.post(
+        f"/api/v1/invoices/{invoice_id}/send",
+        headers=manager_auth_headers
+    )
+    assert send_response.status_code == 200
+
+    # Verify that the PDF bytes are identical
+    assert sent_pdf_bytes is not None, "Email was not sent"
+    assert sent_pdf_bytes == downloaded_pdf_bytes, (
+        "PDF sent via email differs from downloaded PDF. "
+        f"Downloaded: {len(downloaded_pdf_bytes)} bytes, "
+        f"Sent: {len(sent_pdf_bytes)} bytes"
+    )
