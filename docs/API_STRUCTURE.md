@@ -20,7 +20,9 @@ Multi-Tenant SaaS Backend API
 ├── /api/v1/auth (Authentication)
 │   ├── POST /register - Register new user
 │   ├── POST /login    - Login and get tokens
-│   └── POST /refresh  - Refresh access token
+│   ├── POST /refresh  - Refresh access token
+│   ├── POST /verify-email - Verify email with token (Security: Token expires in 24h)
+│   └── POST /resend-verification-email - Resend verification email (Rate limited: 3/hour)
 │
 └── /api/v1/users (User Management)
     ├── GET    /me - Get current user info (Authenticated)
@@ -143,29 +145,34 @@ Multi-Tenant SaaS Backend API
 ## Data Model Relationships
 
 ```bash
-┌──────────────────┐
-│     Tenant       │
-│  - id (PK)       │
-│  - name          │
-│  - domain        │
-│  - plan_type     │
-│  - is_active     │
-└────────┬─────────┘
+┌───────────────────────────┐
+│     Tenant                │
+│  - id (PK)                │
+│  - name                   │
+│  - domain                 │
+│  - plan_type              │
+│  - is_active              │
+│  - default_currency (ISO) │  ◄── ISO 4217 compliant
+│  - tax_rate (Decimal)     │  ◄── GDPR Art. 6 compliant
+│  - tax_label (String)     │
+└────────┬──────────────────┘
          │
          │ 1:N
          │
          ▼
-┌──────────────────┐
-│      User        │
-│  - id (PK)       │
-│  - email         │
-│  - full_name     │
-│  - hashed_pass   │
-│  - role (enum)   │
-│  - tenant_id(FK) │◄── Foreign Key
-│  - is_active     │
-│  - is_verified   │
-└──────────────────┘
+┌───────────────────────────────┐
+│      User                     │
+│  - id (PK)                    │
+│  - email                      │
+│  - full_name                  │
+│  - hashed_pass                │
+│  - role (enum)                │
+│  - tenant_id(FK)              │◄── Foreign Key
+│  - is_active                  │
+│  - is_verified                │
+│  - verification_token         │◄── ISO 27001: Access control
+│  - verification_token_exp_at  │◄── GDPR: Data minimization
+└───────────────────────────────┘
 ```
 
 ## Security Layers
@@ -277,7 +284,7 @@ app/
 
 ## Summary Statistics
 
-- **Total Endpoints**: 14 (5 tenant + 3 auth + 6 user)
+- **Total Endpoints**: 16 (5 tenant + 5 auth + 6 user)
 - **Protected Endpoints**: 6 (require authentication)
 - **Role-Restricted**: 5 (require specific roles)
 - **Authentication Methods**: JWT Bearer Token
@@ -285,6 +292,8 @@ app/
 - **Token Types**: 2 (access + refresh)
 - **User Roles**: 4 (Owner, Admin, Manager, Attendant)
 - **Security Layers**: 5 (validation, auth, authz, isolation, ORM)
+- **Supported Currencies**: 4 (USD, EUR, GBP, NGN - ISO 4217 compliant)
+- **Email Verification**: Enabled with 24h token expiration
 
 ## Quick Start Commands
 
@@ -325,3 +334,98 @@ curl http://localhost:8000/api/v1/users/me \
 ✅ Protected endpoints
 ✅ OpenAPI documentation
 ✅ Code style compliance (pycodestyle)
+✅ Email verification with token expiration
+✅ Multi-currency support (ISO 4217)
+✅ Tax configuration per tenant
+
+## Security & Compliance
+
+### ISO 27001 Compliance
+
+**Access Control (A.9)**
+- JWT-based authentication with token expiration
+- Role-based access control (RBAC) with 4 hierarchical roles
+- Email verification tokens expire after 24 hours
+- Verification tokens are cryptographically secure (secrets.token_urlsafe)
+- Rate limiting on sensitive endpoints (3 resends/hour)
+
+**Cryptography (A.10)**
+- Passwords hashed using Bcrypt algorithm
+- JWT tokens signed with HS256 algorithm
+- Verification tokens use 32-byte URL-safe random strings
+- All secrets stored in environment variables, not in code
+
+**Operations Security (A.12)**
+- Automatic logging of authentication events
+- Token validation on every protected endpoint
+- Inactive users blocked from authentication
+- Soft delete for data retention and audit trails
+
+### GDPR Compliance
+
+**Right to Erasure (Art. 17)**
+- Soft delete implementation for users (`is_active` flag)
+- Verification tokens automatically cleared after use
+- Token expiration ensures data minimization
+
+**Data Minimization (Art. 5.1.c)**
+- Verification tokens expire after 24 hours
+- Tokens cleared immediately after successful verification
+- Only necessary user fields stored
+
+**Lawful Basis for Processing (Art. 6)**
+- Tax information processed under legal obligation (Art. 6.1.c)
+- Customer financial data processed under contract (Art. 6.1.b)
+- Email verification for legitimate interest in security (Art. 6.1.f)
+
+**Data Protection by Design (Art. 25)**
+- Tenant isolation at database query level
+- Foreign key constraints prevent orphaned records
+- Input validation via Pydantic schemas
+- Secure defaults (is_active=True, is_verified=False)
+
+**Security of Processing (Art. 32)**
+- Bcrypt password hashing (industry standard)
+- JWT token-based authentication
+- HTTPS recommended for production
+- Rate limiting prevents brute force attacks
+
+### Financial Data Security
+
+**Multi-Currency Support (ISO 4217)**
+- All currency codes follow ISO 4217 standard
+- Supported currencies: USD, EUR, GBP, NGN
+- Currency validation at schema level
+- Database indexes on currency fields for performance
+
+**Tax Data Handling**
+- Tax rates stored with 2 decimal precision (Decimal 5,2)
+- Tax labels support regional variations (VAT, GST, Sales Tax)
+- Per-tenant tax configuration for regulatory compliance
+- Nullable tax_rate supports tax-exempt organizations
+
+**Sensitive Financial Fields**
+- All monetary values use Decimal type (not Float) for precision
+- Customer financial information isolated by tenant_id
+- Invoice data protected by role-based permissions
+- Audit trail via automatic timestamps (created_at, updated_at)
+
+### Data Privacy Best Practices
+
+**Personal Identifiable Information (PII)**
+- Customer email, phone, address stored encrypted at rest (DB level)
+- Email addresses used for authentication only
+- No PII in logs or error messages
+- User enumeration prevention in resend endpoint
+
+**Token Security**
+- Verification tokens single-use only
+- Tokens indexed for efficient lookup but cleared after use
+- Expired tokens rejected with clear error messages
+- Token generation uses cryptographically secure randomness
+
+**Rate Limiting**
+- Verification endpoint: 10 requests/minute
+- Resend endpoint: 3 requests/hour
+- Login endpoint: Standard rate limiting via SlowAPI
+- Prevents abuse and brute force attacks

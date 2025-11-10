@@ -259,18 +259,237 @@ CREATE TABLE invoice_items (
 );
 ```
 
-## Future Enhancements
+## Multi-Currency and Tax Support
 
-While not in scope for this sprint, these enhancements could be added:
+### Overview
 
-1. **Tax Calculation**: Configurable tax rates per tenant/branch
+**Implementation Date**: 2025-11-10  
+**Migration**: `add_multi_currency_and_tax_support.py`
+
+The system now supports multi-currency invoicing and configurable tax rates per tenant, enabling global operations and compliance with regional tax regulations.
+
+### Database Schema Updates
+
+#### Invoice Table Changes
+
+**currency** (String(3), NOT NULL, default='USD', indexed)
+- Stores the invoice currency using ISO 4217 currency codes
+- Supported currencies: USD, EUR, GBP, NGN
+- Indexed for efficient filtering and reporting
+- Defaults to tenant's default_currency or 'USD'
+- **Compliance**: ISO 4217 standard for currency codes
+
+#### Tenant Table Changes
+
+**default_currency** (String(3), NOT NULL, default='USD')
+- Tenant's default currency for new invoices
+- ISO 4217 compliant (3-letter currency code)
+- Automatically applied to invoices if not specified
+- **Security**: Validated at schema level
+
+**tax_rate** (Numeric(5,2), nullable)
+- Default tax/VAT rate as percentage (0.00-100.00)
+- Nullable for tax-exempt organizations
+- Precision: 2 decimal places (e.g., 7.50 for 7.5%)
+- **GDPR**: Processed under Art. 6.1.c (legal obligation)
+
+**tax_label** (String(50), nullable)
+- Human-readable tax label (e.g., 'VAT', 'GST', 'Sales Tax')
+- Supports regional tax terminology
+- Nullable for tax-exempt organizations
+- **Privacy**: No PII stored
+
+### Model Updates
+
+#### Invoice Model (`app/models/invoice.py`)
+
+```python
+currency = Column(Enum(Currency), nullable=False, default=Currency.USD, index=True)
+```
+
+**Currency Enum**:
+```python
+class Currency(str, enum.Enum):
+    NGN = "NGN"  # Nigerian Naira
+    USD = "USD"  # US Dollar
+    GBP = "GBP"  # British Pound
+    EUR = "EUR"  # Euro
+```
+
+#### Tenant Model (`app/models/tenant.py`)
+
+```python
+default_currency = Column(String(3), default="USD", nullable=False)
+tax_rate = Column(Numeric(5, 2), nullable=True)
+tax_label = Column(String(50), nullable=True)
+```
+
+### Schema Updates
+
+#### Invoice Schemas (`app/schemas/invoice.py`)
+
+**InvoiceBase**:
+```python
+currency: Optional[Currency] = Field(
+    None, description="Currency code (defaults to tenant's default)"
+)
+```
+
+#### Tenant Schemas (`app/schemas/tenant.py`)
+
+**TenantBase/Create/Update**:
+```python
+default_currency: Optional[str] = Field(
+    "USD", description="Default currency (NGN, USD, GBP, EUR)"
+)
+tax_rate: Optional[Decimal] = Field(
+    None, ge=0, le=100,
+    description="Tax/VAT rate as percentage (0-100, null for tax-free)"
+)
+tax_label: Optional[str] = Field(
+    None, max_length=50,
+    description="Tax label (e.g., 'VAT', 'GST', 'Sales Tax')"
+)
+```
+
+### API Behavior
+
+#### Creating an Invoice
+
+**Scenario 1: No currency specified**
+```json
+POST /api/v1/invoices/
+{
+  "customer_name": "John Doe",
+  "items": [...]
+}
+```
+Response: Invoice created with tenant's `default_currency`
+
+**Scenario 2: Currency specified**
+```json
+POST /api/v1/invoices/
+{
+  "customer_name": "John Doe",
+  "currency": "EUR",
+  "items": [...]
+}
+```
+Response: Invoice created with specified currency (EUR)
+
+**Scenario 3: Invalid currency**
+```json
+{
+  "currency": "ABC"
+}
+```
+Response: 422 Validation Error (not in Currency enum)
+
+#### Configuring Tenant Tax Settings
+
+```json
+PUT /api/v1/tenants/{tenant_id}
+{
+  "default_currency": "GBP",
+  "tax_rate": 20.00,
+  "tax_label": "VAT"
+}
+```
+
+**Tax-Exempt Organization**:
+```json
+{
+  "default_currency": "USD",
+  "tax_rate": null,
+  "tax_label": null
+}
+```
+
+### Security and Compliance
+
+#### ISO 4217 Compliance
+- All currency codes follow ISO 4217 standard
+- Only supported currencies allowed (enum validation)
+- Currency field indexed for audit and reporting
+- **Benefit**: International standard compliance
+
+#### GDPR Compliance
+
+**Legal Basis (Art. 6.1.c)**:
+- Tax information processed under legal obligation
+- Required for regulatory compliance in most jurisdictions
+- Stored at tenant level (not customer level) for privacy
+
+**Data Minimization (Art. 5.1.c)**:
+- Only essential tax fields stored
+- Tax label optional for flexibility
+- No customer tax IDs or sensitive tax data
+
+**Purpose Limitation (Art. 5.1.b)**:
+- Tax data used only for invoice generation
+- Currency for financial reporting and invoicing
+- No secondary use without consent
+
+#### Financial Data Security
+
+**Decimal Precision**:
+- Tax rates stored as Numeric(5,2) not Float
+- Prevents rounding errors in calculations
+- Industry standard for financial data
+
+**Validation**:
+- Tax rate: 0.00 to 100.00 (enforced at schema level)
+- Currency: Enum validation prevents invalid codes
+- Labels: Max 50 characters prevents buffer issues
+
+**Audit Trail**:
+- All changes tracked via updated_at timestamp
+- Currency changes auditable via database logs
+- Tenant-level config isolates tax data
+
+### Migration Details
+
+**File**: `migrations/versions/add_multi_currency_and_tax_support.py`
+
+**Upgrade Actions**:
+1. Add `currency` column to invoices table (default 'USD')
+2. Create index on invoices.currency
+3. Add `default_currency` to tenants table (default 'USD')
+4. Add `tax_rate` to tenants table (nullable)
+5. Add `tax_label` to tenants table (nullable)
+
+**Downgrade Actions**:
+- Removes all added columns and indexes
+- Safe rollback supported
+
+**Backward Compatibility**:
+- All new columns have sensible defaults
+- Existing invoices get 'USD' currency
+- No data loss on upgrade
+
+### Future Enhancements
+
+While not in scope for this release, these enhancements could be added:
+
+1. **Automated Tax Calculation**: Apply tenant tax_rate to invoice subtotal
+2. **Multi-Rate Tax**: Support multiple tax rates per invoice
+3. **Tax Exemptions**: Customer-level tax exemption flags
+4. **Currency Conversion**: Real-time exchange rate API integration
+5. **Tax Reports**: Generate tax reports by period/currency
+6. **Regional Tax Rules**: Country-specific tax calculation logic
+
+## Legacy Future Enhancements
+
+While not in scope for earlier sprints, these enhancements were noted:
+
+1. ~~**Tax Calculation**: Configurable tax rates per tenant/branch~~ ✅ **IMPLEMENTED**
 2. **Discount Management**: Percentage or fixed amount discounts
 3. **Payment Records**: Separate payment transaction table
 4. **Invoice Templates**: Customizable PDF invoice generation
 5. **Overdue Detection**: Background job to auto-mark overdue invoices
 6. **Reminders**: Automated payment reminder emails
 7. **Recurring Invoices**: Template-based recurring invoice generation
-8. **Multi-Currency**: Support for different currencies
+8. ~~**Multi-Currency**: Support for different currencies~~ ✅ **IMPLEMENTED**
 9. **Export**: CSV/PDF export functionality
 10. **Analytics**: Revenue reports, overdue tracking
 

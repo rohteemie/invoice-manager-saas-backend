@@ -10,11 +10,14 @@ This directory contains comprehensive documentation for the Multi-Tenant SaaS Ba
 docs/
 ├── API_STRUCTURE.md            # Visual API structure and endpoint overview
 ├── authentication.md           # User authentication & authorization guide
+├── SECURITY.md                 # Security & compliance documentation (ISO 27001, GDPR)
 ├── alembic_setup.md            # Database migration setup guide
 ├── ci_cd_pipeline.md           # CI/CD pipeline documentation
 ├── deployment.md               # Deployment guide with migration automation
 ├── product_requirement.md      # Product Requirements Document (PRD)
 ├── srs_technical_design.md     # System Requirements Document (SRD)
+├── INVOICE_IMPLEMENTATION.md   # Invoice feature with multi-currency & tax support
+├── EMAIL_VERIFICATION.md       # Email verification feature documentation
 ├── sprint_1.2_summary.md       # Sprint 1.2 implementation summary
 ├── activity_diagram.png        # Invoice workflow activity diagram
 ├── api_sequence_diagram.png    # API request/response sequence
@@ -84,27 +87,113 @@ docs/
 
 #### API Structure Overview (`API_STRUCTURE.md`)
 
-**Purpose:** Visual representation of the entire API structure.
+**Purpose:** Visual representation of the entire API structure with security compliance.
 
 **Key Sections:**
 
-- Complete API endpoint tree
+- Complete API endpoint tree (16 endpoints)
+- Email verification endpoints
 - Role hierarchy visualization
 - Authentication flow diagram
-- Data model relationships
-- Security layers
+- Data model relationships with security annotations
+- Security layers (5 layers)
 - Token lifecycle
 - File structure mapping
-- Summary statistics
+- Security & Compliance section (ISO 27001, GDPR)
+- Multi-currency support details
 
 **Highlights:**
 
-- 14 total endpoints (5 tenant + 3 auth + 6 user)
+- 16 total endpoints (5 tenant + 5 auth + 6 user)
 - Visual ASCII diagrams for flows
 - Security layer architecture
-- Testing checklist
+- ISO 27001 and GDPR compliance annotations
+- Multi-currency (ISO 4217) documentation
 
-**Audience:** Developers, API consumers, testers
+**Audience:** Developers, API consumers, testers, security reviewers
+
+---
+
+#### Security & Compliance Documentation (`SECURITY.md`)
+
+**Purpose:** Comprehensive security and compliance guide covering ISO 27001 and GDPR standards.
+
+**Key Sections:**
+
+- ISO 27001 Compliance (A.9, A.10, A.12)
+- GDPR Compliance (Articles 5, 6, 17, 25, 32)
+- Authentication & Access Control
+- Data Protection measures
+- Financial Data Security
+- Email Verification Security
+- Multi-Currency & Tax Compliance
+- Security Best Practices
+- Incident Response Plan
+- Audit & Monitoring guidance
+
+**Highlights:**
+
+- 500+ lines of comprehensive security documentation
+- Compliance checklist with status
+- Security measures for developers, deployers, and users
+- Incident response procedures
+- Financial data handling (ISO 4217, tax data)
+- Token security details
+- Privacy protection measures
+
+**Audience:** Security reviewers, compliance officers, developers, DevOps engineers
+
+---
+
+#### Invoice Implementation (`INVOICE_IMPLEMENTATION.md`)
+
+**Purpose:** Complete documentation of invoice features including multi-currency and tax support.
+
+**Key Sections:**
+
+- Invoice data model
+- Invoice lifecycle and status transitions
+- API endpoints and permissions
+- Multi-Currency support (ISO 4217 compliant)
+- Tax configuration per tenant
+- Security and compliance measures
+- Database schema details
+- Testing coverage
+
+**Highlights:**
+
+- Multi-currency support (USD, EUR, GBP, NGN)
+- Configurable tax rates per tenant
+- GDPR compliance for financial data
+- Migration details and backward compatibility
+- Security annotations for sensitive fields
+
+**Audience:** Developers, API consumers, compliance officers
+
+---
+
+#### Email Verification (`EMAIL_VERIFICATION.md`)
+
+**Purpose:** Documentation of email verification feature with security best practices.
+
+**Key Sections:**
+
+- Token generation and security
+- Email verification workflow
+- Resend functionality
+- Rate limiting
+- Security considerations
+- Frontend integration guide
+
+**Highlights:**
+
+- Cryptographically secure tokens
+- 24-hour token expiration
+- Single-use tokens
+- Rate limiting protection
+- GDPR data minimization compliance
+
+**Audience:** Frontend developers, security reviewers
 
 ---
 
@@ -170,25 +259,26 @@ docs/
 
 #### Authentication Guide (`authentication.md`)
 
-**Purpose:** Comprehensive authentication and authorization documentation.
+**Purpose:** Comprehensive authentication and authorization documentation with security compliance.
 
 **Key Sections:**
 
-- User model attributes
+- User model attributes (including verification tokens)
+- Email verification fields with security annotations
 - User role definitions and hierarchy
-- Authentication endpoints (register, login, refresh)
+- Authentication endpoints (register, login, refresh, verify-email)
 - JWT token structure
-- Security features
-- GDPR compliance
+- Security features (ISO 27001, GDPR)
 - Testing examples
 
 **Contents:**
 
-- Password hashing with bcrypt
+- Password hashing with bcrypt (ISO 27001 A.10)
 - JWT token generation and validation
+- Email verification token security
 - Role-based access control implementation
-- Soft deletion for GDPR compliance
-- Email verification workflow
+- Soft deletion for GDPR compliance (Art. 17)
+- Token expiration for data minimization (GDPR Art. 5.1.c)
 - Code examples for each endpoint
 
 **Audience:** Frontend developers, API integrators, security reviewers
@@ -350,10 +440,23 @@ docs/
 
 **Security Assessment:**
 
-1. Review [authentication.md](authentication.md) for auth mechanisms
-2. Check [srs_technical_design.md](srs_technical_design.md) for security requirements
-3. Examine security layers in [API_STRUCTURE.md](API_STRUCTURE.md)
-4. Validate GDPR compliance in sprint documentation
+1. Review [SECURITY.md](SECURITY.md) for comprehensive security documentation
+2. Check [authentication.md](authentication.md) for auth mechanisms and token security
+3. Examine [srs_technical_design.md](srs_technical_design.md) for security requirements
+4. Review security layers in [API_STRUCTURE.md](API_STRUCTURE.md)
+5. Validate GDPR compliance across all documentation
+6. Check [INVOICE_IMPLEMENTATION.md](INVOICE_IMPLEMENTATION.md) for financial data security
+
+### For Compliance Officers
+
+**Compliance Review:**
+
+1. Review [SECURITY.md](SECURITY.md) for ISO 27001 and GDPR compliance
+2. Check compliance status table and measures
+3. Review data retention policies
+4. Validate legal basis for processing (GDPR Art. 6)
+5. Verify data protection by design measures
+6. Review incident response procedures
 
 ## Document Relationships
 

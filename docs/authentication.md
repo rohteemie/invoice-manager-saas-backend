@@ -11,13 +11,30 @@ The User model implements the following attributes:
 - **id**: UUID primary key
 - **email**: Unique email address (used as username for login)
 - **full_name**: User's full name
-- **hashed_password**: Bcrypt-hashed password for secure storage
+- **hashed_password**: Bcrypt-hashed password for secure storage (ISO 27001: A.10)
 - **role**: User role enum (Owner, Admin, Manager, Attendant)
 - **tenant_id**: Foreign key to Tenant model for data isolation
-- **is_active**: Boolean flag for soft delete (GDPR-compliant)
+- **is_active**: Boolean flag for soft delete (GDPR-compliant: Art. 17)
 - **is_verified**: Boolean flag for email verification status
-- **created_at**: Timestamp of user creation
-- **updated_at**: Timestamp of last update
+- **verification_token**: Cryptographically secure token for email verification (nullable, indexed)
+- **verification_token_expires_at**: Token expiration timestamp (nullable, 24h default - GDPR: Data minimization)
+- **created_at**: Timestamp of user creation (GDPR: Audit trail)
+- **updated_at**: Timestamp of last update (GDPR: Audit trail)
+
+### Email Verification Fields (Security)
+
+**verification_token** (String, 255 chars, nullable, indexed)
+- Generated using `secrets.token_urlsafe(32)` for cryptographic security
+- 43-character URL-safe token (32 bytes base64-encoded)
+- Indexed for efficient lookup during verification
+- Single-use: cleared immediately after successful verification
+- **Security compliance**: ISO 27001 A.9 (Access Control)
+
+**verification_token_expires_at** (DateTime, nullable)
+- Default expiration: 24 hours from generation (configurable)
+- Prevents indefinite token validity
+- Automatically cleared after verification
+- **Privacy compliance**: GDPR Art. 5.1.c (Data Minimization)
 
 ## User Roles
 
