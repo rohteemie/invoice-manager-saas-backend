@@ -43,25 +43,28 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
     return number
 
 
-def calculate_totals(items: List[InvoiceItemModel], tax_rate: Optional[Decimal] = None) -> dict:
+def calculate_totals(
+    items: List[InvoiceItemModel],
+    tax_rate: Optional[Decimal] = None
+) -> dict:
     """
     Calculate invoice totals from items.
-    
+
     Args:
         items: List of invoice items
         tax_rate: Tax rate as percentage (0-100), None for tax-free
-    
+
     Returns:
         Dict with subtotal, tax_amount, discount_amount, and total_amount
     """
     subtotal = sum(item.total_price for item in items)
-    
+
     # Calculate tax based on tenant's tax configuration
     if tax_rate is not None and tax_rate > 0:
         tax_amount = subtotal * (tax_rate / Decimal("100"))
     else:
         tax_amount = Decimal("0.00")
-    
+
     discount_amount = Decimal("0.00")
     total_amount = subtotal + tax_amount - discount_amount
 
@@ -90,10 +93,10 @@ def create_invoice(
     tenant = db.query(TenantModel).filter(
         TenantModel.id == current_user.tenant_id
     ).first()
-    
+
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    
+
     # Use invoice currency if provided, otherwise use tenant's default
     currency = invoice_in.currency
     if currency is None:
@@ -102,7 +105,7 @@ def create_invoice(
         except ValueError:
             # Fallback to USD if tenant's currency is invalid
             currency = Currency.USD
-    
+
     # Create invoice
     invoice_number = generate_invoice_number(db, current_user.tenant_id)
 

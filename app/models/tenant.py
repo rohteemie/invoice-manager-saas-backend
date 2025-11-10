@@ -5,7 +5,7 @@ from sqlalchemy import Column, String, Boolean, Numeric
 class Tenant(Gen_Model, Base):
     """
     Tenant model for multi-tenant architecture.
-    
+
     Attributes:
         name: Tenant name
         domain: Unique tenant domain (optional)
