@@ -13,9 +13,11 @@ from app.db.session import get_db
 from app.models.invoice import (
     Invoice as InvoiceModel,
     InvoiceItem as InvoiceItemModel,
-    InvoiceStatus
+    InvoiceStatus,
+    Currency
 )
 from app.models.user import User, UserRole
+from app.models.tenant import Tenant as TenantModel
 from app.schemas.invoice import (
     Invoice,
     InvoiceCreate,
@@ -41,11 +43,28 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
     return number
 
 
-def calculate_totals(items: List[InvoiceItemModel]) -> dict:
-    """Calculate invoice totals from items."""
+def calculate_totals(
+    items: List[InvoiceItemModel],
+    tax_rate: Optional[Decimal] = None
+) -> dict:
+    """
+    Calculate invoice totals from items.
+
+    Args:
+        items: List of invoice items
+        tax_rate: Tax rate as percentage (0-100), None for tax-free
+
+    Returns:
+        Dict with subtotal, tax_amount, discount_amount, and total_amount
+    """
     subtotal = sum(item.total_price for item in items)
-    # For simplicity, tax is 0 for now (can be configured later)
-    tax_amount = Decimal("0.00")
+
+    # Calculate tax based on tenant's tax configuration
+    if tax_rate is not None and tax_rate > 0:
+        tax_amount = subtotal * (tax_rate / Decimal("100"))
+    else:
+        tax_amount = Decimal("0.00")
+
     discount_amount = Decimal("0.00")
     total_amount = subtotal + tax_amount - discount_amount
 
@@ -68,7 +87,25 @@ def create_invoice(
 
     Permissions: All authenticated users can create invoices.
     Invoice is created in DRAFT status by default.
+    Currency and tax are inherited from tenant settings unless specified.
     """
+    # Get tenant to access currency and tax settings
+    tenant = db.query(TenantModel).filter(
+        TenantModel.id == current_user.tenant_id
+    ).first()
+
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Use invoice currency if provided, otherwise use tenant's default
+    currency = invoice_in.currency
+    if currency is None:
+        try:
+            currency = Currency(tenant.default_currency)
+        except ValueError:
+            # Fallback to USD if tenant's currency is invalid
+            currency = Currency.USD
+
     # Create invoice
     invoice_number = generate_invoice_number(db, current_user.tenant_id)
 
@@ -81,6 +118,7 @@ def create_invoice(
         customer_phone=invoice_in.customer_phone,
         customer_address=invoice_in.customer_address,
         branch_id=invoice_in.branch_id,
+        currency=currency,
         issue_date=invoice_in.issue_date,
         due_date=invoice_in.due_date,
         notes=invoice_in.notes,
@@ -100,8 +138,8 @@ def create_invoice(
         )
         items.append(db_item)
 
-    # Calculate invoice totals
-    totals = calculate_totals(items)
+    # Calculate invoice totals using tenant's tax rate
+    totals = calculate_totals(items, tenant.tax_rate)
     db_invoice.subtotal = totals["subtotal"]
     db_invoice.tax_amount = totals["tax_amount"]
     db_invoice.discount_amount = totals["discount_amount"]

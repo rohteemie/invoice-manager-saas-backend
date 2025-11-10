@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
+from decimal import Decimal
 
 
 class TenantBase(BaseModel):
@@ -14,6 +15,17 @@ class TenantBase(BaseModel):
                                        description="Tenant description"
                                        )
     plan_type: str = Field("free", description="Tenant plan type")
+    default_currency: Optional[str] = Field(
+        "USD", description="Default currency (NGN, USD, GBP, EUR)"
+    )
+    tax_rate: Optional[Decimal] = Field(
+        None, ge=0, le=100,
+        description="Tax/VAT rate as percentage (0-100, null for tax-free)"
+    )
+    tax_label: Optional[str] = Field(
+        None, max_length=50,
+        description="Tax label (e.g., 'VAT', 'GST', 'Sales Tax')"
+    )
 
 
 class TenantCreate(TenantBase):
@@ -24,8 +36,19 @@ class TenantUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     domain: Optional[str] = Field(None, min_length=3, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
-    plan_type: Optional[str] = None  # Add missing field
+    plan_type: Optional[str] = None
     is_active: Optional[bool] = None
+    default_currency: Optional[str] = Field(
+        None, description="Default currency (NGN, USD, GBP, EUR)"
+    )
+    tax_rate: Optional[Decimal] = Field(
+        None, ge=0, le=100,
+        description="Tax/VAT rate as percentage (0-100, null for tax-free)"
+    )
+    tax_label: Optional[str] = Field(
+        None, max_length=50,
+        description="Tax label (e.g., 'VAT', 'GST', 'Sales Tax')"
+    )
 
 
 class TenantInDB(TenantBase):
