@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr
 from decimal import Decimal
-from app.models.invoice import InvoiceStatus
+from app.models.invoice import InvoiceStatus, Currency
 
 
 class InvoiceItemBase(BaseModel):
@@ -54,6 +54,9 @@ class InvoiceBase(BaseModel):
                                             description="Customer address")
     branch_id: Optional[str] = Field(None,
                                      description="Branch ID (optional)")
+    currency: Optional[Currency] = Field(
+        None, description="Currency code (defaults to tenant's default)"
+    )
     issue_date: str = Field(..., description="Invoice issue date (ISO 8601)")
     due_date: Optional[str] = Field(
         None, description="Payment due date (ISO 8601)"
@@ -79,6 +82,7 @@ class InvoiceUpdate(BaseModel):
     customer_phone: Optional[str] = Field(None, max_length=20)
     customer_address: Optional[str] = Field(None, max_length=500)
     branch_id: Optional[str] = None
+    currency: Optional[Currency] = None
     issue_date: Optional[str] = None
     due_date: Optional[str] = None
     notes: Optional[str] = Field(None, max_length=1000)
@@ -101,6 +105,7 @@ class InvoiceInDB(InvoiceBase):
     tenant_id: str
     creator_id: str
     status: InvoiceStatus
+    currency: Currency
     subtotal: Decimal
     tax_amount: Decimal
     discount_amount: Decimal

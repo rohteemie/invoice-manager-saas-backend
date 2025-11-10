@@ -15,6 +15,16 @@ class InvoiceStatus(str, enum.Enum):
     OVERDUE = "overdue"
 
 
+class Currency(str, enum.Enum):
+    """
+    Supported currencies for invoicing.
+    """
+    NGN = "NGN"  # Nigerian Naira
+    USD = "USD"  # US Dollar
+    GBP = "GBP"  # British Pound
+    EUR = "EUR"  # Euro
+
+
 class Invoice(Gen_Model, Base):
     """
     Invoice model for multi-tenant invoicing system.
@@ -29,6 +39,7 @@ class Invoice(Gen_Model, Base):
         customer_address: Customer address (optional)
         creator_id: User who created the invoice
         status: Invoice status (Draft, Sent, Paid, Overdue)
+        currency: Currency code (NGN, USD, GBP, EUR)
         issue_date: Date invoice was issued
         due_date: Payment due date (optional)
         subtotal: Subtotal amount before tax
@@ -53,6 +64,8 @@ class Invoice(Gen_Model, Base):
                         index=True)
     status = Column(Enum(InvoiceStatus), nullable=False,
                     default=InvoiceStatus.DRAFT, index=True)
+    currency = Column(Enum(Currency), nullable=False, default=Currency.USD,
+                      index=True)
     issue_date = Column(String(50), nullable=False)
     due_date = Column(String(50), nullable=True)
     subtotal = Column(Numeric(10, 2), nullable=False, default=0.00)
