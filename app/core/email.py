@@ -4,6 +4,7 @@ Email service for sending verification and notification emails.
 import logging
 import base64
 import html
+import re
 from typing import Optional
 
 import httpx
@@ -11,6 +12,52 @@ import httpx
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def sanitize_for_email(text: str) -> str:
+    """
+    Sanitize text for use in email content and headers.
+    Removes control characters and normalizes whitespace.
+
+    Args:
+        text: Text to sanitize
+
+    Returns:
+        Sanitized text safe for email
+    """
+    if not text:
+        return ""
+    # Remove control characters except newline and tab
+    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
+    # Replace newlines with spaces (for headers and single-line content)
+    text = text.replace('\n', ' ').replace('\r', ' ')
+    # Normalize multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize filename to prevent path traversal and special characters.
+
+    Args:
+        filename: Original filename
+
+    Returns:
+        Safe filename with only alphanumeric, hyphens, underscores, and dots
+    """
+    if not filename:
+        return "invoice.pdf"
+    # Remove path separators and potentially dangerous characters
+    filename = re.sub(r'[/\\:*?"<>|]', '', filename)
+    # Allow only alphanumeric, hyphens, underscores, and dots
+    filename = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
+    # Ensure it doesn't start with a dot (hidden file)
+    filename = filename.lstrip('.')
+    # Limit length
+    if len(filename) > 255:
+        filename = filename[:255]
+    return filename if filename else "invoice.pdf"
 
 
 def send_verification_email(
@@ -205,15 +252,21 @@ def send_invoice_email(
         )
         return False
 
+    # Sanitize user-provided data
+    safe_customer_name = sanitize_for_email(customer_name)
+    safe_invoice_number = sanitize_for_email(invoice_number)
+    safe_total_amount = sanitize_for_email(total_amount)
+    safe_project_name = sanitize_for_email(settings.PROJECT_NAME)
+
     # Plain text content
     plain_text = (
-        f"Dear {customer_name},\n\n"
+        f"Dear {safe_customer_name},\n\n"
         f"Thank you for your business!\n\n"
-        f"Please find attached your invoice {invoice_number} "
-        f"for the amount of {total_amount}.\n\n"
+        f"Please find attached your invoice {safe_invoice_number} "
+        f"for the amount of {safe_total_amount}.\n\n"
         "If you have any questions, please don't hesitate to contact us.\n\n"
         "Best regards,\n"
-        f"{settings.PROJECT_NAME}"
+        f"{safe_project_name}"
     )
 
     # HTML content with styling
@@ -229,13 +282,13 @@ def send_invoice_email(
         <div style="background-color: #f8f9fa; padding: 30px;
         border-radius: 10px;">
             <h1 style="color: #2c3e50; margin-bottom: 20px;">
-            Invoice from {html.escape(settings.PROJECT_NAME)}</h1>
+            Invoice from {html.escape(safe_project_name)}</h1>
             <p style="font-size: 16px; margin-bottom: 20px;">
-            Dear {html.escape(customer_name)},</p>
+            Dear {html.escape(safe_customer_name)},</p>
             <p style="font-size: 16px; margin-bottom: 20px;">
                 Thank you for your business! Please find attached your invoice
-                <strong>{html.escape(invoice_number)}</strong> for the amount
-                of <strong>{html.escape(total_amount)}</strong>.
+                <strong>{html.escape(safe_invoice_number)}</strong> for the amount
+                of <strong>{html.escape(safe_total_amount)}</strong>.
             </p>
             <p style="font-size: 16px; margin-bottom: 20px;">
                 If you have any questions about this invoice, please don't
@@ -244,7 +297,7 @@ def send_invoice_email(
             <p style="font-size: 14px; color: #666; margin-top: 30px;
             padding-top: 20px; border-top: 1px solid #ddd;">
                 Best regards,<br>
-                {html.escape(settings.PROJECT_NAME)}
+                {html.escape(safe_project_name)}
             </p>
         </div>
     </body>
@@ -259,7 +312,7 @@ def send_invoice_email(
             {
                 "to": [{"email": email}],
                 "subject": (
-                    f"Invoice {invoice_number} from {settings.PROJECT_NAME}"
+                    f"Invoice {safe_invoice_number} from {safe_project_name}"
                 ),
             }
         ],
@@ -278,7 +331,7 @@ def send_invoice_email(
             {
                 "content": pdf_base64,
                 "type": "application/pdf",
-                "filename": f"invoice_{invoice_number}.pdf",
+                "filename": sanitize_filename(f"invoice_{invoice_number}.pdf"),
                 "disposition": "attachment"
             }
         ]
