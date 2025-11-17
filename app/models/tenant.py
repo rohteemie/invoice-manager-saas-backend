@@ -13,7 +13,7 @@ class Tenant(Gen_Model, Base):
         description: Tenant description (optional)
         is_active: Whether tenant is active
         default_currency: Default currency for invoices (NGN, USD, GBP, EUR)
-        tax_rate: Default tax/VAT rate as percentage (0-100, nullable for tax-free)
+        tax_rate: Default tax/VAT rate as percentage (0-100, tax-free nullable)
         tax_label: Label for tax (e.g., 'VAT', 'GST', 'Sales Tax', or None)
     """
     __tablename__ = "tenants"

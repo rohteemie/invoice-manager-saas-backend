@@ -258,7 +258,7 @@ def update_invoice(
         tenant = db.query(TenantModel).filter(
             TenantModel.id == current_user.tenant_id
         ).first()
-        
+
         # Delete existing items
         db.query(InvoiceItemModel).filter(
             InvoiceItemModel.invoice_id == invoice_id
@@ -634,7 +634,9 @@ def export_invoices(
                 invoice.customer_name,
                 invoice.customer_email or "",
                 invoice.status.value,
-                invoice.currency.value if hasattr(invoice.currency, 'value') else str(invoice.currency),
+                invoice.currency.value if hasattr(
+                    invoice.currency, 'value'
+                    ) else str(invoice.currency),
                 invoice.issue_date,
                 invoice.due_date or "",
                 float(invoice.subtotal),
@@ -668,7 +670,9 @@ def export_invoices(
                 "customer_phone": invoice.customer_phone,
                 "customer_address": invoice.customer_address,
                 "status": invoice.status.value,
-                "currency": invoice.currency.value if hasattr(invoice.currency, 'value') else str(invoice.currency),
+                "currency": invoice.currency.value if hasattr(
+                    invoice.currency, 'value'
+                    ) else str(invoice.currency),
                 "issue_date": invoice.issue_date,
                 "due_date": invoice.due_date,
                 "subtotal": float(invoice.subtotal),
