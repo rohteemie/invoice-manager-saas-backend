@@ -72,9 +72,19 @@ class PDFGenerator:
         Returns:
             Dictionary with formatted invoice data
         """
+        # Get currency symbol based on invoice currency
+        currency_symbols = {
+            "USD": "$",
+            "GBP": "£",
+            "EUR": "€",
+            "NGN": "₦"
+        }
+        currency_code = invoice.currency.value if hasattr(invoice.currency, 'value') else str(invoice.currency)
+        currency_symbol = currency_symbols.get(currency_code, "$")
+        
         # Format monetary values
         def format_money(value: Decimal) -> str:
-            return f"${value:,.2f}"
+            return f"{currency_symbol}{value:,.2f}"
 
         # Format dates
         def format_date(date_str: Optional[str]) -> str:

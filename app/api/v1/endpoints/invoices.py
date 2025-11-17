@@ -254,6 +254,11 @@ def update_invoice(
 
     # Update items if provided
     if items_data is not None:
+        # Get tenant to access tax rate for recalculation
+        tenant = db.query(TenantModel).filter(
+            TenantModel.id == current_user.tenant_id
+        ).first()
+        
         # Delete existing items
         db.query(InvoiceItemModel).filter(
             InvoiceItemModel.invoice_id == invoice_id
@@ -273,8 +278,8 @@ def update_invoice(
             )
             items.append(db_item)
 
-        # Recalculate totals
-        totals = calculate_totals(items)
+        # Recalculate totals with tenant's tax rate
+        totals = calculate_totals(items, tenant.tax_rate if tenant else None)
         invoice.subtotal = totals["subtotal"]
         invoice.tax_amount = totals["tax_amount"]
         invoice.discount_amount = totals["discount_amount"]
@@ -617,7 +622,7 @@ def export_invoices(
         # Write header
         writer.writerow([
             "Invoice Number", "Customer Name", "Customer Email",
-            "Status", "Issue Date", "Due Date",
+            "Status", "Currency", "Issue Date", "Due Date",
             "Subtotal", "Tax Amount", "Discount Amount", "Total Amount",
             "Payment Method", "Paid At", "Created At"
         ])
@@ -629,6 +634,7 @@ def export_invoices(
                 invoice.customer_name,
                 invoice.customer_email or "",
                 invoice.status.value,
+                invoice.currency.value if hasattr(invoice.currency, 'value') else str(invoice.currency),
                 invoice.issue_date,
                 invoice.due_date or "",
                 float(invoice.subtotal),
@@ -662,6 +668,7 @@ def export_invoices(
                 "customer_phone": invoice.customer_phone,
                 "customer_address": invoice.customer_address,
                 "status": invoice.status.value,
+                "currency": invoice.currency.value if hasattr(invoice.currency, 'value') else str(invoice.currency),
                 "issue_date": invoice.issue_date,
                 "due_date": invoice.due_date,
                 "subtotal": float(invoice.subtotal),
