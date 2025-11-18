@@ -77,7 +77,7 @@ class Invoice(Gen_Model, Base):
                         index=True)
     status = Column(Enum(InvoiceStatus), nullable=False,
                     default=InvoiceStatus.DRAFT, index=True)
-    currency = Column(Enum(Currency), nullable=False, default=Currency.USD,
+    currency = Column(Enum(Currency), nullable=False, default=Currency.NGN,
                       index=True)
     issue_date = Column(String(50), nullable=False)
     due_date = Column(String(50), nullable=True)

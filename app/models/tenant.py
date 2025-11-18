@@ -23,7 +23,7 @@ class Tenant(Gen_Model, Base):
     plan_type = Column(String(20), default="free")
     description = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
-    default_currency = Column(String(3), default="USD", nullable=False)
+    default_currency = Column(String(3), default="NGN", nullable=False)
     tax_rate = Column(Numeric(5, 2), nullable=True)
     tax_label = Column(String(50), nullable=True)
 
