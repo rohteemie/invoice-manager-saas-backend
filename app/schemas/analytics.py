@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import Dict
 
 
 class InvoiceSummary(BaseModel):
