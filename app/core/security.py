@@ -129,7 +129,9 @@ def generate_verification_token() -> Tuple[str, datetime]:
         Tuple of (token string, expiration datetime)
     """
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(
+    # Use local time `now()` so comparisons elsewhere (which use
+    # `datetime.now()`) remain consistent during tests/runtime.
+    expires_at = datetime.now() + timedelta(
         hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS
     )
     return token, expires_at
@@ -143,7 +145,9 @@ def generate_password_reset_token() -> Tuple[str, datetime]:
         Tuple of (token string, expiration datetime)
     """
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(
+    # Use local time `now()` so comparisons elsewhere (which use
+    # `datetime.now()`) remain consistent during tests/runtime.
+    expires_at = datetime.now() + timedelta(
         minutes=settings.PASSWORD_RESET_TOKEN_EXPIRATION_MINUTES
     )
     return token, expires_at
