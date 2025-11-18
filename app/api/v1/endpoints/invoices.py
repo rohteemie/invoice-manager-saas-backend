@@ -636,7 +636,7 @@ def export_invoices(
                 invoice.status.value,
                 invoice.currency.value if hasattr(
                     invoice.currency, 'value'
-                    ) else str(invoice.currency),
+                ) else str(invoice.currency),
                 invoice.issue_date,
                 invoice.due_date or "",
                 float(invoice.subtotal),
@@ -672,7 +672,7 @@ def export_invoices(
                 "status": invoice.status.value,
                 "currency": invoice.currency.value if hasattr(
                     invoice.currency, 'value'
-                    ) else str(invoice.currency),
+                ) else str(invoice.currency),
                 "issue_date": invoice.issue_date,
                 "due_date": invoice.due_date,
                 "subtotal": float(invoice.subtotal),

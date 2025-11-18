@@ -25,7 +25,7 @@ def get_invoice_summary(
     db: Session = Depends(get_db)
 ):
     """
-    Get tenant-level invoice summary.
+    Get tenant-level invoice summary with multi-currency support.
 
     Returns:
     - total_invoices: Total number of invoices
@@ -33,9 +33,12 @@ def get_invoice_summary(
     - sent_count: Number of sent invoices
     - paid_count: Number of paid invoices
     - overdue_count: Number of overdue invoices
-    - total_revenue: Total revenue from paid invoices
-    - pending_amount: Total amount from sent invoices
-    - overdue_amount: Total amount from overdue invoices
+    - total_revenue: Total revenue from paid invoices (grouped by currency)
+    - pending_amount: Total amount from sent invoices (grouped by currency)
+    - overdue_amount: Total amount from overdue invoices (grouped by currency)
+
+    Multi-currency amounts are returned as dictionaries with currency codes
+    as keys and amounts as values, e.g., {"USD": 1000.00, "EUR": 500.00}
 
     Permissions: All authenticated users can view analytics
     for their tenant.
@@ -76,32 +79,50 @@ def get_invoice_summary(
         InvoiceModel.status == InvoiceStatus.OVERDUE
     ).count()
 
-    # Get total revenue from paid invoices
-    total_revenue_result = db.query(
-        func.sum(InvoiceModel.total_amount)
+    # Get total revenue from paid invoices, grouped by currency
+    total_revenue_results = db.query(
+        InvoiceModel.currency,
+        func.sum(InvoiceModel.total_amount).label('total')
     ).filter(
         InvoiceModel.tenant_id == tenant_id,
         InvoiceModel.status == InvoiceStatus.PAID
-    ).scalar()
-    total_revenue = Decimal(str(total_revenue_result or 0))
+    ).group_by(
+        InvoiceModel.currency
+    ).all()
+    total_revenue = {
+        str(currency.value): Decimal(str(total or 0))
+        for currency, total in total_revenue_results
+    }
 
-    # Get pending amount from sent invoices
-    pending_amount_result = db.query(
-        func.sum(InvoiceModel.total_amount)
+    # Get pending amount from sent invoices, grouped by currency
+    pending_amount_results = db.query(
+        InvoiceModel.currency,
+        func.sum(InvoiceModel.total_amount).label('total')
     ).filter(
         InvoiceModel.tenant_id == tenant_id,
         InvoiceModel.status == InvoiceStatus.SENT
-    ).scalar()
-    pending_amount = Decimal(str(pending_amount_result or 0))
+    ).group_by(
+        InvoiceModel.currency
+    ).all()
+    pending_amount = {
+        str(currency.value): Decimal(str(total or 0))
+        for currency, total in pending_amount_results
+    }
 
-    # Get overdue amount
-    overdue_amount_result = db.query(
-        func.sum(InvoiceModel.total_amount)
+    # Get overdue amount, grouped by currency
+    overdue_amount_results = db.query(
+        InvoiceModel.currency,
+        func.sum(InvoiceModel.total_amount).label('total')
     ).filter(
         InvoiceModel.tenant_id == tenant_id,
         InvoiceModel.status == InvoiceStatus.OVERDUE
-    ).scalar()
-    overdue_amount = Decimal(str(overdue_amount_result or 0))
+    ).group_by(
+        InvoiceModel.currency
+    ).all()
+    overdue_amount = {
+        str(currency.value): Decimal(str(total or 0))
+        for currency, total in overdue_amount_results
+    }
 
     result = InvoiceSummary(
         total_invoices=total_invoices,
@@ -117,9 +138,11 @@ def get_invoice_summary(
     # Cache the result for 5 minutes (300 seconds)
     result_dict = result.model_dump()
     # Convert Decimal to string for JSON serialization
-    result_dict["total_revenue"] = str(result_dict["total_revenue"])
-    result_dict["pending_amount"] = str(result_dict["pending_amount"])
-    result_dict["overdue_amount"] = str(result_dict["overdue_amount"])
+    for key in ["total_revenue", "pending_amount", "overdue_amount"]:
+        result_dict[key] = {
+            currency: str(amount)
+            for currency, amount in result_dict[key].items()
+        }
     set_cache(cache_key_name, result_dict, expiry=300)
 
     return result
@@ -131,9 +154,13 @@ def get_revenue_by_status(
     db: Session = Depends(get_db)
 ):
     """
-    Get revenue breakdown by invoice status.
+    Get revenue breakdown by invoice status with multi-currency support.
 
     Returns a list of revenue totals grouped by status.
+    Each status entry includes amounts grouped by currency code.
+
+    Multi-currency amounts are returned as dictionaries with currency codes
+    as keys and amounts as values, e.g., {"USD": 1000.00, "EUR": 500.00}
 
     Permissions: All authenticated users can view analytics
     for their tenant.
@@ -148,33 +175,52 @@ def get_revenue_by_status(
     if cached_result:
         return [RevenueByStatus(**item) for item in cached_result]
 
-    # Query revenue by status
+    # Query revenue by status and currency
     results = db.query(
         InvoiceModel.status,
+        InvoiceModel.currency,
         func.count(InvoiceModel.id).label('count'),
         func.sum(InvoiceModel.total_amount).label('total_amount')
     ).filter(
         InvoiceModel.tenant_id == tenant_id
     ).group_by(
-        InvoiceModel.status
+        InvoiceModel.status,
+        InvoiceModel.currency
     ).all()
 
-    revenue_by_status = []
-    for status, count, total_amount in results:
-        revenue_by_status.append(
-            RevenueByStatus(
-                status=status.value,
-                count=count,
-                total_amount=Decimal(str(total_amount or 0))
-            )
+    # Group results by status
+    status_map = {}
+    for status, currency, count, total_amount in results:
+        status_key = status.value
+        if status_key not in status_map:
+            status_map[status_key] = {
+                'status': status_key,
+                'count': 0,
+                'total_amount': {}
+            }
+        status_map[status_key]['count'] += count
+        status_map[status_key]['total_amount'][str(currency.value)] = Decimal(
+            str(total_amount or 0)
         )
+
+    revenue_by_status = [
+        RevenueByStatus(
+            status=item['status'],
+            count=item['count'],
+            total_amount=item['total_amount']
+        )
+        for item in status_map.values()
+    ]
 
     # Cache the result for 5 minutes
     result_list = [
         {
             "status": item.status,
             "count": item.count,
-            "total_amount": str(item.total_amount)
+            "total_amount": {
+                currency: str(amount)
+                for currency, amount in item.total_amount.items()
+            }
         }
         for item in revenue_by_status
     ]
