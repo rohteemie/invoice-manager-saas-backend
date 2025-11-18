@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -30,7 +30,10 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/invoice-summary", response_model=InvoiceSummary)
+@router.get(
+    "/invoice-summary",
+    response_model=Union[InvoiceSummary, InvoiceSummaryUnified]
+)
 def get_invoice_summary(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -214,7 +217,10 @@ def get_invoice_summary(
     return result
 
 
-@router.get("/revenue-by-status", response_model=List[RevenueByStatus])
+@router.get(
+    "/revenue-by-status",
+    response_model=Union[List[RevenueByStatus], List[RevenueByStatusUnified]]
+)
 def get_revenue_by_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
