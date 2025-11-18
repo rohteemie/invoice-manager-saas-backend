@@ -349,13 +349,13 @@ def test_status_transition_sent_to_paid(client, auth_headers,
     # Change status to PAID
     response = client.patch(
         f"/api/v1/invoices/{invoice_id}/status",
-        json={"status": "paid", "payment_method": "Credit Card"},
+        json={"status": "paid", "payment_method": "card"},
         headers=manager_auth_headers
     )
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "paid"
-    assert data["payment_method"] == "Credit Card"
+    assert data["payment_method"] == "card"
     assert data["paid_at"] is not None
 
 
@@ -422,7 +422,7 @@ def test_status_transition_overdue_to_paid(client, auth_headers,
     # Change status to PAID
     response = client.patch(
         f"/api/v1/invoices/{invoice_id}/status",
-        json={"status": "paid", "payment_method": "Bank Transfer"},
+        json={"status": "paid", "payment_method": "transfer"},
         headers=manager_auth_headers
     )
     assert response.status_code == 200
@@ -448,7 +448,7 @@ def test_invalid_status_transition(client, auth_headers,
     # Try to go directly from DRAFT to PAID (should fail)
     response = client.patch(
         f"/api/v1/invoices/{invoice_id}/status",
-        json={"status": "paid", "payment_method": "Cash"},
+        json={"status": "paid", "payment_method": "cash"},
         headers=manager_auth_headers
     )
     assert response.status_code == 400
