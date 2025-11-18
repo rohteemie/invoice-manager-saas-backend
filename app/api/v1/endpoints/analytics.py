@@ -1,28 +1,43 @@
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from decimal import Decimal
+import logging
 
 from app.db.session import get_db
 from app.models.invoice import Invoice as InvoiceModel, InvoiceStatus
 from app.models.user import User
-from app.schemas.analytics import InvoiceSummary, RevenueByStatus
+from app.schemas.analytics import (
+    InvoiceSummary,
+    InvoiceSummaryUnified,
+    RevenueByStatus,
+    RevenueByStatusUnified
+)
 from app.core.deps import get_current_user
 from app.core.cache import (
     get_cache,
     set_cache,
     cache_key,
 )
+from app.services.currency_converter import (
+    convert_currency_dict,
+    CurrencyConversionError
+)
 # invalidate_tenant_cache is removed as it is unused
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/invoice-summary", response_model=InvoiceSummary)
 def get_invoice_summary(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    unified: bool = Query(
+        False,
+        description="Return amounts in user's preferred currency"
+    )
 ):
     """
     Get tenant-level invoice summary with multi-currency support.
@@ -40,6 +55,9 @@ def get_invoice_summary(
     Multi-currency amounts are returned as dictionaries with currency codes
     as keys and amounts as values, e.g., {"USD": 1000.00, "EUR": 500.00}
 
+    When unified=true, all amounts are converted to user's preferred currency
+    and returned as single values.
+
     Permissions: All authenticated users can view analytics
     for their tenant.
 
@@ -47,10 +65,16 @@ def get_invoice_summary(
     """
     tenant_id = current_user.tenant_id
 
-    # Check cache first
-    cache_key_name = cache_key(tenant_id, "invoice_summary")
+    # Determine cache key based on unified parameter
+    cache_suffix = "unified" if unified else "multi"
+    cache_key_name = cache_key(
+        tenant_id,
+        f"invoice_summary_{cache_suffix}_{current_user.currency_preference.value}"
+    )
     cached_result = get_cache(cache_key_name)
     if cached_result:
+        if unified:
+            return InvoiceSummaryUnified(**cached_result)
         return InvoiceSummary(**cached_result)
 
     # Get total invoice count
@@ -124,6 +148,48 @@ def get_invoice_summary(
         for currency, total in overdue_amount_results
     }
 
+    # Convert to unified currency if requested
+    if unified:
+        target_currency = current_user.currency_preference.value
+        try:
+            unified_revenue = convert_currency_dict(
+                total_revenue, target_currency
+            )
+            unified_pending = convert_currency_dict(
+                pending_amount, target_currency
+            )
+            unified_overdue = convert_currency_dict(
+                overdue_amount, target_currency
+            )
+
+            result = InvoiceSummaryUnified(
+                total_invoices=total_invoices,
+                draft_count=draft_count,
+                sent_count=sent_count,
+                paid_count=paid_count,
+                overdue_count=overdue_count,
+                total_revenue=unified_revenue,
+                pending_amount=unified_pending,
+                overdue_amount=unified_overdue,
+                currency=target_currency
+            )
+
+            # Cache the result
+            result_dict = result.model_dump()
+            result_dict["total_revenue"] = str(result_dict["total_revenue"])
+            result_dict["pending_amount"] = str(result_dict["pending_amount"])
+            result_dict["overdue_amount"] = str(result_dict["overdue_amount"])
+            set_cache(cache_key_name, result_dict, expiry=300)
+
+            return result
+
+        except CurrencyConversionError as e:
+            logger.error(
+                f"Currency conversion error for user {current_user.id}: {e}"
+            )
+            # Fall back to multi-currency response
+            logger.warning("Falling back to multi-currency response")
+
     result = InvoiceSummary(
         total_invoices=total_invoices,
         draft_count=draft_count,
@@ -151,7 +217,11 @@ def get_invoice_summary(
 @router.get("/revenue-by-status", response_model=List[RevenueByStatus])
 def get_revenue_by_status(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    unified: bool = Query(
+        False,
+        description="Return amounts in user's preferred currency"
+    )
 ):
     """
     Get revenue breakdown by invoice status with multi-currency support.
@@ -162,6 +232,9 @@ def get_revenue_by_status(
     Multi-currency amounts are returned as dictionaries with currency codes
     as keys and amounts as values, e.g., {"USD": 1000.00, "EUR": 500.00}
 
+    When unified=true, all amounts are converted to user's preferred currency
+    and returned as single values per status.
+
     Permissions: All authenticated users can view analytics
     for their tenant.
 
@@ -169,10 +242,16 @@ def get_revenue_by_status(
     """
     tenant_id = current_user.tenant_id
 
-    # Check cache first
-    cache_key_name = cache_key(tenant_id, "revenue_by_status")
+    # Determine cache key based on unified parameter
+    cache_suffix = "unified" if unified else "multi"
+    cache_key_name = cache_key(
+        tenant_id,
+        f"revenue_by_status_{cache_suffix}_{current_user.currency_preference.value}"
+    )
     cached_result = get_cache(cache_key_name)
     if cached_result:
+        if unified:
+            return [RevenueByStatusUnified(**item) for item in cached_result]
         return [RevenueByStatus(**item) for item in cached_result]
 
     # Query revenue by status and currency
@@ -202,6 +281,46 @@ def get_revenue_by_status(
         status_map[status_key]['total_amount'][str(currency.value)] = Decimal(
             str(total_amount or 0)
         )
+
+    # Convert to unified currency if requested
+    if unified:
+        target_currency = current_user.currency_preference.value
+        try:
+            unified_results = []
+            for item in status_map.values():
+                converted_amount = convert_currency_dict(
+                    item['total_amount'],
+                    target_currency
+                )
+                unified_results.append(
+                    RevenueByStatusUnified(
+                        status=item['status'],
+                        count=item['count'],
+                        total_amount=converted_amount,
+                        currency=target_currency
+                    )
+                )
+
+            # Cache the result
+            result_list = [
+                {
+                    "status": item.status,
+                    "count": item.count,
+                    "total_amount": str(item.total_amount),
+                    "currency": item.currency
+                }
+                for item in unified_results
+            ]
+            set_cache(cache_key_name, result_list, expiry=300)
+
+            return unified_results
+
+        except CurrencyConversionError as e:
+            logger.error(
+                f"Currency conversion error for user {current_user.id}: {e}"
+            )
+            # Fall back to multi-currency response
+            logger.warning("Falling back to multi-currency response")
 
     revenue_by_status = [
         RevenueByStatus(

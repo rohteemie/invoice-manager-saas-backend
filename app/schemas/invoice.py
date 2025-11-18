@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr
 from decimal import Decimal
-from app.models.invoice import InvoiceStatus, Currency
+from app.models.invoice import InvoiceStatus, Currency, PaymentMethod
 
 
 class InvoiceItemBase(BaseModel):
@@ -92,8 +92,8 @@ class InvoiceUpdate(BaseModel):
 class InvoiceStatusUpdate(BaseModel):
     """Schema for updating invoice status."""
     status: InvoiceStatus = Field(..., description="New invoice status")
-    payment_method: Optional[str] = Field(
-        None, max_length=50,
+    payment_method: Optional[PaymentMethod] = Field(
+        None,
         description="Payment method (required for PAID status)"
     )
 
@@ -110,7 +110,7 @@ class InvoiceInDB(InvoiceBase):
     tax_amount: Decimal
     discount_amount: Decimal
     total_amount: Decimal
-    payment_method: Optional[str]
+    payment_method: Optional[PaymentMethod]
     paid_at: Optional[str]
     created_at: datetime
     updated_at: datetime

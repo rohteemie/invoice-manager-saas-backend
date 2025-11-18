@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 from app.models.user import UserRole
+from app.models.invoice import Currency
 
 
 class UserBase(BaseModel):
@@ -26,6 +27,9 @@ class UserUpdate(BaseModel):
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
+    currency_preference: Optional[Currency] = Field(
+        None, description="User's preferred currency for analytics"
+    )
 
 
 class UserInDB(UserBase):
@@ -34,6 +38,7 @@ class UserInDB(UserBase):
     tenant_id: str
     is_active: bool
     is_verified: bool
+    currency_preference: Currency
     created_at: datetime
     updated_at: datetime
 

@@ -1,5 +1,6 @@
 from app.models.general_model import Gen_Model, Base
 from sqlalchemy import Column, String, Boolean, ForeignKey, Enum, DateTime
+from app.models.invoice import Currency
 import enum
 
 
@@ -30,6 +31,7 @@ class User(Gen_Model, Base):
         verification_token_expires_at: Expiration time for verification token
         reset_password_token: Token for password reset
         reset_password_token_expires_at: Expiration time for reset token
+        currency_preference: User's preferred currency for analytics display
     """
     __tablename__ = "users"
 
@@ -45,6 +47,8 @@ class User(Gen_Model, Base):
     verification_token_expires_at = Column(DateTime, nullable=True)
     reset_password_token = Column(String(255), nullable=True, index=True)
     reset_password_token_expires_at = Column(DateTime, nullable=True)
+    currency_preference = Column(Enum(Currency), nullable=False,
+                                  default=Currency.USD)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

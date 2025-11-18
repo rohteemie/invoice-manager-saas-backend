@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, Optional
 
 
 class InvoiceSummary(BaseModel):
@@ -21,6 +21,25 @@ class InvoiceSummary(BaseModel):
         from_attributes = True
 
 
+class InvoiceSummaryUnified(BaseModel):
+    """
+    Tenant-level invoice summary with unified currency.
+    All amounts are converted to user's preferred currency.
+    """
+    total_invoices: int
+    draft_count: int
+    sent_count: int
+    paid_count: int
+    overdue_count: int
+    total_revenue: Decimal
+    pending_amount: Decimal
+    overdue_amount: Decimal
+    currency: str
+
+    class Config:
+        from_attributes = True
+
+
 class RevenueByStatus(BaseModel):
     """
     Revenue breakdown by invoice status.
@@ -29,6 +48,20 @@ class RevenueByStatus(BaseModel):
     status: str
     count: int
     total_amount: Dict[str, Decimal]
+
+    class Config:
+        from_attributes = True
+
+
+class RevenueByStatusUnified(BaseModel):
+    """
+    Revenue breakdown by invoice status with unified currency.
+    All amounts are converted to user's preferred currency.
+    """
+    status: str
+    count: int
+    total_amount: Decimal
+    currency: str
 
     class Config:
         from_attributes = True
