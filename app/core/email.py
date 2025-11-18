@@ -373,3 +373,179 @@ def send_invoice_email(
             str(exc), exc_info=True
         )
         return False
+
+
+def send_password_reset_email(
+    email: str,
+    token: str,
+    full_name: str,
+    base_url: Optional[str] = None,
+) -> bool:
+    """
+    Send a password reset email using SendGrid's Web API v3.
+
+    Args:
+        email: Recipient email address
+        token: Password reset token
+        full_name: Recipient full name
+        base_url: Optional base URL to build reset link; falls back to
+            settings.EMAIL_VERIFICATION_BASE_URL
+
+    Returns:
+        True if send request was accepted by SendGrid, False otherwise.
+    """
+    sg_api_key = settings.SENDGRID_API_KEY
+    sender = settings.EMAILS_FROM
+
+    if not sg_api_key or not sender:
+        logger.warning(
+            "SendGrid not configured\
+                (missing SENDGRID_API_KEY or EMAILS_FROM).\
+                Email not sent."
+        )
+        return False
+
+    if base_url is None:
+        base_url = settings.EMAIL_VERIFICATION_BASE_URL or \
+            "http://localhost:5173"
+
+    reset_link = f"{base_url.rstrip('/')}/reset-password?token={token}"
+
+    # Sanitize user-provided data
+    safe_full_name = sanitize_for_email(full_name)
+    safe_project_name = sanitize_for_email(settings.PROJECT_NAME)
+
+    # Plain text content
+    plain_text = (
+        f"Hello {safe_full_name},\n\n"
+        "We received a request to reset your password. "
+        "If you made this request, click the link below to reset your\n"
+        "password:\n\n"
+        f"{reset_link}\n\n"
+        "This link will expire in 30 minutes.\n\n"
+        "If you didn't request a password reset, please ignore this email "
+        "and your password will remain unchanged.\n\n"
+        "For security reasons, we recommend that you:\n"
+        "- Never share your password with anyone\n"
+        "- Use a strong, unique password\n"
+        "- Change your password regularly\n\n"
+        f"Best regards,\n{safe_project_name}"
+    )
+
+    # HTML content with styling
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6;
+    color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f8f9fa; padding: 30px;
+        border-radius: 10px;">
+            <h1 style="color: #2c3e50; margin-bottom: 20px;">
+            Password Reset Request</h1>
+            <p style="font-size: 16px; margin-bottom: 20px;">
+            Hello {html.escape(safe_full_name)},</p>
+            <p style="font-size: 16px; margin-bottom: 20px;">
+                We received a request to reset your password for your
+                {html.escape(safe_project_name)} account.
+                If you made this request, click the button below to reset \n
+                your password:
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_link}"
+                   style="background-color: #e74c3c; color: white;
+                   padding: 14px 28px;
+                   text-decoration: none; border-radius: 5px; font-size: 16px;
+                   font-weight: bold; display: inline-block;">
+                    Reset Password
+                </a>
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                Or copy and paste this link into your browser:
+            </p>
+            <p style="font-size: 14px; color: #3498db; word-break: break-all;
+            background-color: #f0f0f0; padding: 10px; border-radius: 5px;">
+                {reset_link}
+            </p>
+            <p style="font-size: 14px; color: #e74c3c; margin-top: 20px;">
+                ⚠️ This link will expire in 30 minutes.
+            </p>
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">
+                If you didn't request a password reset, please ignore this.
+                Your password will remain unchanged.
+            </p>
+            <div style="margin-top: 30px; padding-top: 20px;
+            border-top: 1px solid #ddd;">
+                <p style="font-size: 14px; color: #666; font-weight: bold;">
+                    Security Tips:
+                </p>
+                <ul style="font-size: 14px; color: #666;">
+                    <li>Never share your password with anyone</li>
+                    <li>Use a strong, unique password</li>
+                    <li>Change your password regularly</li>
+                </ul>
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 30px;
+            padding-top: 20px; border-top: 1px solid #ddd;">
+                Best regards,<br>
+                {html.escape(safe_project_name)}
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
+    payload = {
+        "personalizations": [
+            {
+                "to": [{"email": email}],
+                "subject": "Password Reset Request",
+            }
+        ],
+        "from": {"email": sender},
+        "content": [
+            {
+                "type": "text/plain",
+                "value": plain_text,
+            },
+            {
+                "type": "text/html",
+                "value": html_content,
+            }
+        ],
+    }
+
+    headers = {
+        "Authorization": f"Bearer {sg_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    sendgrid_url = "https://api.sendgrid.com/v3/mail/send"
+
+    try:
+        # Use a short timeout and do not stream large responses
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(sendgrid_url, headers=headers, json=payload)
+
+        if resp.status_code in (200, 202):
+            logger.info("Password reset email queued/sent for %s", email)
+            return True
+
+        # Log non-sensitive parts of the error
+        logger.warning(
+            "Failed to send password reset email to %s. status=%s response=%s",
+            email,
+            resp.status_code,
+            resp.text[:1000],
+        )
+        return False
+
+    except httpx.RequestError as exc:
+        logger.error(
+            "Error sending password reset email to %s: %s", email,
+            str(exc), exc_info=True
+        )
+        return False
