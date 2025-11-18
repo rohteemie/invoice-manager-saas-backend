@@ -474,7 +474,7 @@ def send_password_reset_email(
                 If you didn't request a password reset, please ignore this email.
                 Your password will remain unchanged.
             </p>
-            <div style="margin-top: 30px; padding-top: 20px; 
+            <div style="margin-top: 30px; padding-top: 20px;
             border-top: 1px solid #ddd;">
                 <p style="font-size: 14px; color: #666; font-weight: bold;">
                     Security Tips:

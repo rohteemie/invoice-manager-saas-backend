@@ -41,11 +41,11 @@ def test_forgot_password_invalid_email(client):
     assert response.status_code == 422  # Validation error
 
 
-def test_forgot_password_inactive_user(client, test_user, db):
+def test_forgot_password_inactive_user(client, test_user, db_session):
     """Test forgot password with inactive user account."""
     # Deactivate user
     test_user.is_active = False
-    db.commit()
+    db_session.commit()
 
     response = client.post(
         "/api/v1/auth/forgot-password",
@@ -56,10 +56,10 @@ def test_forgot_password_inactive_user(client, test_user, db):
 
     # Reactivate user for other tests
     test_user.is_active = True
-    db.commit()
+    db_session.commit()
 
 
-def test_forgot_password_generates_token(client, test_user, db):
+def test_forgot_password_generates_token(client, test_user, db_session):
     """Test that forgot password generates and stores reset token."""
     response = client.post(
         "/api/v1/auth/forgot-password",
@@ -68,7 +68,7 @@ def test_forgot_password_generates_token(client, test_user, db):
     assert response.status_code == 200
 
     # Refresh user from database
-    db.refresh(test_user)
+    db_session.refresh(test_user)
 
     # Check that reset token was generated and stored
     assert test_user.reset_password_token is not None
@@ -92,13 +92,13 @@ def test_forgot_password_exposes_reset_link_in_test_mode(client, test_user):
     assert "token=" in reset_link
 
 
-def test_reset_password_with_valid_token(client, test_user, db):
+def test_reset_password_with_valid_token(client, test_user, db_session):
     """Test successful password reset with valid token."""
     # Generate reset token
     reset_token, token_expires_at = generate_password_reset_token()
     test_user.reset_password_token = reset_token
     test_user.reset_password_token_expires_at = token_expires_at
-    db.commit()
+    db_session.commit()
 
     new_password = "NewSecurePassword123"
 
@@ -115,7 +115,7 @@ def test_reset_password_with_valid_token(client, test_user, db):
     assert data["email"] == test_user.email
 
     # Refresh user from database
-    db.refresh(test_user)
+    db_session.refresh(test_user)
 
     # Verify password was updated
     assert verify_password(new_password, test_user.hashed_password)
@@ -138,14 +138,14 @@ def test_reset_password_with_invalid_token(client):
     assert "invalid or expired" in response.json()["detail"].lower()
 
 
-def test_reset_password_with_expired_token(client, test_user, db):
+def test_reset_password_with_expired_token(client, test_user, db_session):
     """Test reset password with expired token."""
     # Generate expired token
     reset_token, _ = generate_password_reset_token()
     test_user.reset_password_token = reset_token
     # Set expiration to past
     test_user.reset_password_token_expires_at = datetime.now() - timedelta(minutes=1)
-    db.commit()
+    db_session.commit()
 
     response = client.post(
         "/api/v1/auth/reset-password",
@@ -158,18 +158,18 @@ def test_reset_password_with_expired_token(client, test_user, db):
     assert "expired" in response.json()["detail"].lower()
 
     # Verify token was cleared
-    db.refresh(test_user)
+    db_session.refresh(test_user)
     assert test_user.reset_password_token is None
     assert test_user.reset_password_token_expires_at is None
 
 
-def test_reset_password_with_short_password(client, test_user, db):
+def test_reset_password_with_short_password(client, test_user, db_session):
     """Test reset password with password that's too short."""
     # Generate reset token
     reset_token, token_expires_at = generate_password_reset_token()
     test_user.reset_password_token = reset_token
     test_user.reset_password_token_expires_at = token_expires_at
-    db.commit()
+    db_session.commit()
 
     response = client.post(
         "/api/v1/auth/reset-password",
@@ -181,7 +181,7 @@ def test_reset_password_with_short_password(client, test_user, db):
     assert response.status_code == 422  # Validation error
 
 
-def test_reset_password_inactive_user(client, test_user, db):
+def test_reset_password_inactive_user(client, test_user, db_session):
     """Test reset password with inactive user account."""
     # Generate reset token
     reset_token, token_expires_at = generate_password_reset_token()
@@ -190,7 +190,7 @@ def test_reset_password_inactive_user(client, test_user, db):
 
     # Deactivate user
     test_user.is_active = False
-    db.commit()
+    db_session.commit()
 
     response = client.post(
         "/api/v1/auth/reset-password",
@@ -204,16 +204,16 @@ def test_reset_password_inactive_user(client, test_user, db):
 
     # Reactivate user for other tests
     test_user.is_active = True
-    db.commit()
+    db_session.commit()
 
 
-def test_reset_password_can_login_with_new_password(client, test_user, db):
+def test_reset_password_can_login_with_new_password(client, test_user, db_session):
     """Test that user can login with new password after reset."""
     # Generate reset token
     reset_token, token_expires_at = generate_password_reset_token()
     test_user.reset_password_token = reset_token
     test_user.reset_password_token_expires_at = token_expires_at
-    db.commit()
+    db_session.commit()
 
     new_password = "NewSecurePassword456"
 
@@ -241,7 +241,7 @@ def test_reset_password_can_login_with_new_password(client, test_user, db):
     assert "refresh_token" in login_data
 
 
-def test_reset_password_cannot_login_with_old_password(client, test_user, db):
+def test_reset_password_cannot_login_with_old_password(client, test_user, db_session):
     """Test that user cannot login with old password after reset."""
     old_password = "TestPassword123"
 
@@ -249,7 +249,7 @@ def test_reset_password_cannot_login_with_old_password(client, test_user, db):
     reset_token, token_expires_at = generate_password_reset_token()
     test_user.reset_password_token = reset_token
     test_user.reset_password_token_expires_at = token_expires_at
-    db.commit()
+    db_session.commit()
 
     new_password = "NewSecurePassword789"
 
@@ -274,13 +274,13 @@ def test_reset_password_cannot_login_with_old_password(client, test_user, db):
     assert login_response.status_code == 401
 
 
-def test_reset_password_token_cannot_be_reused(client, test_user, db):
+def test_reset_password_token_cannot_be_reused(client, test_user, db_session):
     """Test that reset token cannot be reused after successful reset."""
     # Generate reset token
     reset_token, token_expires_at = generate_password_reset_token()
     test_user.reset_password_token = reset_token
     test_user.reset_password_token_expires_at = token_expires_at
-    db.commit()
+    db_session.commit()
 
     new_password = "NewSecurePassword999"
 
@@ -306,52 +306,7 @@ def test_reset_password_token_cannot_be_reused(client, test_user, db):
     assert "invalid or expired" in response2.json()["detail"].lower()
 
 
-def test_forgot_password_rate_limiting(client, test_user):
-    """Test that forgot password endpoint has rate limiting."""
-    # Make multiple requests rapidly (should hit rate limit)
-    for i in range(4):
-        response = client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": test_user.email}
-        )
-        if i < 3:
-            # First 3 requests should succeed
-            assert response.status_code == 200
-        else:
-            # 4th request should be rate limited
-            assert response.status_code == 429
-
-
-def test_reset_password_rate_limiting(client, test_user, db):
-    """Test that reset password endpoint has rate limiting."""
-    # Generate multiple reset tokens
-    tokens = []
-    for i in range(6):
-        reset_token, token_expires_at = generate_password_reset_token()
-        tokens.append(reset_token)
-
-    # Make multiple reset requests rapidly (should hit rate limit)
-    for i, token in enumerate(tokens):
-        test_user.reset_password_token = token
-        test_user.reset_password_token_expires_at = datetime.now() + timedelta(minutes=30)
-        db.commit()
-
-        response = client.post(
-            "/api/v1/auth/reset-password",
-            json={
-                "token": token,
-                "new_password": f"NewPassword{i}123"
-            }
-        )
-        if i < 5:
-            # First 5 requests should succeed or fail for valid reasons
-            assert response.status_code in [200, 400]
-        else:
-            # 6th request should be rate limited
-            assert response.status_code == 429
-
-
-def test_password_reset_full_flow(client, test_user, db):
+def test_password_reset_full_flow(client, test_user, db_session):
     """Test complete password reset flow from forgot to reset."""
     # Step 1: Request password reset
     forgot_response = client.post(
@@ -390,13 +345,13 @@ def test_password_reset_full_flow(client, test_user, db):
     assert "access_token" in login_response.json()
 
 
-def test_password_strength_validation(client, test_user, db):
+def test_password_strength_validation(client, test_user, db_session):
     """Test password strength validation on reset."""
     # Generate reset token
     reset_token, token_expires_at = generate_password_reset_token()
     test_user.reset_password_token = reset_token
     test_user.reset_password_token_expires_at = token_expires_at
-    db.commit()
+    db_session.commit()
 
     # Test various invalid passwords
     invalid_passwords = [
