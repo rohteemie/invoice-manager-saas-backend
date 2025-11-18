@@ -81,7 +81,7 @@ class PDFGenerator:
         }
         currency_code = invoice.currency.value if hasattr(
             invoice.currency, 'value'
-            ) else str(invoice.currency)
+        ) else str(invoice.currency)
         currency_symbol = currency_symbols.get(currency_code, "$")
 
         # Format monetary values
