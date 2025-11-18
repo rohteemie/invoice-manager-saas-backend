@@ -199,7 +199,9 @@ def get_revenue_by_status(
                 'total_amount': {}
             }
         status_map[status_key]['count'] += count
-        status_map[status_key]['total_amount'][str(currency.value)] = Decimal(str(total_amount or 0))
+        status_map[status_key]['total_amount'][str(currency.value)] = Decimal(
+            str(total_amount or 0)
+        )
 
     revenue_by_status = [
         RevenueByStatus(
