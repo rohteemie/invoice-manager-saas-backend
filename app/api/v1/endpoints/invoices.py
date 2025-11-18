@@ -15,7 +15,8 @@ from app.models.invoice import (
     Invoice as InvoiceModel,
     InvoiceItem as InvoiceItemModel,
     InvoiceStatus,
-    Currency
+    Currency,
+    PaymentMethod
 )
 from app.models.user import User, UserRole
 from app.models.tenant import Tenant as TenantModel

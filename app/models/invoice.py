@@ -25,6 +25,19 @@ class Currency(str, enum.Enum):
     EUR = "EUR"  # Euro
 
 
+class PaymentMethod(str, enum.Enum):
+    """
+    Supported payment methods for invoices.
+    """
+    TRANSFER = "transfer"
+    CASH = "cash"
+    POS = "pos"
+    CHEQUE = "cheque"
+    CARD = "card"
+    MOBILE_MONEY = "mobile_money"
+    OTHER = "other"
+
+
 class Invoice(Gen_Model, Base):
     """
     Invoice model for multi-tenant invoicing system.
@@ -73,7 +86,7 @@ class Invoice(Gen_Model, Base):
     discount_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
     total_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
     notes = Column(Text, nullable=True)
-    payment_method = Column(String(50), nullable=True)
+    payment_method = Column(Enum(PaymentMethod), nullable=True)
     paid_at = Column(String(50), nullable=True)
 
     # Relationships

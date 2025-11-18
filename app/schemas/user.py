@@ -18,6 +18,11 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=100,
                           description="User password (min 8 characters)")
     tenant_id: str = Field(..., description="Tenant ID for data isolation")
+    currency_preference: Optional[str] = Field(
+        "NGN",
+        description="User's preferred currency (NGN, USD, GBP, EUR). "
+                    "Defaults to NGN and cannot be changed once set."
+    )
 
 
 class UserUpdate(BaseModel):
@@ -34,6 +39,7 @@ class UserInDB(UserBase):
     tenant_id: str
     is_active: bool
     is_verified: bool
+    currency_preference: str
     created_at: datetime
     updated_at: datetime
 
