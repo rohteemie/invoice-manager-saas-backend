@@ -20,14 +20,14 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserCreate, User, Token
+from app.schemas.user import UserCreate, User, Token, ForgotPasswordRequest, ResetPasswordRequest
 from app.core.security import (
     verify_password, get_password_hash,
     create_access_token, create_refresh_token, decode_token,
-    generate_verification_token
+    generate_verification_token, generate_password_reset_token
 )
 from app.core.rate_limit import limiter
-from app.core.email import send_verification_email
+from app.core.email import send_verification_email, send_password_reset_email
 from app.core.config import settings
 
 router = APIRouter()
@@ -348,5 +348,173 @@ def resend_verification_email(
     return {
         "message": "Verification email has been resent.\
         Please check your inbox.",
+        "email": user.email
+    }
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/hour")
+def forgot_password(
+    request: Request,
+    forgot_request: ForgotPasswordRequest,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Request password reset.
+
+    - Finds user by email
+    - Generates password reset token
+    - Sends password reset email
+    - Always returns success message (security: don't reveal if email exists)
+
+    Args:
+        forgot_request: Email address for password reset
+
+    Returns:
+        Success message
+    """
+    # Find user by email
+    user = db.query(UserModel).filter(
+        UserModel.email == forgot_request.email
+    ).first()
+
+    # Always return success message to prevent email enumeration
+    success_message = {
+        "message": "If the email exists in our system, "
+                   "a password reset link will be sent.",
+        "email": forgot_request.email
+    }
+
+    if not user:
+        # Don't reveal whether user exists for security
+        logger.info(
+            "Password reset requested for non-existent email: %s",
+            forgot_request.email
+        )
+        return success_message
+
+    # Check if user is active
+    if not user.is_active:
+        logger.warning(
+            "Password reset requested for inactive user: %s",
+            forgot_request.email
+        )
+        return success_message
+
+    # Generate password reset token
+    reset_token, token_expires_at = generate_password_reset_token()
+
+    # Update user with reset token
+    user.reset_password_token = reset_token
+    user.reset_password_token_expires_at = token_expires_at
+    db.commit()
+
+    # Build reset link for use in the email and in debug
+    base = settings.EMAIL_VERIFICATION_BASE_URL or ""
+    reset_link = (
+        f"{base.rstrip('/')}/reset-password?token={reset_token}"
+    )
+
+    # Send password reset email
+    sent = send_password_reset_email(
+        email=user.email,
+        token=reset_token,
+        full_name=user.full_name,
+        base_url=settings.EMAIL_VERIFICATION_BASE_URL
+    )
+
+    if not sent:
+        logger.warning(
+            "Password reset email not sent for %s", user.email
+        )
+
+    # Log password reset action for audit
+    logger.info(
+        "Password reset requested for user: %s (tenant: %s)",
+        user.email, user.tenant_id
+    )
+
+    # For non-production or test runs, expose the link in a header
+    env = os.environ.get("TESTING") or settings.ENVIRONMENT
+    if env and env != "production":
+        response.headers["X-Reset-Link"] = reset_link
+
+    return success_message
+
+
+@router.post("/reset-password")
+@limiter.limit("5/hour")
+def reset_password(
+    request: Request,
+    reset_request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Reset password using reset token.
+
+    - Validates the reset token
+    - Checks token expiration
+    - Updates password (hashed)
+    - Invalidates the reset token
+    - Logs password reset action
+
+    Args:
+        reset_request: Reset token and new password
+
+    Returns:
+        Success message
+    """
+    # Find user by reset token
+    user = db.query(UserModel).filter(
+        UserModel.reset_password_token == reset_request.token
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+
+    # Check if token has expired
+    if (
+            user.reset_password_token_expires_at
+            and user.reset_password_token_expires_at < datetime.now()
+    ):
+        # Clear expired token
+        user.reset_password_token = None
+        user.reset_password_token_expires_at = None
+        db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token has expired. Please request a new password reset."
+        )
+
+    # Check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive"
+        )
+
+    # Update password with new hashed password
+    user.hashed_password = get_password_hash(reset_request.new_password)
+
+    # Invalidate the reset token
+    user.reset_password_token = None
+    user.reset_password_token_expires_at = None
+
+    db.commit()
+    db.refresh(user)
+
+    # Log password reset action for audit
+    logger.info(
+        "Password successfully reset for user: %s (tenant: %s)",
+        user.email, user.tenant_id
+    )
+
+    return {
+        "message": "Password has been reset successfully. You can now log in with your new password.",
         "email": user.email
     }

@@ -28,6 +28,8 @@ class User(Gen_Model, Base):
         is_verified: Email verification status
         verification_token: Token for email verification
         verification_token_expires_at: Expiration time for verification token
+        reset_password_token: Token for password reset
+        reset_password_token_expires_at: Expiration time for reset token
     """
     __tablename__ = "users"
 
@@ -41,6 +43,8 @@ class User(Gen_Model, Base):
     is_verified = Column(Boolean, default=False)
     verification_token = Column(String(255), nullable=True, index=True)
     verification_token_expires_at = Column(DateTime, nullable=True)
+    reset_password_token = Column(String(255), nullable=True, index=True)
+    reset_password_token_expires_at = Column(DateTime, nullable=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

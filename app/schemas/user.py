@@ -65,3 +65,19 @@ class TokenPayload(BaseModel):
     tenant_id: str
     role: str
     exp: Optional[int] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Schema for forgot password request."""
+    email: EmailStr = Field(..., description="User's email address")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for reset password request."""
+    token: str = Field(..., description="Password reset token")
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=100,
+        description="New password (min 8 characters)"
+    )

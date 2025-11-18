@@ -55,6 +55,11 @@ class Settings(BaseSettings):
         24,
         validation_alias="EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS"
     )
+    # Password reset token expiration in minutes (default 30 minutes)
+    PASSWORD_RESET_TOKEN_EXPIRATION_MINUTES: int = Field(
+        30,
+        validation_alias="PASSWORD_RESET_TOKEN_EXPIRATION_MINUTES"
+    )
 
     model_config = {
         "env_file": ".env",
