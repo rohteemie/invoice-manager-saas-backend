@@ -20,7 +20,11 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserCreate, User, Token, ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.user import (
+    UserCreate, User, Token,
+    ForgotPasswordRequest,
+    ResetPasswordRequest
+)
 from app.core.security import (
     verify_password, get_password_hash,
     create_access_token, create_refresh_token, decode_token,
@@ -488,7 +492,8 @@ def reset_password(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired. Please request a new password reset."
+            detail="Reset token has expired.\
+                Please request a new password reset."
         )
 
     # Check if user is active
@@ -515,6 +520,7 @@ def reset_password(
     )
 
     return {
-        "message": "Password has been reset successfully. You can now log in with your new password.",
+        "message": "Password has been reset successfully.\
+            You can now log in with your new password.",
         "email": user.email
     }

@@ -399,7 +399,8 @@ def send_password_reset_email(
 
     if not sg_api_key or not sender:
         logger.warning(
-            "SendGrid not configured (missing SENDGRID_API_KEY or EMAILS_FROM).\
+            "SendGrid not configured\
+                (missing SENDGRID_API_KEY or EMAILS_FROM).\
                 Email not sent."
         )
         return False
@@ -418,7 +419,8 @@ def send_password_reset_email(
     plain_text = (
         f"Hello {safe_full_name},\n\n"
         "We received a request to reset your password. "
-        "If you made this request, click the link below to reset your password:\n\n"
+        "If you made this request, click the link below to reset your\n"
+        "password:\n\n"
         f"{reset_link}\n\n"
         "This link will expire in 30 minutes.\n\n"
         "If you didn't request a password reset, please ignore this email "
@@ -449,7 +451,8 @@ def send_password_reset_email(
             <p style="font-size: 16px; margin-bottom: 20px;">
                 We received a request to reset your password for your
                 {html.escape(safe_project_name)} account.
-                If you made this request, click the button below to reset your password:
+                If you made this request, click the button below to reset \n
+                your password:
             </p>
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{reset_link}"
@@ -471,7 +474,7 @@ def send_password_reset_email(
                 ⚠️ This link will expire in 30 minutes.
             </p>
             <p style="font-size: 14px; color: #666; margin-top: 30px;">
-                If you didn't request a password reset, please ignore this email.
+                If you didn't request a password reset, please ignore this.
                 Your password will remain unchanged.
             </p>
             <div style="margin-top: 30px; padding-top: 20px;
