@@ -106,7 +106,7 @@ class TestInvoiceLifecycleIntegration:
             f"/api/v1/invoices/{invoice_id}/status",
             json={
                 "status": "paid",
-                "payment_method": "credit_card",
+                "payment_method": "card",
                 "payment_reference": "PAY-123456"
             },
             headers=headers
@@ -115,7 +115,7 @@ class TestInvoiceLifecycleIntegration:
         paid_invoice = pay_response.json()
         assert paid_invoice["status"] == "paid"
         assert paid_invoice["paid_at"] is not None
-        assert paid_invoice["payment_method"] == "credit_card"
+        assert paid_invoice["payment_method"] == "card"
 
         # Step 6: Verify invoice cannot be modified after paid
         update_response = client.put(
@@ -187,7 +187,7 @@ class TestInvoiceLifecycleIntegration:
             f"/api/v1/invoices/{invoice_id}/status",
             json={
                 "status": "paid",
-                "payment_method": "bank_transfer"
+                "payment_method": "transfer"
             },
             headers=manager_auth_headers
         )
