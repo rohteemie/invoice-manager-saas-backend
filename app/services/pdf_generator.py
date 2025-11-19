@@ -62,12 +62,13 @@ class PDFGenerator:
         # Configure fonts for WeasyPrint
         self.font_config = FontConfiguration()
 
-    def _prepare_invoice_data(self, invoice: Invoice) -> dict:
+    def _prepare_invoice_data(self, invoice: Invoice, tenant=None) -> dict:
         """
         Prepare invoice data for template rendering.
 
         Args:
             invoice: Invoice model instance
+            tenant: Optional Tenant model instance for branding
 
         Returns:
             Dictionary with formatted invoice data
@@ -128,17 +129,37 @@ class PDFGenerator:
             "notes": invoice.notes or "",
             "payment_method": invoice.payment_method or "N/A",
             "paid_at": format_date(invoice.paid_at) if invoice.paid_at else "N/A",  # noqa: E501
-            "generated_at": datetime.now().strftime("%B %d, %Y at %I:%M %p")
+            "generated_at": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
+            "tenant": None,
+            "logo_url": None
         }
+        
+        # Add tenant information if provided
+        if tenant:
+            data["tenant"] = {
+                "name": tenant.name,
+                "address": tenant.address or "N/A",
+                "phone": tenant.phone or "N/A",
+                "email": tenant.email or "N/A",
+                "tax_label": tenant.tax_label or "Tax"
+            }
+            # Convert logo_url to absolute path for WeasyPrint
+            if tenant.logo_url:
+                from pathlib import Path
+                base_dir = Path(__file__).resolve().parent.parent
+                logo_path = base_dir / tenant.logo_url
+                if logo_path.exists():
+                    data["logo_url"] = str(logo_path)
 
         return data
 
-    def generate_invoice_pdf(self, invoice: Invoice) -> bytes:
+    def generate_invoice_pdf(self, invoice: Invoice, tenant=None) -> bytes:
         """
         Generate PDF for an invoice.
 
         Args:
             invoice: Invoice model instance with loaded relationships
+            tenant: Optional Tenant model instance for branding
 
         Returns:
             PDF file content as bytes
@@ -155,7 +176,7 @@ class PDFGenerator:
             )
 
         # Prepare data
-        invoice_data = self._prepare_invoice_data(invoice)
+        invoice_data = self._prepare_invoice_data(invoice, tenant)
 
         # Render HTML
         try:

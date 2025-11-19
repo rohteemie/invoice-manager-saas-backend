@@ -213,6 +213,10 @@ init.sql
 *.db
 test.db
 
+# Uploaded files
+uploads/logos/*
+!uploads/logos/.gitkeep
+
 # Deployment files
 server_connect.sh
 deploy.env

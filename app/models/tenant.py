@@ -1,5 +1,5 @@
 from app.models.general_model import Gen_Model, Base
-from sqlalchemy import Column, String, Boolean, Numeric
+from sqlalchemy import Column, String, Boolean, Numeric, Text
 
 
 class Tenant(Gen_Model, Base):
@@ -15,6 +15,10 @@ class Tenant(Gen_Model, Base):
         default_currency: Default currency for invoices (NGN, USD, GBP, EUR)
         tax_rate: Default tax/VAT rate as percentage (0-100, tax-free nullable)
         tax_label: Label for tax (e.g., 'VAT', 'GST', 'Sales Tax', or None)
+        logo_url: URL/path to tenant logo for branded invoices (optional)
+        address: Tenant business address for invoices (optional)
+        phone: Tenant contact phone number (optional)
+        email: Tenant contact email for invoices (optional)
     """
     __tablename__ = "tenants"
 
@@ -26,6 +30,10 @@ class Tenant(Gen_Model, Base):
     default_currency = Column(String(3), default="NGN", nullable=False)
     tax_rate = Column(Numeric(5, 2), nullable=True)
     tax_label = Column(String(50), nullable=True)
+    logo_url = Column(String(500), nullable=True)
+    address = Column(Text, nullable=True)
+    phone = Column(String(20), nullable=True)
+    email = Column(String(255), nullable=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

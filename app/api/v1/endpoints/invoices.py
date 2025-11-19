@@ -425,10 +425,15 @@ def download_invoice_pdf(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
+    # Fetch tenant for branding
+    tenant = db.query(TenantModel).filter(
+        TenantModel.id == current_user.tenant_id
+    ).first()
+
     # Generate PDF
     try:
         pdf_generator = get_pdf_generator()
-        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice)
+        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice, tenant)
     except PDFGenerationError as e:
         raise HTTPException(
             status_code=500,
@@ -508,8 +513,13 @@ def send_invoice(
 
     # Generate PDF
     try:
+        # Fetch tenant for branding
+        tenant = db.query(TenantModel).filter(
+            TenantModel.id == current_user.tenant_id
+        ).first()
+        
         pdf_generator = get_pdf_generator()
-        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice)
+        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice, tenant)
     except PDFGenerationError as e:
         raise HTTPException(
             status_code=500,
