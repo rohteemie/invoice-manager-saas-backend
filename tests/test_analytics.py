@@ -27,9 +27,11 @@ def test_invoice_summary_empty(
     assert data["sent_count"] == 0
     assert data["paid_count"] == 0
     assert data["overdue_count"] == 0
-    assert data["total_revenue"] == {}
-    assert data["pending_amount"] == {}
-    assert data["overdue_amount"] == {}
+    # New format: single currency amount instead of dict
+    assert data["total_revenue"] == "0.00"
+    assert data["pending_amount"] == "0.00"
+    assert data["overdue_amount"] == "0.00"
+    assert data["currency"] == "NGN"  # Default user preference
 
 
 def test_invoice_summary_with_data(
@@ -125,12 +127,14 @@ def test_invoice_summary_with_data(
     assert data["sent_count"] == 1
     assert data["paid_count"] == 2
     assert data["overdue_count"] == 1
-    # Total revenue = 400 + 500 = 900 (USD)
-    assert Decimal(data["total_revenue"]["USD"]) == Decimal("900.00")
-    # Pending amount = 300 (USD)
-    assert Decimal(data["pending_amount"]["USD"]) == Decimal("300.00")
-    # Overdue amount = 600 (USD)
-    assert Decimal(data["overdue_amount"]["USD"]) == Decimal("600.00")
+    assert data["currency"] == "NGN"  # Default user preference
+    # All amounts converted to NGN (1 USD = 1650 NGN)
+    # Total revenue = (400 + 500) USD * 1650 = 1485000 NGN
+    assert Decimal(data["total_revenue"]) == Decimal("1485000.00")
+    # Pending amount = 300 USD * 1650 = 495000 NGN
+    assert Decimal(data["pending_amount"]) == Decimal("495000.00")
+    # Overdue amount = 600 USD * 1650 = 990000 NGN
+    assert Decimal(data["overdue_amount"]) == Decimal("990000.00")
 
 
 def test_invoice_summary_tenant_isolation(
@@ -198,7 +202,9 @@ def test_invoice_summary_tenant_isolation(
     # Should only see test_tenant's invoice
     assert data["total_invoices"] == 1
     assert data["paid_count"] == 1
-    assert Decimal(data["total_revenue"]["USD"]) == Decimal("100.00")
+    assert data["currency"] == "NGN"
+    # 100 USD * 1650 = 165000 NGN
+    assert Decimal(data["total_revenue"]) == Decimal("165000.00")
 
 
 def test_revenue_by_status(
@@ -257,14 +263,18 @@ def test_revenue_by_status(
     # Convert to dict for easier testing
     status_dict = {item["status"]: item for item in data}
 
+    # All amounts in NGN (1 USD = 1650 NGN)
     assert status_dict["draft"]["count"] == 1
-    assert Decimal(status_dict["draft"]["total_amount"]["USD"]) == Decimal("100.00")
+    assert status_dict["draft"]["currency"] == "NGN"
+    assert Decimal(status_dict["draft"]["total_amount"]) == Decimal("165000.00")
 
     assert status_dict["sent"]["count"] == 1
-    assert Decimal(status_dict["sent"]["total_amount"]["USD"]) == Decimal("200.00")
+    assert status_dict["sent"]["currency"] == "NGN"
+    assert Decimal(status_dict["sent"]["total_amount"]) == Decimal("330000.00")
 
     assert status_dict["paid"]["count"] == 1
-    assert Decimal(status_dict["paid"]["total_amount"]["USD"]) == Decimal("300.00")
+    assert status_dict["paid"]["currency"] == "NGN"
+    assert Decimal(status_dict["paid"]["total_amount"]) == Decimal("495000.00")
 
 
 def test_revenue_by_status_empty(
@@ -343,12 +353,14 @@ def test_analytics_with_multiple_statuses(
     assert data["sent_count"] == 3
     assert data["paid_count"] == 3
     assert data["overdue_count"] == 3
-    # Total revenue = 3 * 300 = 900 (USD)
-    assert Decimal(data["total_revenue"]["USD"]) == Decimal("900.00")
-    # Pending amount = 3 * 200 = 600 (USD)
-    assert Decimal(data["pending_amount"]["USD"]) == Decimal("600.00")
-    # Overdue amount = 3 * 400 = 1200 (USD)
-    assert Decimal(data["overdue_amount"]["USD"]) == Decimal("1200.00")
+    assert data["currency"] == "NGN"
+    # All amounts in NGN (1 USD = 1650 NGN)
+    # Total revenue = 3 * 300 USD * 1650 = 1485000 NGN
+    assert Decimal(data["total_revenue"]) == Decimal("1485000.00")
+    # Pending amount = 3 * 200 USD * 1650 = 990000 NGN
+    assert Decimal(data["pending_amount"]) == Decimal("990000.00")
+    # Overdue amount = 3 * 400 USD * 1650 = 1980000 NGN
+    assert Decimal(data["overdue_amount"]) == Decimal("1980000.00")
 
 
 def test_revenue_by_status_tenant_isolation(
@@ -416,8 +428,10 @@ def test_revenue_by_status_tenant_isolation(
     assert len(data) == 1
     assert data[0]["status"] == "paid"
     assert data[0]["count"] == 1
-    # Should only see test_tenant's revenue
-    assert Decimal(data[0]["total_amount"]["USD"]) == Decimal("100.00")
+    assert data[0]["currency"] == "NGN"
+    # Should only see test_tenant's revenue in NGN
+    # 100 USD * 1650 = 165000 NGN
+    assert Decimal(data[0]["total_amount"]) == Decimal("165000.00")
 
 
 def test_invoice_summary_multi_currency(
@@ -496,20 +510,16 @@ def test_invoice_summary_multi_currency(
     assert data["total_invoices"] == 5
     assert data["paid_count"] == 3
     assert data["sent_count"] == 2
+    assert data["currency"] == "NGN"
 
-    # Verify revenue is grouped by currency
-    assert "USD" in data["total_revenue"]
-    assert "EUR" in data["total_revenue"]
-    assert "GBP" in data["total_revenue"]
-    assert Decimal(data["total_revenue"]["USD"]) == Decimal("100.00")
-    assert Decimal(data["total_revenue"]["EUR"]) == Decimal("200.00")
-    assert Decimal(data["total_revenue"]["GBP"]) == Decimal("150.00")
+    # All amounts converted to NGN
+    # Total revenue = (100 USD * 1650) + (200 EUR * 1800) + (150 GBP * 2100)
+    # = 165000 + 360000 + 315000 = 840000 NGN
+    assert Decimal(data["total_revenue"]) == Decimal("840000.00")
 
-    # Verify pending amounts are grouped by currency
-    assert "USD" in data["pending_amount"]
-    assert "EUR" in data["pending_amount"]
-    assert Decimal(data["pending_amount"]["USD"]) == Decimal("300.00")
-    assert Decimal(data["pending_amount"]["EUR"]) == Decimal("400.00")
+    # Pending amount = (300 USD * 1650) + (400 EUR * 1800)
+    # = 495000 + 720000 = 1215000 NGN
+    assert Decimal(data["pending_amount"]) == Decimal("1215000.00")
 
 
 def test_revenue_by_status_multi_currency(
@@ -580,16 +590,14 @@ def test_revenue_by_status_multi_currency(
     # Convert to dict for easier testing
     status_dict = {item["status"]: item for item in data}
 
-    # Verify paid invoices are grouped by currency
+    # All amounts in NGN
     assert status_dict["paid"]["count"] == 2
-    assert "USD" in status_dict["paid"]["total_amount"]
-    assert "EUR" in status_dict["paid"]["total_amount"]
-    assert Decimal(status_dict["paid"]["total_amount"]["USD"]) == Decimal("100.00")
-    assert Decimal(status_dict["paid"]["total_amount"]["EUR"]) == Decimal("200.00")
+    assert status_dict["paid"]["currency"] == "NGN"
+    # Paid = (100 USD * 1650) + (200 EUR * 1800) = 165000 + 360000 = 525000
+    assert Decimal(status_dict["paid"]["total_amount"]) == Decimal("525000.00")
 
-    # Verify sent invoices are grouped by currency
+    # Verify sent invoices in NGN
     assert status_dict["sent"]["count"] == 2
-    assert "USD" in status_dict["sent"]["total_amount"]
-    assert "GBP" in status_dict["sent"]["total_amount"]
-    assert Decimal(status_dict["sent"]["total_amount"]["USD"]) == Decimal("300.00")
-    assert Decimal(status_dict["sent"]["total_amount"]["GBP"]) == Decimal("150.00")
+    assert status_dict["sent"]["currency"] == "NGN"
+    # Sent = (300 USD * 1650) + (150 GBP * 2100) = 495000 + 315000 = 810000
+    assert Decimal(status_dict["sent"]["total_amount"]) == Decimal("810000.00")

@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from decimal import Decimal
-from app.models.invoice import InvoiceStatus, Currency
+from app.models.invoice import InvoiceStatus, Currency, PaymentMethod
 
 
 class InvoiceItemBase(BaseModel):
@@ -92,10 +92,31 @@ class InvoiceUpdate(BaseModel):
 class InvoiceStatusUpdate(BaseModel):
     """Schema for updating invoice status."""
     status: InvoiceStatus = Field(..., description="New invoice status")
-    payment_method: Optional[str] = Field(
-        None, max_length=50,
+    payment_method: Optional[PaymentMethod] = Field(
+        None,
         description="Payment method (required for PAID status)"
     )
+
+    @field_validator('payment_method', mode='before')
+    @classmethod
+    def normalize_payment_method(cls, v):
+        """Normalize payment method to lowercase for enum matching."""
+        if v is None:
+            return v
+        if isinstance(v, str):
+            # Convert to lowercase for case-insensitive matching
+            normalized = v.lower()
+            # Try to match with enum values
+            try:
+                return PaymentMethod(normalized)
+            except ValueError:
+                # Provide helpful error message with valid options
+                valid_methods = [m.value for m in PaymentMethod]
+                raise ValueError(
+                    f"Invalid payment method '{v}'. "
+                    f"Valid options are: {', '.join(valid_methods)}"
+                )
+        return v
 
 
 class InvoiceInDB(InvoiceBase):
@@ -110,7 +131,7 @@ class InvoiceInDB(InvoiceBase):
     tax_amount: Decimal
     discount_amount: Decimal
     total_amount: Decimal
-    payment_method: Optional[str]
+    payment_method: Optional[PaymentMethod]
     paid_at: Optional[str]
     created_at: datetime
     updated_at: datetime

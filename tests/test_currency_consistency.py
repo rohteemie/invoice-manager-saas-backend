@@ -431,7 +431,7 @@ def test_invoice_currency_consistency_through_lifecycle(client, auth_headers, db
 def test_different_tenants_can_use_different_currencies(client, auth_headers, db_session):
     """Test that different tenants can have different default currencies."""
     # This test verifies tenant isolation and currency independence
-    # The current tenant uses USD (default)
+    # The current tenant uses NGN (default)
     
     # Create invoice without specifying currency (should use tenant default)
     response = client.post(
@@ -451,14 +451,14 @@ def test_different_tenants_can_use_different_currencies(client, auth_headers, db
     )
     assert response.status_code == 201
     invoice = response.json()
-    assert invoice["currency"] == "USD"  # Default tenant currency
+    assert invoice["currency"] == "NGN"  # Default tenant currency
     
     # Create invoice with explicit currency override
     response2 = client.post(
         "/api/v1/invoices/",
         json={
             "customer_name": "Override Currency Customer",
-            "currency": "NGN",
+            "currency": "USD",
             "issue_date": "2024-01-15",
             "items": [
                 {
@@ -472,4 +472,4 @@ def test_different_tenants_can_use_different_currencies(client, auth_headers, db
     )
     assert response2.status_code == 201
     invoice2 = response2.json()
-    assert invoice2["currency"] == "NGN"
+    assert invoice2["currency"] == "USD"
