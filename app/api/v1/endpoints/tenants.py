@@ -246,37 +246,37 @@ def upload_tenant_logo(
 ):
     """
     Upload a logo for a tenant.
-    
+
     Permissions: Admin and Owner roles only.
-    
+
     Requirements:
     - File types: PNG, JPG, JPEG, SVG only
     - Maximum file size: 2MB
-    
+
     The uploaded logo will be used in branded invoices and reports.
     """
     # Check if tenant exists
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    
+
     # Verify user has access to this tenant
     if current_user.tenant_id != tenant_id and current_user.role != UserRole.OWNER:
         raise HTTPException(
             status_code=403,
             detail="You don't have permission to upload logo for this tenant"
         )
-    
+
     # Upload and save file
     try:
         file_service = get_file_upload_service()
         logo_url = file_service.save_logo(tenant_id, file)
-        
+
         # Update tenant with logo URL
         tenant.logo_url = logo_url
         db.commit()
         db.refresh(tenant)
-        
+
         return tenant
     except FileUploadError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -295,31 +295,31 @@ def get_tenant_logo(
 ):
     """
     Retrieve the logo file for a tenant.
-    
+
     Returns the logo image file if it exists, or a 404 error if not found.
     """
     # Check if tenant exists
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    
+
     # Check if tenant has a logo
     if not tenant.logo_url:
         raise HTTPException(
             status_code=404,
             detail="Tenant does not have a logo"
         )
-    
+
     # Get logo file path
     file_service = get_file_upload_service()
     logo_path = file_service.get_logo_path(tenant.logo_url)
-    
+
     if not logo_path:
         raise HTTPException(
             status_code=404,
             detail="Logo file not found"
         )
-    
+
     # Return file
     return FileResponse(
         path=logo_path,
@@ -336,29 +336,29 @@ def delete_tenant_logo(
 ):
     """
     Delete the logo for a tenant.
-    
+
     Permissions: Admin and Owner roles only.
     """
     # Check if tenant exists
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    
+
     # Verify user has access to this tenant
     if current_user.tenant_id != tenant_id and current_user.role != UserRole.OWNER:
         raise HTTPException(
             status_code=403,
             detail="You don't have permission to delete logo for this tenant"
         )
-    
+
     # Delete logo file
     if tenant.logo_url:
         file_service = get_file_upload_service()
         file_service.delete_logo(tenant_id)
-        
+
         # Update tenant
         tenant.logo_url = None
         db.commit()
         db.refresh(tenant)
-    
+
     return tenant
