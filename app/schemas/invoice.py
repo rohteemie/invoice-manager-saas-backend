@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from decimal import Decimal
 from app.models.invoice import InvoiceStatus, Currency, PaymentMethod
 
@@ -33,8 +33,7 @@ class InvoiceItemInDB(InvoiceItemBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InvoiceItem(InvoiceItemInDB):
@@ -137,8 +136,7 @@ class InvoiceInDB(InvoiceBase):
     updated_at: datetime
     items: List[InvoiceItem] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Invoice(InvoiceInDB):

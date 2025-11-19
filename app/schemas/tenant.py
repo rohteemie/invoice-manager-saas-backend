@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from decimal import Decimal
 
 
@@ -57,8 +57,7 @@ class TenantInDB(TenantBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Tenant(TenantInDB):
@@ -84,5 +83,4 @@ class TenantWithOwner(BaseModel):
     tenant: Tenant
     owner: dict  # We'll return owner info without sensitive data
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

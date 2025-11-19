@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
 from typing import Dict
 
@@ -18,8 +18,7 @@ class InvoiceSummary(BaseModel):
     overdue_amount: Decimal
     currency: str  # User's preferred currency
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InvoiceSummaryMultiCurrency(BaseModel):
@@ -37,8 +36,7 @@ class InvoiceSummaryMultiCurrency(BaseModel):
     pending_amount: Dict[str, Decimal]
     overdue_amount: Dict[str, Decimal]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RevenueByStatus(BaseModel):
@@ -51,8 +49,7 @@ class RevenueByStatus(BaseModel):
     total_amount: Decimal
     currency: str  # User's preferred currency
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RevenueByStatusMultiCurrency(BaseModel):
@@ -65,5 +62,4 @@ class RevenueByStatusMultiCurrency(BaseModel):
     count: int
     total_amount: Dict[str, Decimal]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
