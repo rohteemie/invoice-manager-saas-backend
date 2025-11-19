@@ -38,6 +38,7 @@ def test_forgot_password_invalid_email(client):
         "/api/v1/auth/forgot-password",
         json={"email": "not-an-email"}
     )
+    # The endpoint validates email format and should return 422 for invalid emails.
     assert response.status_code == 422  # Validation error
 
 

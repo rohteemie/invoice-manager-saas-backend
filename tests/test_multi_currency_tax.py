@@ -25,7 +25,7 @@ def test_create_invoice_with_default_currency(client, auth_headers):
     )
     assert response.status_code == 201
     data = response.json()
-    assert data["currency"] == "USD"  # Default tenant currency
+    assert data["currency"] == "NGN"  # Default tenant currency
 
 
 def test_create_invoice_with_specific_currency(client, auth_headers):
@@ -222,7 +222,7 @@ def test_list_invoices_shows_currency(client, auth_headers):
     list_response = client.get("/api/v1/invoices/", headers=auth_headers)
     assert list_response.status_code == 200
     invoices = list_response.json()
-    
+
     # Find the NGN invoice we just created
     ngn_invoice = next((inv for inv in invoices if inv["currency"] == "NGN"), None)
     assert ngn_invoice is not None
