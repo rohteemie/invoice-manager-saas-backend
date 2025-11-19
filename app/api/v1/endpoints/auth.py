@@ -6,6 +6,10 @@ from datetime import datetime
 import logging
 import os
 
+from typing import Optional
+import json
+from urllib.parse import parse_qs
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -22,7 +26,6 @@ from app.db.session import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import (
     UserCreate, User, Token,
-    ForgotPasswordRequest,
     ResetPasswordRequest
 )
 from app.core.security import (
@@ -358,10 +361,9 @@ def resend_verification_email(
 
 @router.post("/forgot-password")
 @limiter.limit("3/hour")
-def forgot_password(
+async def forgot_password(
     request: Request,
-    forgot_request: ForgotPasswordRequest,
-    response: Response,
+    response: Response = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -378,23 +380,63 @@ def forgot_password(
     Returns:
         Success message
     """
+    # Read raw body once and log it
+    try:
+        raw_body = await request.body()
+    except Exception:
+        raw_body = b""
+
+    content_type = request.headers.get("content-type", "")
+    logger.debug("forgot-password Content-Type: %s", content_type)
+    logger.debug("forgot-password raw body: %s", raw_body.decode(
+        "utf-8", errors="replace"
+    ))
+
+    # Parse email from JSON or form-encoded body
+    email_value: Optional[str] = None
+    body_text = raw_body.decode("utf-8", errors="replace")
+    if "application/json" in content_type:
+        try:
+            body_json = json.loads(body_text) if body_text else {}
+            email_value = body_json.get("email")
+        except Exception:
+            email_value = None
+    elif "application/x-www-form-urlencoded" in content_type:
+        parsed = parse_qs(body_text)
+        vals = parsed.get("email")
+        if vals:
+            email_value = vals[0]
+    else:
+        # Try JSON as fallback
+        try:
+            body_json = json.loads(body_text) if body_text else {}
+            email_value = body_json.get("email")
+        except Exception:
+            email_value = None
+
+    if not email_value:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Email is required",
+        )
+
     # Find user by email
     user = db.query(UserModel).filter(
-        UserModel.email == forgot_request.email
+        UserModel.email == email_value
     ).first()
 
     # Always return success message to prevent email enumeration
     success_message = {
         "message": "If the email exists in our system, "
                    "a password reset link will be sent.",
-        "email": forgot_request.email
+        "email": email_value
     }
 
     if not user:
         # Don't reveal whether user exists for security
         logger.info(
             "Password reset requested for non-existent email: %s",
-            forgot_request.email
+            email_value
         )
         return success_message
 
@@ -402,7 +444,7 @@ def forgot_password(
     if not user.is_active:
         logger.warning(
             "Password reset requested for inactive user: %s",
-            forgot_request.email
+            email_value
         )
         return success_message
 
