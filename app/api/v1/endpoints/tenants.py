@@ -1,5 +1,6 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -12,6 +13,8 @@ from app.schemas.tenant import (
 from app.core.security import get_password_hash, generate_verification_token
 from app.core.email import send_verification_email
 from app.core.config import settings
+from app.core.deps import require_role
+from app.services.file_upload import get_file_upload_service, FileUploadError
 
 router = APIRouter()
 
@@ -232,3 +235,130 @@ def delete_tenant(
     tenant.is_active = False
     db.commit()
     return {"message": "Tenant deactivated successfully"}
+
+
+@router.post("/{tenant_id}/logo", response_model=Tenant)
+def upload_tenant_logo(
+    tenant_id: str,
+    file: UploadFile = File(...),
+    current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload a logo for a tenant.
+
+    Permissions: Admin and Owner roles only.
+
+    Requirements:
+    - File types: PNG, JPG, JPEG, SVG only
+    - Maximum file size: 2MB
+
+    The uploaded logo will be used in branded invoices and reports.
+    """
+    # Check if tenant exists
+    tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Verify user has access to this tenant
+    if current_user.tenant_id != tenant_id and current_user.role != UserRole.OWNER:
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have permission to upload logo for this tenant"
+        )
+
+    # Upload and save file
+    try:
+        file_service = get_file_upload_service()
+        logo_url = file_service.save_logo(tenant_id, file)
+
+        # Update tenant with logo URL
+        tenant.logo_url = logo_url
+        db.commit()
+        db.refresh(tenant)
+
+        return tenant
+    except FileUploadError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload logo: {str(e)}"
+        )
+
+
+@router.get("/{tenant_id}/logo")
+def get_tenant_logo(
+    tenant_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve the logo file for a tenant.
+
+    Returns the logo image file if it exists, or a 404 error if not found.
+    """
+    # Check if tenant exists
+    tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Check if tenant has a logo
+    if not tenant.logo_url:
+        raise HTTPException(
+            status_code=404,
+            detail="Tenant does not have a logo"
+        )
+
+    # Get logo file path
+    file_service = get_file_upload_service()
+    logo_path = file_service.get_logo_path(tenant.logo_url)
+
+    if not logo_path:
+        raise HTTPException(
+            status_code=404,
+            detail="Logo file not found"
+        )
+
+    # Return file
+    return FileResponse(
+        path=logo_path,
+        media_type="image/png",  # Will be auto-detected by FileResponse
+        filename=f"tenant_{tenant_id}_logo{logo_path.suffix}"
+    )
+
+
+@router.delete("/{tenant_id}/logo", response_model=Tenant)
+def delete_tenant_logo(
+    tenant_id: str,
+    current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete the logo for a tenant.
+
+    Permissions: Admin and Owner roles only.
+    """
+    # Check if tenant exists
+    tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Verify user has access to this tenant
+    if current_user.tenant_id != tenant_id and current_user.role != UserRole.OWNER:
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have permission to delete logo for this tenant"
+        )
+
+    # Delete logo file
+    if tenant.logo_url:
+        file_service = get_file_upload_service()
+        file_service.delete_logo(tenant_id)
+
+        # Update tenant
+        tenant.logo_url = None
+        db.commit()
+        db.refresh(tenant)
+
+    return tenant

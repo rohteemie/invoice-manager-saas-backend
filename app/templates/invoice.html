@@ -269,8 +269,29 @@
         <!-- Header -->
         <div class="invoice-header">
             <div class="company-info">
+                {% if logo_url %}
+                <div style="margin-bottom: 10px;">
+                    <img src="file://{{ logo_url }}" alt="Company Logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
+                </div>
+                {% endif %}
+                {% if tenant %}
+                <div class="company-name">{{ tenant.name }}</div>
+                {% if tenant.address != 'N/A' %}
+                <div style="font-size: 9pt; color: #666; margin-top: 5px;">
+                    {{ tenant.address }}
+                </div>
+                {% endif %}
+                {% if tenant.phone != 'N/A' or tenant.email != 'N/A' %}
+                <div style="font-size: 9pt; color: #666; margin-top: 3px;">
+                    {% if tenant.phone != 'N/A' %}Phone: {{ tenant.phone }}{% endif %}
+                    {% if tenant.phone != 'N/A' and tenant.email != 'N/A' %} | {% endif %}
+                    {% if tenant.email != 'N/A' %}Email: {{ tenant.email }}{% endif %}
+                </div>
+                {% endif %}
+                {% else %}
                 <div class="company-name">Multi-Tenant SaaS</div>
                 <div class="company-tagline">Professional Invoice Management</div>
+                {% endif %}
             </div>
             <div class="invoice-title">
                 <h1>INVOICE</h1>
@@ -354,7 +375,7 @@
                     <span>{{ subtotal }}</span>
                 </div>
                 <div class="totals-row tax">
-                    <span>Tax:</span>
+                    <span>{% if tenant and tenant.tax_label != 'Tax' %}{{ tenant.tax_label }}{% else %}Tax{% endif %}:</span>
                     <span>{{ tax_amount }}</span>
                 </div>
                 <div class="totals-row discount">

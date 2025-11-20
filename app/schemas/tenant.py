@@ -26,6 +26,17 @@ class TenantBase(BaseModel):
         None, max_length=50,
         description="Tax label (e.g., 'VAT', 'GST', 'Sales Tax')"
     )
+    address: Optional[str] = Field(
+        None, max_length=1000,
+        description="Tenant business address for invoices"
+    )
+    phone: Optional[str] = Field(
+        None, max_length=20,
+        description="Tenant contact phone number"
+    )
+    email: Optional[EmailStr] = Field(
+        None, description="Tenant contact email for invoices"
+    )
 
 
 class TenantCreate(TenantBase):
@@ -49,11 +60,23 @@ class TenantUpdate(BaseModel):
         None, max_length=50,
         description="Tax label (e.g., 'VAT', 'GST', 'Sales Tax')"
     )
+    address: Optional[str] = Field(
+        None, max_length=1000,
+        description="Tenant business address for invoices"
+    )
+    phone: Optional[str] = Field(
+        None, max_length=20,
+        description="Tenant contact phone number"
+    )
+    email: Optional[EmailStr] = Field(
+        None, description="Tenant contact email for invoices"
+    )
 
 
 class TenantInDB(TenantBase):
     id: str
     is_active: bool
+    logo_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
