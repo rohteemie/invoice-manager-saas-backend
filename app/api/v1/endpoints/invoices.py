@@ -517,7 +517,7 @@ def send_invoice(
         tenant = db.query(TenantModel).filter(
             TenantModel.id == current_user.tenant_id
         ).first()
-        
+
         pdf_generator = get_pdf_generator()
         pdf_bytes = pdf_generator.generate_invoice_pdf(invoice, tenant)
     except PDFGenerationError as e:

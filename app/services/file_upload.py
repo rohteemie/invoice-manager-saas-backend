@@ -7,9 +7,8 @@ Handles file validation, storage, and retrieval for tenant logos.
 import os
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple
-from fastapi import UploadFile, HTTPException
-import mimetypes
+from typing import Optional
+from fastapi import UploadFile
 
 
 class FileUploadError(Exception):
@@ -83,7 +82,7 @@ class FileUploadService:
         # Check MIME type
         if file.content_type not in self.ALLOWED_MIME_TYPES:
             raise FileUploadError(
-                f"Invalid file type. Allowed: PNG, JPG, JPEG, SVG"
+                "Invalid file type. Allowed: PNG, JPG, JPEG, SVG"
             )
 
         # Check file size

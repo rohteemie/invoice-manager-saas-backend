@@ -13,7 +13,7 @@ from app.schemas.tenant import (
 from app.core.security import get_password_hash, generate_verification_token
 from app.core.email import send_verification_email
 from app.core.config import settings
-from app.core.deps import get_current_user, require_role
+from app.core.deps import require_role
 from app.services.file_upload import get_file_upload_service, FileUploadError
 
 router = APIRouter()

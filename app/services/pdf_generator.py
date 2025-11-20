@@ -133,7 +133,7 @@ class PDFGenerator:
             "tenant": None,
             "logo_url": None
         }
-        
+
         # Add tenant information if provided
         if tenant:
             data["tenant"] = {
