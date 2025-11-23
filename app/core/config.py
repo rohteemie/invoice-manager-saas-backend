@@ -60,6 +60,10 @@ class Settings(BaseSettings):
         30,
         validation_alias="PASSWORD_RESET_TOKEN_EXPIRATION_MINUTES"
     )
+    POOL_SIZE: int = Field(10, validation_alias="POOL_SIZE")
+    MAX_OVERFLOW: int = Field(20, validation_alias="MAX_OVERFLOW")
+    POOL_TIMEOUT: int = Field(30, validation_alias="POOL_TIMEOUT")
+    POOL_RECYCLE: int = Field(1800, validation_alias="POOL_RECYCLE")
 
     model_config = {
         "env_file": ".env",
