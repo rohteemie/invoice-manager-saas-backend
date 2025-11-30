@@ -36,9 +36,8 @@ class Settings(BaseSettings):
         ["*"],
         validation_alias="CORS_ORIGINS"
     )
-    # Email configuration
     EMAIL_VERIFICATION_BASE_URL: Optional[str] = Field(
-        "https://yourapp.com",
+        None,
         validation_alias="EMAIL_VERIFICATION_BASE_URL"
     )
     # SendGrid / Email settings
@@ -64,6 +63,7 @@ class Settings(BaseSettings):
     MAX_OVERFLOW: int = Field(20, validation_alias="MAX_OVERFLOW")
     POOL_TIMEOUT: int = Field(30, validation_alias="POOL_TIMEOUT")
     POOL_RECYCLE: int = Field(1800, validation_alias="POOL_RECYCLE")
+    CONNECT_TIMEOUT: int = Field(10, validation_alias="DB_CONNECT_TIMEOUT")
 
     model_config = {
         "env_file": ".env",
