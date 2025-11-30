@@ -1,9 +1,11 @@
+
 from sqlalchemy import QueuePool, create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker
 from app.models.general_model import Base
 from app.core.config import settings
 
-# Create the engine
+
+# Create the engine with sensible defaults and pool pre-ping
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
@@ -11,19 +13,16 @@ engine = create_engine(
     max_overflow=settings.MAX_OVERFLOW,
     pool_timeout=settings.POOL_TIMEOUT,
     pool_recycle=settings.POOL_RECYCLE,
-    # Optional: for psycopg2 set a connect timeout
-    connect_args={"connect_timeout": int(getattr(settings, "DB_CONNECT_TIMEOUT", 10))},
     poolclass=QueuePool,
 )
 
-# Session factory
-SessionLocal = scoped_session(
-    sessionmaker(
-        bind=engine,
-        autocommit=False,
-        autoflush=False,
-        expire_on_commit=False
-    )
+# Use a plain sessionmaker (one Session per request) rather than scoped_session.
+# scoped_session can cause unexpected session reuse across async contexts.
+SessionLocal = sessionmaker(
+    bind=engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
 )
 
 
