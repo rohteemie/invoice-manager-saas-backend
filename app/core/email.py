@@ -287,7 +287,7 @@ def send_invoice_email(
             Dear {html.escape(safe_customer_name)},</p>
             <p style="font-size: 16px; margin-bottom: 20px;">
                 Thank you for your business! Please find attached your invoice
-                <strong>{html.escape(safe_invoice_number)}</strong> for\
+                <strong>{html.escape(safe_invoice_number)}</strong> for
                     the amount
                 of <strong>{html.escape(safe_total_amount)}</strong>.
             </p>
