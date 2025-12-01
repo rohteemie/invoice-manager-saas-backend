@@ -354,8 +354,10 @@ def delete_tenant_logo(
     ):
         raise HTTPException(
             status_code=403,
-            detail="You don't have permission to \
-                delete logo for this tenant"
+            detail=(
+                "You don't have permission to "
+                "delete logo for this tenant"
+            )
         )
 
     # Delete logo file
