@@ -9,9 +9,11 @@ if not os.getenv("TESTING"):
 
 
 def get_db():
-    """Dependency that provides a DB session with automatic retry on connection failures.
+    """Dependency that provides a DB session with automatic retry on
+    connection failures.
 
-    Attempts up to 3 times with exponential backoff (0.5s, 1s, 2s) if OperationalError occurs.
+    Attempts up to 3 times with exponential backoff (0.5s, 1s, 2s)
+    if OperationalError occurs.
 
     Yields:
         sqlalchemy.orm.Session: A database session object.

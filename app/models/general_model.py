@@ -43,7 +43,9 @@ class Gen_Model:
                     except (ValueError, TypeError):
                         pass
                     if not isinstance(value, datetime):
-                        raise ValueError(f"Invalid datetime value for {key}: {value!r}")
+                        raise ValueError(
+                            f"Invalid datetime value for {key}: {value!r}"
+                        )
                 if key != "__class__":
                     setattr(self, key, value)
             if "id" not in kwargs:
