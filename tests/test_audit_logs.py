@@ -15,7 +15,7 @@ def test_login_creates_audit_log(client, test_tenant, test_user, db_session):
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "testpass123"
+            "password": "TestPassword123"
         }
     )
     assert response.status_code == 200
@@ -71,7 +71,7 @@ def test_token_refresh_creates_audit_log(
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "testpass123"
+            "password": "TestPassword123"
         }
     )
     assert response.status_code == 200
@@ -296,8 +296,6 @@ def test_list_audit_logs_requires_admin(client, manager_auth_headers):
 
 def test_list_audit_logs_as_admin(client, admin_auth_headers, db_session):
     """Test that admin can list audit logs."""
-    from app.models.audit_log import AuditLog
-
     response = client.get(
         "/api/v1/audit-logs/",
         headers=admin_auth_headers
@@ -412,8 +410,6 @@ def test_audit_logs_tenant_isolation(
     client, admin_auth_headers, second_tenant, db_session
 ):
     """Test that audit logs are isolated by tenant."""
-    from app.models.audit_log import AuditLog
-
     # Get audit logs - should only see logs from own tenant
     response = client.get(
         "/api/v1/audit-logs/",
@@ -442,7 +438,7 @@ def test_audit_log_captures_ip_address(
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "testpass123"
+            "password": "TestPassword123"
         },
         headers={"X-Forwarded-For": "192.168.1.100"}
     )
@@ -470,7 +466,7 @@ def test_audit_log_captures_user_agent(
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "testpass123"
+            "password": "TestPassword123"
         },
         headers={"User-Agent": "TestClient/1.0"}
     )
@@ -488,14 +484,15 @@ def test_audit_log_captures_user_agent(
 
 def test_audit_log_date_filtering(client, admin_auth_headers, db_session):
     """Test filtering audit logs by date range."""
+    from urllib.parse import quote
     now = datetime.now(timezone.utc)
     yesterday = now - timedelta(days=1)
     tomorrow = now + timedelta(days=1)
 
-    # Filter by date range
+    # Filter by date range (URL encode the dates)
     response = client.get(
-        f"/api/v1/audit-logs/?start_date={yesterday.isoformat()}"
-        f"&end_date={tomorrow.isoformat()}",
+        f"/api/v1/audit-logs/?start_date={quote(yesterday.isoformat())}"
+        f"&end_date={quote(tomorrow.isoformat())}",
         headers=admin_auth_headers
     )
     assert response.status_code == 200
