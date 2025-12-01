@@ -36,6 +36,8 @@ from app.core.security import (
 from app.core.rate_limit import limiter
 from app.core.email import send_verification_email, send_password_reset_email
 from app.core.config import settings
+from app.services.audit_logger import log_auth_event
+from app.models.audit_log import AuditAction
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -144,6 +146,16 @@ def login(
     if not user or not verify_password(
         form_data.password, user.hashed_password
     ):
+        # Log failed login attempt
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILED,
+            user_id=user.id if user else None,
+            tenant_id=user.tenant_id if user else None,
+            status="failure",
+            description=f"Failed login attempt for {form_data.username}"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -151,6 +163,16 @@ def login(
         )
 
     if not user.is_active:
+        # Log failed login for inactive user
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILED,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            status="failure",
+            description="Login attempt for inactive user account"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user account"
@@ -164,6 +186,16 @@ def login(
 
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
+
+    # Log successful login
+    log_auth_event(
+        db=db,
+        request=request,
+        action=AuditAction.LOGIN,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        description=f"Successful login for {user.email}"
+    )
 
     return {
         "access_token": access_token,
@@ -217,6 +249,16 @@ def refresh_token(
 
     new_access_token = create_access_token(token_data)
     new_refresh_token = create_refresh_token(token_data)
+
+    # Log token refresh
+    log_auth_event(
+        db=db,
+        request=request,
+        action=AuditAction.TOKEN_REFRESH,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        description="Token refresh successful"
+    )
 
     return {
         "access_token": new_access_token,

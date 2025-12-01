@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +29,8 @@ from app.core.deps import get_current_user, require_role
 from app.core.cache import invalidate_tenant_cache
 from app.services.pdf_generator import get_pdf_generator, PDFGenerationError
 from app.core.email import send_invoice_email
+from app.services.audit_logger import log_invoice_event, log_export_event
+from app.models.audit_log import AuditAction
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -301,6 +303,7 @@ def update_invoice(
 def update_invoice_status(
     invoice_id: str,
     status_update: InvoiceStatusUpdate,
+    request: Request,
     current_user: User = Depends(require_role(UserRole.MANAGER)),
     db: Session = Depends(get_db)
 ):
@@ -340,6 +343,9 @@ def update_invoice_status(
                    f"{invoice.status.value} to {status_update.status.value}"
         )
 
+    # Capture old status for audit
+    old_status = invoice.status.value
+
     # Update status
     invoice.status = status_update.status
 
@@ -355,6 +361,21 @@ def update_invoice_status(
 
     db.commit()
     db.refresh(invoice)
+
+    # Log invoice status change
+    log_invoice_event(
+        db=db,
+        request=request,
+        action=AuditAction.INVOICE_STATUS_CHANGED,
+        resource_id=invoice.id,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        changes={
+            "status": {"before": old_status, "after": invoice.status.value}
+        },
+        description=(f"Invoice {invoice.invoice_number} status changed from "
+                     f"{old_status} to {invoice.status.value}")
+    )
 
     # Invalidate analytics cache for this tenant
     invalidate_tenant_cache(current_user.tenant_id, "*")
@@ -401,6 +422,7 @@ def delete_invoice(
 @router.get("/{invoice_id}/pdf")
 def download_invoice_pdf(
     invoice_id: str,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -444,6 +466,16 @@ def download_invoice_pdf(
             status_code=500,
             detail=f"Unexpected error generating PDF: {str(e)}"
         )
+
+    # Log PDF generation
+    log_export_event(
+        db=db,
+        request=request,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        description=f"PDF generated for invoice {invoice.invoice_number}",
+        resource_id=invoice.id
+    )
 
     # Return PDF response
     filename = f"invoice_{invoice.invoice_number}.pdf"
@@ -575,6 +607,7 @@ def send_invoice(
 
 @router.get("/export/invoices")
 def export_invoices(
+    request: Request,
     format: str = Query("csv", pattern="^(csv|json)$",
                         description="Export format: csv or json"),
     status: Optional[InvoiceStatus] = Query(None,
@@ -687,6 +720,16 @@ def export_invoices(
 
         # Prepare response
         output.seek(0)
+
+        # Log data export
+        log_export_event(
+            db=db,
+            request=request,
+            user_id=current_user.id,
+            tenant_id=current_user.tenant_id,
+            description=f"CSV export of {len(invoices)} invoices"
+        )
+
         return StreamingResponse(
             iter([output.getvalue()]),
             media_type="text/csv",
@@ -733,6 +776,15 @@ def export_invoices(
 
         # Convert to JSON
         json_str = json.dumps(data, indent=2)
+
+        # Log data export
+        log_export_event(
+            db=db,
+            request=request,
+            user_id=current_user.id,
+            tenant_id=current_user.tenant_id,
+            description=f"JSON export of {len(invoices)} invoices"
+        )
 
         # Prepare response
         return StreamingResponse(
