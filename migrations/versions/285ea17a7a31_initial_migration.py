@@ -28,8 +28,20 @@ def upgrade() -> None:
     migrations' `down_revision` references intact.
     """
     bind = op.get_bind()
-    # Import here to avoid import-time side effects when Alembic inspects files
+    # Import models so they are registered on the metadata before create_all()
+    # Importing here avoids import-time side effects when Alembic inspects files
     from app.models.general_model import Base
+    # Ensure all model modules are imported so their Table objects are present
+    # in Base.metadata. Add new model module names to the tuple below as models
+    # are added. Using importlib avoids multiple noqa comments and is easier
+    # to extend.
+    import importlib
+    for module in (
+        "app.models.tenant",
+        "app.models.user",
+        "app.models.invoice",
+    ):
+        importlib.import_module(module)
 
     Base.metadata.create_all(bind=bind)
 
