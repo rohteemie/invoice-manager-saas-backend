@@ -3,7 +3,7 @@ Test suite for Password Reset functionality.
 Tests forgot password and reset password endpoints.
 """
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.models.user import User as UserModel
 from app.core.security import generate_password_reset_token, verify_password
 
@@ -76,7 +76,7 @@ def test_forgot_password_generates_token(client, test_user, db_session):
     assert test_user.reset_password_token is not None
     assert len(test_user.reset_password_token) > 0
     assert test_user.reset_password_token_expires_at is not None
-    assert test_user.reset_password_token_expires_at > datetime.now()
+    assert test_user.reset_password_token_expires_at > datetime.now(timezone.utc)
 
 
 def test_forgot_password_exposes_reset_link_in_test_mode(client, test_user):
@@ -145,8 +145,8 @@ def test_reset_password_with_expired_token(client, test_user, db_session):
     # Generate expired token
     reset_token, _ = generate_password_reset_token()
     test_user.reset_password_token = reset_token
-    # Set expiration to past
-    test_user.reset_password_token_expires_at = datetime.now() - timedelta(minutes=1)
+    # Set expiration to past (use UTC-aware datetime)
+    test_user.reset_password_token_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
     db_session.commit()
 
     response = client.post(

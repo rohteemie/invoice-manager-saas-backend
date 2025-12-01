@@ -24,10 +24,14 @@ def _create_redis_client() -> Optional[redis.Redis]:
         client = redis.from_url(
             settings.REDIS_URL,
             decode_responses=True,
-            socket_connect_timeout=int(getattr(settings, "REDIS_CONNECT_TIMEOUT", 5)),
+            socket_connect_timeout=int(
+                getattr(settings, "REDIS_CONNECT_TIMEOUT", 5)
+            ),
             socket_timeout=int(getattr(settings, "REDIS_SOCKET_TIMEOUT", 5)),
             retry_on_timeout=True,
-            health_check_interval=int(getattr(settings, "REDIS_HEALTH_CHECK_INTERVAL", 30)),
+            health_check_interval=int(
+                getattr(settings, "REDIS_HEALTH_CHECK_INTERVAL", 30)
+            ),
         )
         # Test connection
         client.ping()

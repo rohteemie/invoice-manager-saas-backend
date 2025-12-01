@@ -16,7 +16,7 @@ engine = create_engine(
     poolclass=QueuePool,
 )
 
-# Use a plain sessionmaker (one Session per request) rather than scoped_session.
+# Use plain sessionmaker (one Session per request) rather than scoped_session.
 # scoped_session can cause unexpected session reuse across async contexts.
 SessionLocal = sessionmaker(
     bind=engine,

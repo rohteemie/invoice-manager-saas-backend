@@ -5,7 +5,7 @@ from other parts of the application (prevents circular imports and keeps
 DB helpers centralised).
 """
 from sqlalchemy.types import TypeDecorator, DateTime as SADateTime
-from datetime import datetime, timezone
+from datetime import timezone
 
 
 class UTCDateTime(TypeDecorator):

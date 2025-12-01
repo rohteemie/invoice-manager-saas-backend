@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """ Base class config For all models """
 from sqlalchemy import Column, String
-from sqlalchemy.types import DateTime as SADateTime
 from sqlalchemy.orm import declarative_base
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -19,18 +18,28 @@ class Gen_Model:
     id = Column(String(60), unique=True, nullable=False, primary_key=True,
                 index=True
                 )
-    created_at = Column(UTCDateTime(), nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(UTCDateTime(), nullable=False, default=lambda: datetime.now(timezone.utc),
-                        onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(
+        UTCDateTime(), nullable=False,
+        default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at = Column(
+        UTCDateTime(), nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
 
     def __init__(self, *args, **kwargs):
         """ Initializes the general class """
         if kwargs:
             for key, value in kwargs.items():
                 if key == "created_at" or key == "updated_at":
-                    # accept naive or ISO-formatted datetimes; assume UTC for naive inputs
+                    # accept naive or ISO-formatted datetimes; assume UTC for
+                    # naive inputs
                     try:
-                        value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+                        value = datetime.strptime(
+                            value,
+                            "%Y-%m-%dT%H:%M:%S.%f"
+                        )
                     except Exception:
                         pass
                 if key != "__class__":

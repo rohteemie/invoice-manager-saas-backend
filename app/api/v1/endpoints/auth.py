@@ -525,7 +525,8 @@ def reset_password(
     # Check if token has expired
     if (
             user.reset_password_token_expires_at
-            and user.reset_password_token_expires_at < datetime.now(timezone.utc)
+            and user.reset_password_token_expires_at
+            < datetime.now(timezone.utc)
     ):
         # Clear expired token
         user.reset_password_token = None

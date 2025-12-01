@@ -76,7 +76,8 @@ class FileUploadService:
         file_ext = os.path.splitext(file.filename)[1].lower()
         if file_ext not in self.ALLOWED_EXTENSIONS:
             raise FileUploadError(
-                f"Invalid file extension. Allowed: {', '.join(self.ALLOWED_EXTENSIONS)}"
+                f"Invalid file extension. Allowed: \
+                {', '.join(self.ALLOWED_EXTENSIONS)}"
             )
 
         # Check MIME type

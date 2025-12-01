@@ -129,7 +129,9 @@ class PDFGenerator:
             "notes": invoice.notes or "",
             "payment_method": invoice.payment_method or "N/A",
             "paid_at": format_date(invoice.paid_at) if invoice.paid_at else "N/A",  # noqa: E501
-            "generated_at": datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p"),
+            "generated_at": datetime.now(timezone.utc).strftime(
+                "%B %d, %Y at %I:%M %p"
+            ),
             "tenant": None,
             "logo_url": None
         }

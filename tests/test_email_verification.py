@@ -2,7 +2,7 @@
 Test suite for Email Verification feature.
 Tests email verification token generation, sending, and verification.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 
 def test_register_tenant_generates_verification_token(client, db_session):
@@ -240,8 +240,8 @@ def test_token_has_expiration(client, db_session):
     ).first()
     assert user.verification_token_expires_at is not None
     # Token should expire in the future (within 25 hours)
-    assert user.verification_token_expires_at > datetime.utcnow()
-    assert user.verification_token_expires_at < datetime.utcnow() + timedelta(hours=25)
+    assert user.verification_token_expires_at > datetime.now(timezone.utc)
+    assert user.verification_token_expires_at < datetime.now(timezone.utc) + timedelta(hours=25)
 
 
 def test_verify_email_with_expired_token(client, db_session):
@@ -271,7 +271,7 @@ def test_verify_email_with_expired_token(client, db_session):
     token = user.verification_token
 
     # Set token expiration to the past
-    user.verification_token_expires_at = datetime.utcnow() - timedelta(hours=1)
+    user.verification_token_expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
     db_session.commit()
 
     # Try to verify with expired token

@@ -611,7 +611,8 @@ def export_invoices(
     if status:
         query = query.filter(InvoiceModel.status == status)
 
-    # Helper to parse ISO date/datetime query params into timezone-aware datetimes
+    # Helper to parse ISO date/datetime query params into timezone-aware
+    # datetimes
     def _parse_date_param(value: str) -> datetime:
         try:
             # Handle plain YYYY-MM-DD as a date

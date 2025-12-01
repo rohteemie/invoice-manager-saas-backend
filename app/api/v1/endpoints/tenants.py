@@ -261,7 +261,10 @@ def upload_tenant_logo(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     # Verify user has access to this tenant
-    if current_user.tenant_id != tenant_id and current_user.role != UserRole.OWNER:
+    if (
+        current_user.tenant_id != tenant_id
+        and current_user.role != UserRole.OWNER
+    ):
         raise HTTPException(
             status_code=403,
             detail="You don't have permission to upload logo for this tenant"
@@ -345,10 +348,14 @@ def delete_tenant_logo(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     # Verify user has access to this tenant
-    if current_user.tenant_id != tenant_id and current_user.role != UserRole.OWNER:
+    if (
+        current_user.tenant_id != tenant_id
+        and current_user.role != UserRole.OWNER
+    ):
         raise HTTPException(
             status_code=403,
-            detail="You don't have permission to delete logo for this tenant"
+            detail="You don't have permission to \
+                delete logo for this tenant"
         )
 
     # Delete logo file
