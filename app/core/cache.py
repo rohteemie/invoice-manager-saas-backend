@@ -6,26 +6,60 @@ from typing import Optional, Any
 from functools import wraps
 import redis
 from app.core.config import settings
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 # Initialize Redis client (will be None if Redis is not configured)
 redis_client: Optional[redis.Redis] = None
 
-try:
-    if hasattr(settings, 'REDIS_URL') and settings.REDIS_URL:
-        redis_client = redis.from_url(
+
+def _create_redis_client() -> Optional[redis.Redis]:
+    """Create a configured Redis client or return None if not configured."""
+    if not (hasattr(settings, 'REDIS_URL') and settings.REDIS_URL):
+        return None
+
+    try:
+        client = redis.from_url(
             settings.REDIS_URL,
-            decode_responses=True
+            decode_responses=True,
+            socket_connect_timeout=int(
+                getattr(settings, "REDIS_CONNECT_TIMEOUT", 5)
+            ),
+            socket_timeout=int(getattr(settings, "REDIS_SOCKET_TIMEOUT", 5)),
+            retry_on_timeout=True,
+            health_check_interval=int(
+                getattr(settings, "REDIS_HEALTH_CHECK_INTERVAL", 30)
+            ),
         )
         # Test connection
-        redis_client.ping()
-except Exception as e:
-    print(f"Redis connection failed: {e}. Caching disabled.")
-    redis_client = None
+        client.ping()
+        return client
+    except Exception as e:
+
+        logger.warning(f"Redis connection failed: {e}. Caching disabled.")
+        return None
+
+
+# Try to create client at import time
+redis_client = _create_redis_client()
 
 
 def get_redis_client() -> Optional[redis.Redis]:
     """Get Redis client instance."""
+    global redis_client
+    # Lazy reconnect: if client is None try to recreate
+    if redis_client is None:
+        redis_client = _create_redis_client()
+
+    if redis_client is not None:
+        try:
+            redis_client.ping()
+        except Exception:
+            # Attempt to recreate once
+            redis_client = _create_redis_client()
+
     return redis_client
 
 
@@ -54,7 +88,7 @@ def set_cache(key: str, value: Any, expiry: int = 300) -> bool:
         redis_client.setex(key, expiry, serialized_value)
         return True
     except Exception as e:
-        print(f"Cache set error: {e}")
+        logger.error(f"Cache set error: {e}")
         return False
 
 
@@ -77,7 +111,7 @@ def get_cache(key: str) -> Optional[Any]:
             return json.loads(value)
         return None
     except Exception as e:
-        print(f"Cache get error: {e}")
+        logger.error(f"Cache get error: {e}")
         return None
 
 
@@ -98,7 +132,7 @@ def delete_cache(key: str) -> bool:
         redis_client.delete(key)
         return True
     except Exception as e:
-        print(f"Cache delete error: {e}")
+        logger.error(f"Cache delete error: {e}")
         return False
 
 
@@ -122,7 +156,7 @@ def invalidate_tenant_cache(tenant_id: str, pattern: str = "*") -> bool:
             redis_client.delete(key)
         return True
     except Exception as e:
-        print(f"Cache invalidation error: {e}")
+        logger.error(f"Cache invalidation error: {e}")
         return False
 
 

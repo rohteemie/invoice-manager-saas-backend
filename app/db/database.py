@@ -1,22 +1,28 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+
+from sqlalchemy import QueuePool, create_engine
+from sqlalchemy.orm import sessionmaker
 from app.models.general_model import Base
 from app.core.config import settings
 
-# Create the engine
+
+# Create the engine with sensible defaults and pool pre-ping
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
+    pool_size=settings.POOL_SIZE,
+    max_overflow=settings.MAX_OVERFLOW,
+    pool_timeout=settings.POOL_TIMEOUT,
+    pool_recycle=settings.POOL_RECYCLE,
+    poolclass=QueuePool,
 )
 
-# Session factory
-SessionLocal = scoped_session(
-    sessionmaker(
-        bind=engine,
-        autocommit=False,
-        autoflush=False,
-        expire_on_commit=False
-    )
+# Use plain sessionmaker (one Session per request) rather than scoped_session.
+# scoped_session can cause unexpected session reuse across async contexts.
+SessionLocal = sessionmaker(
+    bind=engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
 )
 
 

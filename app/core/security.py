@@ -2,7 +2,7 @@
 Security utilities for password hashing and JWT token management.
 Implements secure authentication following OWASP best practices.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, Tuple
 import secrets
 from passlib.context import CryptContext
@@ -56,11 +56,11 @@ def create_access_token(
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRATION
-        )
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRATION)
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
         to_encode,
@@ -86,9 +86,9 @@ def create_refresh_token(
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.REFRESH_TOKEN_EXPIRATION
         )
     to_encode.update({"exp": expire})
@@ -129,9 +129,7 @@ def generate_verification_token() -> Tuple[str, datetime]:
         Tuple of (token string, expiration datetime)
     """
     token = secrets.token_urlsafe(32)
-    # Use local time `now()` so comparisons elsewhere (which use
-    # `datetime.now()`) remain consistent during tests/runtime.
-    expires_at = datetime.now() + timedelta(
+    expires_at = datetime.now(timezone.utc) + timedelta(
         hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS
     )
     return token, expires_at
@@ -145,9 +143,7 @@ def generate_password_reset_token() -> Tuple[str, datetime]:
         Tuple of (token string, expiration datetime)
     """
     token = secrets.token_urlsafe(32)
-    # Use local time `now()` so comparisons elsewhere (which use
-    # `datetime.now()`) remain consistent during tests/runtime.
-    expires_at = datetime.now() + timedelta(
+    expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.PASSWORD_RESET_TOKEN_EXPIRATION_MINUTES
     )
     return token, expires_at

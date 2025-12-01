@@ -2,7 +2,7 @@
 Authentication endpoints for user registration, login, and token refresh.
 Implements JWT-based authentication with secure password handling.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import os
 
@@ -268,7 +268,7 @@ def verify_email(
     # Check if token has expired
     if (
             user.verification_token_expires_at
-            and user.verification_token_expires_at < datetime.now()
+            and user.verification_token_expires_at < datetime.now(timezone.utc)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -524,8 +524,8 @@ def reset_password(
 
     # Check if token has expired
     if (
-            user.reset_password_token_expires_at
-            and user.reset_password_token_expires_at < datetime.now()
+        user.reset_password_token_expires_at
+        and user.reset_password_token_expires_at < datetime.now(timezone.utc)
     ):
         # Clear expired token
         user.reset_password_token = None

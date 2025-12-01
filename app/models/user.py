@@ -1,5 +1,6 @@
 from app.models.general_model import Gen_Model, Base
-from sqlalchemy import Column, String, Boolean, ForeignKey, Enum, DateTime
+from app.db.types import UTCDateTime
+from sqlalchemy import Column, String, Boolean, ForeignKey, Enum
 import enum
 
 
@@ -46,9 +47,9 @@ class User(Gen_Model, Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     verification_token = Column(String(255), nullable=True, index=True)
-    verification_token_expires_at = Column(DateTime, nullable=True)
+    verification_token_expires_at = Column(UTCDateTime(), nullable=True)
     reset_password_token = Column(String(255), nullable=True, index=True)
-    reset_password_token_expires_at = Column(DateTime, nullable=True)
+    reset_password_token_expires_at = Column(UTCDateTime(), nullable=True)
     currency_preference = Column(String(3), nullable=False, default="NGN")
 
     def __init__(self, *args, **kwargs):
