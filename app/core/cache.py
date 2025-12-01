@@ -39,7 +39,6 @@ def _create_redis_client() -> Optional[redis.Redis]:
     except Exception as e:
 
         logger.warning(f"Redis connection failed: {e}. Caching disabled.")
-        logger.error(f"Cache set error: {e}")
         return None
 
 
