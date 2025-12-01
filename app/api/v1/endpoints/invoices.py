@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date, timezone
 import csv
 import io
 import json
@@ -41,7 +41,7 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
         InvoiceModel.tenant_id == tenant_id
     ).count()
     # Format: INV-YYYYMMDD-XXXX
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     number = f"INV-{date_str}-{count + 1:04d}"
     return number
 
@@ -351,7 +351,7 @@ def update_invoice_status(
                 detail="Payment method is required for PAID status"
             )
         invoice.payment_method = status_update.payment_method
-        invoice.paid_at = datetime.now().isoformat()
+        invoice.paid_at = datetime.now(timezone.utc).isoformat()
 
     db.commit()
     db.refresh(invoice)
@@ -611,17 +611,44 @@ def export_invoices(
     if status:
         query = query.filter(InvoiceModel.status == status)
 
-    # Apply date range filters
+    # Helper to parse ISO date/datetime query params into timezone-aware datetimes
+    def _parse_date_param(value: str) -> datetime:
+        try:
+            # Handle plain YYYY-MM-DD as a date
+            if len(value) == 10 and value.count("-") == 2:
+                d = date.fromisoformat(value)
+                return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+
+            # Try full ISO datetime parsing
+            dt = datetime.fromisoformat(value)
+            if isinstance(dt, date) and not isinstance(dt, datetime):
+                # convert date to datetime
+                return datetime(dt.year, dt.month, dt.day, tzinfo=timezone.utc)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except Exception:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Invalid date format for export filter. Use YYYY-MM-DD or "
+                    "an ISO 8601 datetime string."
+                ),
+            )
+
+    # Apply date range filters (parse strings to datetimes first)
     if start_date:
-        query = query.filter(InvoiceModel.created_at >= start_date)
+        sd = _parse_date_param(start_date)
+        query = query.filter(InvoiceModel.created_at >= sd)
     if end_date:
-        query = query.filter(InvoiceModel.created_at <= end_date)
+        ed = _parse_date_param(end_date)
+        query = query.filter(InvoiceModel.created_at <= ed)
 
     # Get all invoices
     invoices = query.all()
 
     # Generate filename with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     filename = f"invoices_{timestamp}.{format}"
 
     if format == "csv":

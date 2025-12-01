@@ -6,7 +6,10 @@ from typing import Optional, Any
 from functools import wraps
 import redis
 from app.core.config import settings
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 # Initialize Redis client (will be None if Redis is not configured)
 redis_client: Optional[redis.Redis] = None
@@ -30,7 +33,9 @@ def _create_redis_client() -> Optional[redis.Redis]:
         client.ping()
         return client
     except Exception as e:
-        print(f"Redis connection failed: {e}. Caching disabled.")
+
+        logger.warning(f"Redis connection failed: {e}. Caching disabled.")
+        logger.error(f"Cache set error: {e}")
         return None
 
 
@@ -80,7 +85,7 @@ def set_cache(key: str, value: Any, expiry: int = 300) -> bool:
         redis_client.setex(key, expiry, serialized_value)
         return True
     except Exception as e:
-        print(f"Cache set error: {e}")
+        logger.error(f"Cache set error: {e}")
         return False
 
 
@@ -103,7 +108,7 @@ def get_cache(key: str) -> Optional[Any]:
             return json.loads(value)
         return None
     except Exception as e:
-        print(f"Cache get error: {e}")
+        logger.error(f"Cache get error: {e}")
         return None
 
 
@@ -124,7 +129,7 @@ def delete_cache(key: str) -> bool:
         redis_client.delete(key)
         return True
     except Exception as e:
-        print(f"Cache delete error: {e}")
+        logger.error(f"Cache delete error: {e}")
         return False
 
 
@@ -148,7 +153,7 @@ def invalidate_tenant_cache(tenant_id: str, pattern: str = "*") -> bool:
             redis_client.delete(key)
         return True
     except Exception as e:
-        print(f"Cache invalidation error: {e}")
+        logger.error(f"Cache invalidation error: {e}")
         return False
 
 

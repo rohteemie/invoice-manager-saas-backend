@@ -1,7 +1,7 @@
 """
 Background tasks for invoice processing.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.celery_app import celery_app
@@ -31,7 +31,7 @@ def check_overdue_invoices():
     db = SessionLocal()
     try:
         # Get current date
-        current_date = datetime.now().date().isoformat()
+        current_date = datetime.now(timezone.utc).date().isoformat()
 
         # Find SENT invoices with due_date in the past
         overdue_invoices = db.query(Invoice).filter(
@@ -58,7 +58,7 @@ def check_overdue_invoices():
             "status": "success",
             "updated_count": updated_count,
             "affected_tenants": len(affected_tenants),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -66,7 +66,7 @@ def check_overdue_invoices():
         return {
             "status": "error",
             "message": str(e),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     finally:
         db.close()
@@ -91,7 +91,7 @@ def process_invoice_reminder(invoice_id: str):
             return {
                 "status": "error",
                 "message": f"Invoice {invoice_id} not found",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
 
         # Placeholder: In a real implementation, this would send an email
@@ -101,14 +101,14 @@ def process_invoice_reminder(invoice_id: str):
             "invoice_id": invoice_id,
             "customer": invoice.customer_name,
             "message": "Reminder sent (placeholder)",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
         return {
             "status": "error",
             "message": str(e),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     finally:
         db.close()

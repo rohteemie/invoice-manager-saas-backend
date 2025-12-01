@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """ Base class config For all models """
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String
+from sqlalchemy.types import DateTime as SADateTime
 from sqlalchemy.orm import declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
+from app.db.types import UTCDateTime
 
 
 Base = declarative_base()
@@ -17,27 +19,31 @@ class Gen_Model:
     id = Column(String(60), unique=True, nullable=False, primary_key=True,
                 index=True
                 )
-    created_at = Column(DateTime, nullable=False, default=datetime.now)
-    updated_at = Column(DateTime, nullable=False, default=datetime.now,
-                        onupdate=datetime.now)
+    created_at = Column(UTCDateTime(), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(UTCDateTime(), nullable=False, default=lambda: datetime.now(timezone.utc),
+                        onupdate=lambda: datetime.now(timezone.utc))
 
     def __init__(self, *args, **kwargs):
         """ Initializes the general class """
         if kwargs:
             for key, value in kwargs.items():
                 if key == "created_at" or key == "updated_at":
-                    value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+                    # accept naive or ISO-formatted datetimes; assume UTC for naive inputs
+                    try:
+                        value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+                    except Exception:
+                        pass
                 if key != "__class__":
                     setattr(self, key, value)
             if "id" not in kwargs:
                 self.id = str(uuid4())
             if "created_at" not in kwargs:
-                self.created_at = datetime.now()
+                self.created_at = datetime.now(timezone.utc)
             if "updated_at" not in kwargs:
-                self.updated_at = datetime.now()
+                self.updated_at = datetime.now(timezone.utc)
         else:
             self.id = str(uuid4())
-            self.created_at = self.updated_at = datetime.now()
+            self.created_at = self.updated_at = datetime.now(timezone.utc)
 
     def __str__(self):
         """
