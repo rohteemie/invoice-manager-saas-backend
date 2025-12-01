@@ -622,9 +622,6 @@ def export_invoices(
 
             # Try full ISO datetime parsing
             dt = datetime.fromisoformat(value)
-            if isinstance(dt, date) and not isinstance(dt, datetime):
-                # convert date to datetime
-                return datetime(dt.year, dt.month, dt.day, tzinfo=timezone.utc)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt
