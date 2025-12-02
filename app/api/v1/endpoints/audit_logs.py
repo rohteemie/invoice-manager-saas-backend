@@ -21,21 +21,79 @@ from app.core.deps import require_role
 router = APIRouter()
 
 
+def apply_common_filters(
+    query,
+    actions: Optional[List[AuditAction]] = None,
+    resource_types: Optional[List[ResourceType]] = None,
+    resource_id: Optional[str] = None,
+    status: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+):
+    """
+    Apply common filters to audit log query.
+
+    This function implements DRY principle by centralizing filter logic
+    that is reused across multiple endpoints.
+
+    Args:
+        query: SQLAlchemy query object
+        actions: List of actions to filter by (OR logic)
+        resource_types: List of resource types to filter by (OR logic)
+        resource_id: Filter by specific resource ID
+        status: Filter by status (success/failure)
+        start_date: Filter by start date
+        end_date: Filter by end date
+
+    Returns:
+        Modified query with filters applied
+    """
+    # Filter by multiple actions (OR logic)
+    if actions:
+        query = query.filter(AuditLogModel.action.in_(actions))
+
+    # Filter by multiple resource types (OR logic)
+    if resource_types:
+        query = query.filter(AuditLogModel.resource_type.in_(resource_types))
+
+    # Filter by resource ID
+    if resource_id:
+        query = query.filter(AuditLogModel.resource_id == resource_id)
+
+    # Filter by status
+    if status:
+        query = query.filter(AuditLogModel.status == status)
+
+    # Filter by date range
+    if start_date:
+        query = query.filter(AuditLogModel.created_at >= start_date)
+
+    if end_date:
+        query = query.filter(AuditLogModel.created_at <= end_date)
+
+    return query
+
+
 @router.get("/", response_model=List[AuditLog])
 def list_audit_logs(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000,
-                       description="Maximum number of records to return"),
-    user_id: Optional[str] = Query(None, description="Filter by user ID"),
-    action: Optional[AuditAction] = Query(None,
-                                          description="Filter by action type"),
-    resource_type: Optional[ResourceType] = Query(
-        None, description="Filter by resource type"
+    limit: int = Query(
+        100, ge=1, le=1000,
+        description="Maximum number of records to return"
     ),
-    resource_id: Optional[str] = Query(None,
-                                       description="Filter by resource ID"),
-    status: Optional[str] = Query(None,
-                                  description="Filter by status (success/failure)"),
+    user_id: Optional[str] = Query(None, description="Filter by user ID"),
+    actions: Optional[List[AuditAction]] = Query(
+        None, description="Filter by action types (supports multiple)"
+    ),
+    resource_types: Optional[List[ResourceType]] = Query(
+        None, description="Filter by resource types (supports multiple)"
+    ),
+    resource_id: Optional[str] = Query(
+        None, description="Filter by resource ID"
+    ),
+    status: Optional[str] = Query(
+        None, description="Filter by status (success/failure)"
+    ),
     start_date: Optional[datetime] = Query(
         None, description="Filter by start date (ISO 8601 format)"
     ),
@@ -51,34 +109,32 @@ def list_audit_logs(
     - Requires Admin role or higher
     - Returns only logs for current tenant (data isolation)
     - Supports pagination and multiple filters
+    - Supports filtering by multiple actions and resource types
     - Results are ordered by created_at descending (newest first)
+
+    Example:
+        GET /audit-logs/?actions=login&actions=login_failed
+        GET /audit-logs/?resource_types=user&resource_types=tenant
     """
     # Build query with tenant isolation
     query = db.query(AuditLogModel).filter(
         AuditLogModel.tenant_id == current_user.tenant_id
     )
 
-    # Apply filters
+    # Filter by user ID
     if user_id:
         query = query.filter(AuditLogModel.user_id == user_id)
 
-    if action:
-        query = query.filter(AuditLogModel.action == action)
-
-    if resource_type:
-        query = query.filter(AuditLogModel.resource_type == resource_type)
-
-    if resource_id:
-        query = query.filter(AuditLogModel.resource_id == resource_id)
-
-    if status:
-        query = query.filter(AuditLogModel.status == status)
-
-    if start_date:
-        query = query.filter(AuditLogModel.created_at >= start_date)
-
-    if end_date:
-        query = query.filter(AuditLogModel.created_at <= end_date)
+    # Apply common filters
+    query = apply_common_filters(
+        query,
+        actions=actions,
+        resource_types=resource_types,
+        resource_id=resource_id,
+        status=status,
+        start_date=start_date,
+        end_date=end_date
+    )
 
     # Order by created_at descending (newest first)
     query = query.order_by(desc(AuditLogModel.created_at))
@@ -120,7 +176,9 @@ def get_user_audit_logs(
     user_id: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    action: Optional[AuditAction] = Query(None),
+    actions: Optional[List[AuditAction]] = Query(
+        None, description="Filter by action types (supports multiple)"
+    ),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
@@ -132,6 +190,10 @@ def get_user_audit_logs(
     - Requires Admin role or higher
     - Returns logs where the user was the actor or the resource
     - Enforces tenant-based access control
+    - Supports filtering by multiple actions
+
+    Example:
+        GET /audit-logs/user/{user_id}?actions=login&actions=login_failed
     """
     # Build query with tenant isolation
     query = db.query(AuditLogModel).filter(
@@ -145,15 +207,13 @@ def get_user_audit_logs(
         )
     )
 
-    # Apply additional filters
-    if action:
-        query = query.filter(AuditLogModel.action == action)
-
-    if start_date:
-        query = query.filter(AuditLogModel.created_at >= start_date)
-
-    if end_date:
-        query = query.filter(AuditLogModel.created_at <= end_date)
+    # Apply common filters
+    query = apply_common_filters(
+        query,
+        actions=actions,
+        start_date=start_date,
+        end_date=end_date
+    )
 
     # Order by created_at descending
     query = query.order_by(desc(AuditLogModel.created_at))
@@ -171,7 +231,9 @@ def get_resource_audit_logs(
     resource_id: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    action: Optional[AuditAction] = Query(None),
+    actions: Optional[List[AuditAction]] = Query(
+        None, description="Filter by action types (supports multiple)"
+    ),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
@@ -183,23 +245,25 @@ def get_resource_audit_logs(
     - Requires Admin role or higher
     - Returns all actions performed on the specified resource
     - Enforces tenant-based access control
+    - Supports filtering by multiple actions
+
+    Example:
+        GET /audit-logs/resource/invoice/{id}?actions=created&actions=updated
     """
-    # Build query with tenant isolation
+    # Build query with tenant isolation and resource filters
     query = db.query(AuditLogModel).filter(
         AuditLogModel.tenant_id == current_user.tenant_id,
         AuditLogModel.resource_type == resource_type,
         AuditLogModel.resource_id == resource_id
     )
 
-    # Apply additional filters
-    if action:
-        query = query.filter(AuditLogModel.action == action)
-
-    if start_date:
-        query = query.filter(AuditLogModel.created_at >= start_date)
-
-    if end_date:
-        query = query.filter(AuditLogModel.created_at <= end_date)
+    # Apply common filters
+    query = apply_common_filters(
+        query,
+        actions=actions,
+        start_date=start_date,
+        end_date=end_date
+    )
 
     # Order by created_at descending
     query = query.order_by(desc(AuditLogModel.created_at))

@@ -42,11 +42,27 @@ class AuditLog(AuditLogBase):
 
 class AuditLogFilter(BaseModel):
     """Schema for filtering audit logs."""
-    user_id: Optional[str] = Field(None, description="Filter by user ID")
-    tenant_id: Optional[str] = Field(None, description="Filter by tenant ID")
-    action: Optional[AuditAction] = Field(None, description="Filter by action type")
-    resource_type: Optional[ResourceType] = Field(None, description="Filter by resource type")
-    resource_id: Optional[str] = Field(None, description="Filter by resource ID")
-    status: Optional[str] = Field(None, description="Filter by status (success/failure)")
-    start_date: Optional[datetime] = Field(None, description="Filter by start date")
-    end_date: Optional[datetime] = Field(None, description="Filter by end date")
+    user_id: Optional[str] = Field(
+        None, description="Filter by user ID"
+    )
+    tenant_id: Optional[str] = Field(
+        None, description="Filter by tenant ID"
+    )
+    action: Optional[AuditAction] = Field(
+        None, description="Filter by action type"
+    )
+    resource_type: Optional[ResourceType] = Field(
+        None, description="Filter by resource type"
+    )
+    resource_id: Optional[str] = Field(
+        None, description="Filter by resource ID"
+    )
+    status: Optional[str] = Field(
+        None, description="Filter by status (success/failure)"
+    )
+    start_date: Optional[datetime] = Field(
+        None, description="Filter by start date"
+    )
+    end_date: Optional[datetime] = Field(
+        None, description="Filter by end date"
+    )

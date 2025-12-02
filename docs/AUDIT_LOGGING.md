@@ -71,12 +71,17 @@ Query Parameters:
 - `skip` (int): Number of records to skip for pagination (default: 0)
 - `limit` (int): Maximum number of records to return (default: 100, max: 1000)
 - `user_id` (string): Filter by user ID
-- `action` (AuditAction): Filter by action type
-- `resource_type` (ResourceType): Filter by resource type
+- `actions` (List[AuditAction]): Filter by action types (supports multiple)
+- `resource_types` (List[ResourceType]): Filter by resource types (supports multiple)
 - `resource_id` (string): Filter by resource ID
 - `status` (string): Filter by status (success/failure)
 - `start_date` (datetime): Filter by start date (ISO 8601 format)
 - `end_date` (datetime): Filter by end date (ISO 8601 format)
+
+**Multiple Filtering Support:**
+- You can filter by multiple actions: `?actions=login&actions=login_failed`
+- You can filter by multiple resource types: `?resource_types=user&resource_types=tenant`
+- Multiple filters use OR logic within the same parameter, AND logic across different parameters
 
 Response: Array of audit log objects, ordered by created_at descending (newest first)
 
@@ -94,7 +99,7 @@ GET /api/v1/audit-logs/user/{user_id}
 
 Returns all audit logs where the user was the actor or the resource.
 
-Query Parameters: Same filtering options as list endpoint
+Query Parameters: `actions` (supports multiple), `start_date`, `end_date`, `skip`, `limit`
 
 #### Get Resource Audit Logs
 ```
@@ -103,7 +108,7 @@ GET /api/v1/audit-logs/resource/{resource_type}/{resource_id}
 
 Returns all audit logs for a specific resource.
 
-Query Parameters: `action`, `start_date`, `end_date`, `skip`, `limit`
+Query Parameters: `actions` (supports multiple), `start_date`, `end_date`, `skip`, `limit`
 
 ### Security & Compliance
 
@@ -155,30 +160,52 @@ Future enhancements may include:
 
 ### Examples
 
-#### View Recent Login Attempts
+#### View Recent Login Attempts (Multiple Actions)
 ```bash
-GET /api/v1/audit-logs/?action=login&limit=50
-GET /api/v1/audit-logs/?action=login_failed&limit=50
+# Get both successful and failed logins
+GET /api/v1/audit-logs/?actions=login&actions=login_failed&limit=50
+
+# Get only successful logins
+GET /api/v1/audit-logs/?actions=login&limit=50
 ```
 
 #### Track User Role Changes
 ```bash
-GET /api/v1/audit-logs/?action=user_role_changed
+GET /api/v1/audit-logs/?actions=user_role_changed
+```
+
+#### Monitor Authentication and User Changes
+```bash
+# Get all authentication-related events and user changes
+GET /api/v1/audit-logs/?resource_types=auth&resource_types=user
 ```
 
 #### Audit Trail for Specific Invoice
 ```bash
+# Get all events for an invoice
 GET /api/v1/audit-logs/resource/invoice/{invoice_id}
+
+# Get only status changes and updates for an invoice
+GET /api/v1/audit-logs/resource/invoice/{invoice_id}?actions=invoice_status_changed&actions=invoice_updated
 ```
 
 #### Find All Actions by Specific User
 ```bash
 GET /api/v1/audit-logs/user/{user_id}
+
+# Filter to specific action types
+GET /api/v1/audit-logs/user/{user_id}?actions=user_role_changed&actions=user_updated
 ```
 
 #### Review Recent Failed Logins
 ```bash
-GET /api/v1/audit-logs/?action=login_failed&start_date=2024-01-01T00:00:00Z
+GET /api/v1/audit-logs/?actions=login_failed&start_date=2024-01-01T00:00:00Z
+```
+
+#### Complex Multi-Filter Query
+```bash
+# Get all invoice and tenant events by a specific user in a date range
+GET /api/v1/audit-logs/?user_id={user_id}&resource_types=invoice&resource_types=tenant&start_date=2024-01-01T00:00:00Z&end_date=2024-12-31T23:59:59Z
 ```
 
 ### Technical Implementation

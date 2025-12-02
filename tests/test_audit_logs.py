@@ -311,9 +311,9 @@ def test_list_audit_logs_with_filters(
     """Test filtering audit logs by various criteria."""
     from app.models.audit_log import AuditAction
 
-    # Filter by action
+    # Filter by single action
     response = client.get(
-        f"/api/v1/audit-logs/?action={AuditAction.LOGIN.value}",
+        f"/api/v1/audit-logs/?actions={AuditAction.LOGIN.value}",
         headers=admin_auth_headers
     )
     assert response.status_code == 200
@@ -331,6 +331,43 @@ def test_list_audit_logs_with_filters(
     for log in data:
         if log["user_id"]:
             assert log["user_id"] == test_user.id
+
+
+def test_list_audit_logs_with_multiple_filters(
+    client, admin_auth_headers, test_user, db_session
+):
+    """Test filtering audit logs by multiple actions and resource types."""
+    from app.models.audit_log import AuditAction, ResourceType
+
+    # Filter by multiple actions
+    response = client.get(
+        f"/api/v1/audit-logs/?actions={AuditAction.LOGIN.value}"
+        f"&actions={AuditAction.LOGIN_FAILED.value}",
+        headers=admin_auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    # Verify all returned logs have one of the specified actions
+    for log in data:
+        assert log["action"] in [
+            AuditAction.LOGIN.value,
+            AuditAction.LOGIN_FAILED.value
+        ]
+
+    # Filter by multiple resource types
+    response = client.get(
+        f"/api/v1/audit-logs/?resource_types={ResourceType.USER.value}"
+        f"&resource_types={ResourceType.AUTH.value}",
+        headers=admin_auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    # Verify all returned logs have one of the specified resource types
+    for log in data:
+        assert log["resource_type"] in [
+            ResourceType.USER.value,
+            ResourceType.AUTH.value
+        ]
 
 
 def test_list_audit_logs_pagination(client, admin_auth_headers, db_session):
