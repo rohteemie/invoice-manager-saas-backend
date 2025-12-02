@@ -3,12 +3,14 @@ User management endpoints with role-based access control.
 Supports CRUD operations with tenant-aware data isolation.
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User as UserModel, UserRole
 from app.schemas.user import User, UserUpdate
 from app.core.deps import get_current_user, require_role
+from app.services.audit_logger import log_user_event
+from app.models.audit_log import AuditAction
 
 router = APIRouter()
 
@@ -75,6 +77,7 @@ def get_user(
 def update_user(
     user_id: str,
     user_update: UserUpdate,
+    request: Request,
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -100,6 +103,10 @@ def update_user(
 
     update_data = user_update.model_dump(exclude_unset=True)
 
+    # Capture before state for audit
+    before_state = {}
+    changes = {}
+
     # Validate role changes
     if "role" in update_data:
         new_role = update_data["role"]
@@ -118,17 +125,50 @@ def update_user(
                 detail="Cannot assign owner role via API"
             )
 
+        # Track role change for audit
+        before_state["role"] = user.role.value
+        changes["role"] = {"before": user.role.value, "after": new_role.value}
+
+    # Track other changes
+    for field, value in update_data.items():
+        if field != "role" and hasattr(user, field):
+            old_value = getattr(user, field)
+            if old_value != value:
+                before_state[field] = old_value
+                changes[field] = {"before": old_value, "after": value}
+
     for field, value in update_data.items():
         setattr(user, field, value)
 
     db.commit()
     db.refresh(user)
+
+    # Log user update
+    action = (AuditAction.USER_ROLE_CHANGED
+              if "role" in changes
+              else AuditAction.USER_UPDATED)
+    log_user_event(
+        db=db,
+        request=request,
+        action=action,
+        resource_id=user.id,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        changes=changes,
+        description=(f"User {user.email} role changed from "
+                     f"{changes['role']['before']} to "
+                     f"{changes['role']['after']}"
+                     if "role" in changes
+                     else f"User {user.email} updated")
+    )
+
     return user
 
 
 @router.delete("/{user_id}")
 def delete_user(
     user_id: str,
+    request: Request,
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -167,4 +207,17 @@ def delete_user(
 
     user.is_active = False
     db.commit()
+
+    # Log user deletion
+    log_user_event(
+        db=db,
+        request=request,
+        action=AuditAction.USER_DELETED,
+        resource_id=user.id,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        changes={"is_active": {"before": True, "after": False}},
+        description=f"User {user.email} deactivated (soft delete)"
+    )
+
     return {"message": "User deactivated successfully"}

@@ -1,5 +1,7 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import (
+    APIRouter, Depends, HTTPException, UploadFile, File, Request
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +17,8 @@ from app.core.email import send_verification_email
 from app.core.config import settings
 from app.core.deps import require_role
 from app.services.file_upload import get_file_upload_service, FileUploadError
+from app.services.audit_logger import log_tenant_event
+from app.models.audit_log import AuditAction
 
 router = APIRouter()
 
@@ -184,6 +188,7 @@ def get_tenant(
 def update_tenant(
     tenant_id: str,
     tenant_update: TenantUpdate,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -194,6 +199,15 @@ def update_tenant(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     update_data = tenant_update.model_dump(exclude_unset=True)
+
+    # Track changes for audit
+    changes = {}
+    for field, value in update_data.items():
+        if hasattr(tenant, field):
+            old_value = getattr(tenant, field)
+            if old_value != value:
+                changes[field] = {"before": old_value, "after": value}
+
     # Check for domain uniqueness if domain is being updated
     if "domain" in update_data and update_data["domain"] is not None:
         new_domain = update_data["domain"]
@@ -212,6 +226,19 @@ def update_tenant(
 
     db.commit()
     db.refresh(tenant)
+
+    # Log tenant update
+    if changes:
+        log_tenant_event(
+            db=db,
+            request=request,
+            action=AuditAction.TENANT_UPDATED,
+            resource_id=tenant.id,
+            tenant_id=tenant.id,
+            changes=changes,
+            description=f"Tenant {tenant.name} updated"
+        )
+
     return tenant
 
 
