@@ -397,7 +397,9 @@ def test_get_audit_log_by_id(client, admin_auth_headers, db_session):
         assert data["id"] == audit_log.id
 
 
-def test_get_user_audit_logs(client, admin_auth_headers, test_user, db_session):
+def test_get_user_audit_logs(
+    client, admin_auth_headers, test_user, db_session
+):
     """Test getting audit logs for a specific user."""
     response = client.get(
         f"/api/v1/audit-logs/user/{test_user.id}",

@@ -1,5 +1,7 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi import (
+    APIRouter, Depends, HTTPException, UploadFile, File, Request
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
