@@ -26,25 +26,27 @@ def upgrade():
     dialect = conn.dialect.name
     if dialect.startswith('mysql'):
         # Modify common model datetime columns to DATETIME(6)
-        op.execute("""
-        ALTER TABLE `users`
-        MODIFY COLUMN `verification_token_expires_at` DATETIME(6) NULL,
-        MODIFY COLUMN `reset_password_token_expires_at` DATETIME(6) NULL,
-        MODIFY COLUMN `created_at` DATETIME(6) NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL;
+        op.execute(
+            "ALTER TABLE `users` MODIFY COLUMN `verification_token_expires_at` DATETIME(6) NULL, "
+            "MODIFY COLUMN `reset_password_token_expires_at` DATETIME(6) NULL, "
+            "MODIFY COLUMN `created_at` DATETIME(6) NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL"
+        )
 
-        ALTER TABLE `tenants`
-        MODIFY COLUMN `created_at` DATETIME(6) NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL;
+        op.execute(
+            "ALTER TABLE `tenants` MODIFY COLUMN `created_at` DATETIME(6) NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL"
+        )
 
-        ALTER TABLE `invoices`
-        MODIFY COLUMN `created_at` DATETIME(6) NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL;
+        op.execute(
+            "ALTER TABLE `invoices` MODIFY COLUMN `created_at` DATETIME(6) NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL"
+        )
 
-        ALTER TABLE `invoice_items`
-        MODIFY COLUMN `created_at` DATETIME(6) NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL;
-        """)
+        op.execute(
+            "ALTER TABLE `invoice_items` MODIFY COLUMN `created_at` DATETIME(6) NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME(6) NOT NULL"
+        )
     else:
         # For other DBs use SQLAlchemy alter_column
         tables = [
@@ -71,25 +73,27 @@ def downgrade():
     conn = op.get_bind()
     dialect = conn.dialect.name
     if dialect.startswith('mysql'):
-        op.execute("""
-        ALTER TABLE `users`
-        MODIFY COLUMN `verification_token_expires_at` DATETIME NULL,
-        MODIFY COLUMN `reset_password_token_expires_at` DATETIME NULL,
-        MODIFY COLUMN `created_at` DATETIME NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME NOT NULL;
+        op.execute(
+            "ALTER TABLE `users` MODIFY COLUMN `verification_token_expires_at` DATETIME NULL, "
+            "MODIFY COLUMN `reset_password_token_expires_at` DATETIME NULL, "
+            "MODIFY COLUMN `created_at` DATETIME NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME NOT NULL"
+        )
 
-        ALTER TABLE `tenants`
-        MODIFY COLUMN `created_at` DATETIME NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME NOT NULL;
+        op.execute(
+            "ALTER TABLE `tenants` MODIFY COLUMN `created_at` DATETIME NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME NOT NULL"
+        )
 
-        ALTER TABLE `invoices`
-        MODIFY COLUMN `created_at` DATETIME NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME NOT NULL;
+        op.execute(
+            "ALTER TABLE `invoices` MODIFY COLUMN `created_at` DATETIME NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME NOT NULL"
+        )
 
-        ALTER TABLE `invoice_items`
-        MODIFY COLUMN `created_at` DATETIME NOT NULL,
-        MODIFY COLUMN `updated_at` DATETIME NOT NULL;
-        """)
+        op.execute(
+            "ALTER TABLE `invoice_items` MODIFY COLUMN `created_at` DATETIME NOT NULL, "
+            "MODIFY COLUMN `updated_at` DATETIME NOT NULL"
+        )
     else:
         tables = [
             ('users', 'verification_token_expires_at'),
