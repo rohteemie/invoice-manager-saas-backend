@@ -56,7 +56,7 @@ def register(
 
     - Validates that email is unique
     - Hashes password using bcrypt
-    - Associates user with tenant for data isolation
+    - Associates user with tenant for data isolation (unless superadmin)
     - Returns user without password
     """
     existing_user = db.query(UserModel).filter(
@@ -68,6 +68,13 @@ def register(
             detail="Email already registered"
         )
 
+    # Validate tenant_id requirement for non-superadmin users
+    if not user_in.is_superadmin and not user_in.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant_id is required for non-superadmin users"
+        )
+
     try:
         hashed_password = get_password_hash(user_in.password)
         db_user = UserModel(
@@ -76,6 +83,7 @@ def register(
             hashed_password=hashed_password,
             role=user_in.role,
             tenant_id=user_in.tenant_id,
+            is_superadmin=user_in.is_superadmin,
         )
 
         # Generate verification token and expiration and attach to user
@@ -181,7 +189,8 @@ def login(
     token_data = {
         "sub": user.id,
         "tenant_id": user.tenant_id,
-        "role": user.role.value
+        "role": user.role.value,
+        "is_superadmin": user.is_superadmin
     }
 
     access_token = create_access_token(token_data)
@@ -244,7 +253,8 @@ def refresh_token(
     token_data = {
         "sub": user.id,
         "tenant_id": user.tenant_id,
-        "role": user.role.value
+        "role": user.role.value,
+        "is_superadmin": user.is_superadmin
     }
 
     new_access_token = create_access_token(token_data)

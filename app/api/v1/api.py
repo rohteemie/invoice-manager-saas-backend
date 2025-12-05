@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
-    tenants, auth, users, invoices, analytics, audit_logs
+    tenants, auth, users, invoices, analytics, audit_logs, admin
 )
 
 api_router = APIRouter()
@@ -14,3 +14,5 @@ api_router.include_router(analytics.router, prefix="/analytics",
                           tags=["analytics"])
 api_router.include_router(audit_logs.router, prefix="/audit-logs",
                           tags=["audit-logs"])
+api_router.include_router(admin.router, prefix="/admin",
+                          tags=["admin"])

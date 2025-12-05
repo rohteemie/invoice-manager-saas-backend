@@ -278,7 +278,7 @@ def test_registration_enforces_tenant_id(client, test_tenant):
             # Missing tenant_id
         }
     )
-    assert response.status_code == 422  # Validation error
+    assert response.status_code == 400  # Bad request (tenant_id required for non-superadmin)
 
 
 def test_user_from_tenant_a_manages_only_tenant_a_users(
