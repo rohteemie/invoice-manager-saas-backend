@@ -23,8 +23,10 @@ def upgrade():
     # Create index on is_superadmin
     op.create_index('ix_users_is_superadmin', 'users', ['is_superadmin'])
     
-    # For SQLite, we need to handle the nullable change differently
-    # Since SQLite doesn't support ALTER COLUMN, we check the dialect
+    # For MySQL/PostgreSQL: Make tenant_id nullable
+    # Note: SQLite doesn't support ALTER COLUMN, so tenant_id remains constrained.
+    # For SQLite, superadmins should be created with a placeholder tenant_id
+    # or migrate to MySQL/PostgreSQL for full support.
     bind = op.get_bind()
     if bind.dialect.name != 'sqlite':
         # For MySQL/PostgreSQL: Make tenant_id nullable

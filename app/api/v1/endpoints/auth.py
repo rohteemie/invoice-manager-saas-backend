@@ -83,7 +83,7 @@ def register(
             hashed_password=hashed_password,
             role=user_in.role,
             tenant_id=user_in.tenant_id,
-            is_superadmin=user_in.is_superadmin or False,
+            is_superadmin=user_in.is_superadmin,
         )
 
         # Generate verification token and expiration and attach to user

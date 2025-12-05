@@ -288,15 +288,15 @@ def get_platform_stats(
     """
     total_tenants = db.query(func.count(TenantModel.id)).scalar()
     active_tenants = db.query(func.count(TenantModel.id)).filter(
-        TenantModel.is_active == True
+        TenantModel.is_active.is_(True)
     ).scalar()
     
     total_users = db.query(func.count(UserModel.id)).scalar()
     active_users = db.query(func.count(UserModel.id)).filter(
-        UserModel.is_active == True
+        UserModel.is_active.is_(True)
     ).scalar()
     superadmins_count = db.query(func.count(UserModel.id)).filter(
-        UserModel.is_superadmin == True
+        UserModel.is_superadmin.is_(True)
     ).scalar()
     
     return {
