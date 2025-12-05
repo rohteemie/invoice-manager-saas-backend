@@ -41,6 +41,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Tenant registration & management ✅
 - [x] User registration & JWT authentication ✅
 - [x] Role-based access (Owner, Admin, Manager, Attendant) ✅
+- [x] **Super Admin role for platform management** ✅ **NEW**
 - [x] Invoice CRUD (tenant-aware) ✅ **Sprint 2**
 - [x] Invoice lifecycle (Draft → Sent → Paid → Overdue) ✅ **Sprint 2**
 - [x] Invoice metadata: branch, creator, customer info ✅ **Sprint 2**
@@ -54,7 +55,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Structured logging & monitoring ✅ **Sprint 4**
 - [x] Rate limiting & request throttling ✅ **Sprint 4**
 - [x] Health checks & metrics endpoints ✅ **Sprint 4**
-- [ ] Audit logging
+- [x] Audit logging ✅ **Sprint 4**
 
 ---
 
