@@ -67,7 +67,7 @@ def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     # Validate tenant_id requirement for non-superadmin users
     if not user_in.is_superadmin and not user_in.tenant_id:
         raise HTTPException(
