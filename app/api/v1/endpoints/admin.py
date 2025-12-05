@@ -24,8 +24,13 @@ router = APIRouter()
 @router.get("/tenants", response_model=List[Tenant])
 def list_all_tenants(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    limit: int = Query(
+        100, ge=1, le=1000,
+        description="Maximum number of records to return"
+    ),
+    is_active: Optional[bool] = Query(
+        None, description="Filter by active status"
+    ),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -123,7 +128,10 @@ def suspend_tenant(
         resource_id=tenant_id,
         tenant_id=tenant_id,
         user_id=current_user.id,
-        description=f"Tenant {tenant.name} suspended by super admin {current_user.email}",
+        description=(
+            f"Tenant {tenant.name} suspended by "
+            f"super admin {current_user.email}"
+        ),
         changes={"is_active": {"before": True, "after": False}}
     )
 
@@ -177,7 +185,10 @@ def reactivate_tenant(
         resource_id=tenant_id,
         tenant_id=tenant_id,
         user_id=current_user.id,
-        description=f"Tenant {tenant.name} reactivated by super admin {current_user.email}",
+        description=(
+            f"Tenant {tenant.name} reactivated by "
+            f"super admin {current_user.email}"
+        ),
         changes={"is_active": {"before": False, "after": True}}
     )
 
@@ -190,10 +201,19 @@ def reactivate_tenant(
 @router.get("/users", response_model=List[User])
 def list_all_users(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
-    tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    is_superadmin: Optional[bool] = Query(None, description="Filter by superadmin status"),
+    limit: int = Query(
+        100, ge=1, le=1000,
+        description="Maximum number of records to return"
+    ),
+    tenant_id: Optional[str] = Query(
+        None, description="Filter by tenant ID"
+    ),
+    is_active: Optional[bool] = Query(
+        None, description="Filter by active status"
+    ),
+    is_superadmin: Optional[bool] = Query(
+        None, description="Filter by superadmin status"
+    ),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -230,10 +250,19 @@ def list_all_users(
 @router.get("/audit-logs", response_model=List[AuditLog])
 def list_platform_audit_logs(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
-    tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
-    user_id: Optional[str] = Query(None, description="Filter by user ID"),
-    action: Optional[str] = Query(None, description="Filter by action type"),
+    limit: int = Query(
+        100, ge=1, le=1000,
+        description="Maximum number of records to return"
+    ),
+    tenant_id: Optional[str] = Query(
+        None, description="Filter by tenant ID"
+    ),
+    user_id: Optional[str] = Query(
+        None, description="Filter by user ID"
+    ),
+    action: Optional[str] = Query(
+        None, description="Filter by action type"
+    ),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -264,7 +293,8 @@ def list_platform_audit_logs(
         query = query.filter(AuditLogModel.action == action)
 
     # Order by created_at descending (most recent first)
-    logs = query.order_by(AuditLogModel.created_at.desc()).offset(skip).limit(limit).all()
+    logs = (query.order_by(AuditLogModel.created_at.desc())
+            .offset(skip).limit(limit).all())
     return logs
 
 

@@ -15,15 +15,22 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for creating a new user."""
-    password: str = Field(..., min_length=8, max_length=100,
-                          description="User password (min 8 characters)")
-    tenant_id: Optional[str] = Field(None, description="Tenant ID for data isolation (null for superadmins)")
+    password: str = Field(
+        ..., min_length=8, max_length=100,
+        description="User password (min 8 characters)"
+    )
+    tenant_id: Optional[str] = Field(
+        None,
+        description="Tenant ID for data isolation (null for superadmins)"
+    )
     currency_preference: Optional[str] = Field(
         "NGN",
         description="User's preferred currency (NGN, USD, GBP, EUR). "
                     "Defaults to NGN and cannot be changed once set."
     )
-    is_superadmin: Optional[bool] = Field(False, description="Platform-level super admin flag")
+    is_superadmin: Optional[bool] = Field(
+        False, description="Platform-level super admin flag"
+    )
 
 
 class UserUpdate(BaseModel):
