@@ -1,0 +1,48 @@
+"""Add superadmin field and make tenant_id nullable
+
+Revision ID: add_superadmin_field_and_nullable_tenant
+Revises: add_audit_logs
+Create Date: 2025-12-05 16:12:00.000000
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision = 'add_superadmin_field_and_nullable_tenant'
+down_revision = 'add_audit_logs'
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    # Add is_superadmin column to users table
+    op.add_column('users', sa.Column('is_superadmin', sa.Boolean(), nullable=False, server_default='0'))
+    
+    # Create index on is_superadmin
+    op.create_index('ix_users_is_superadmin', 'users', ['is_superadmin'])
+    
+    # For SQLite, we need to handle the nullable change differently
+    # Since SQLite doesn't support ALTER COLUMN, we check the dialect
+    bind = op.get_bind()
+    if bind.dialect.name != 'sqlite':
+        # For MySQL/PostgreSQL: Make tenant_id nullable
+        op.alter_column('users', 'tenant_id',
+                       existing_type=sa.String(60),
+                       nullable=True)
+
+
+def downgrade():
+    # Remove index
+    op.drop_index('ix_users_is_superadmin', table_name='users')
+    
+    # Remove is_superadmin column
+    op.drop_column('users', 'is_superadmin')
+    
+    # Restore tenant_id to non-nullable
+    bind = op.get_bind()
+    if bind.dialect.name != 'sqlite':
+        op.alter_column('users', 'tenant_id',
+                       existing_type=sa.String(60),
+                       nullable=False)

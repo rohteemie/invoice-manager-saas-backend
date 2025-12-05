@@ -17,12 +17,13 @@ class UserCreate(UserBase):
     """Schema for creating a new user."""
     password: str = Field(..., min_length=8, max_length=100,
                           description="User password (min 8 characters)")
-    tenant_id: str = Field(..., description="Tenant ID for data isolation")
+    tenant_id: Optional[str] = Field(None, description="Tenant ID for data isolation (null for superadmins)")
     currency_preference: Optional[str] = Field(
         "NGN",
         description="User's preferred currency (NGN, USD, GBP, EUR). "
                     "Defaults to NGN and cannot be changed once set."
     )
+    is_superadmin: Optional[bool] = Field(False, description="Platform-level super admin flag")
 
 
 class UserUpdate(BaseModel):
@@ -36,9 +37,10 @@ class UserUpdate(BaseModel):
 class UserInDB(UserBase):
     """Schema for user in database."""
     id: str
-    tenant_id: str
+    tenant_id: Optional[str]
     is_active: bool
     is_verified: bool
+    is_superadmin: bool
     currency_preference: str
     created_at: datetime
     updated_at: datetime
@@ -67,8 +69,9 @@ class Token(BaseModel):
 class TokenPayload(BaseModel):
     """JWT token payload schema."""
     sub: str  # User ID
-    tenant_id: str
+    tenant_id: Optional[str]
     role: str
+    is_superadmin: Optional[bool] = False
     exp: Optional[int] = None
 
 

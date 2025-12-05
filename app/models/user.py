@@ -24,9 +24,10 @@ class User(Gen_Model, Base):
         full_name: User's full name
         hashed_password: Bcrypt hashed password for security
         role: User role (Owner, Admin, Manager, Attendant)
-        tenant_id: Associated tenant for data isolation
+        tenant_id: Associated tenant for data isolation (null for superadmins)
         is_active: Soft delete flag for GDPR right-to-be-forgotten
         is_verified: Email verification status
+        is_superadmin: Platform-level super admin flag (default: False)
         verification_token: Token for email verification
         verification_token_expires_at: Expiration time for verification
                                        token
@@ -42,10 +43,11 @@ class User(Gen_Model, Base):
     full_name = Column(String(100), nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.ATTENDANT)
-    tenant_id = Column(String(60), ForeignKey("tenants.id"), nullable=False,
+    tenant_id = Column(String(60), ForeignKey("tenants.id"), nullable=True,
                        index=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    is_superadmin = Column(Boolean, default=False, index=True)
     verification_token = Column(String(255), nullable=True, index=True)
     verification_token_expires_at = Column(UTCDateTime(), nullable=True)
     reset_password_token = Column(String(255), nullable=True, index=True)
