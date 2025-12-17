@@ -5,37 +5,87 @@
 This document provides a visual overview of the implemented API structure.
 
 ```bash
-Multi-Tenant SaaS Backend API
+Multi-Tenant SaaS Backend API (43 Total Endpoints)
 │
 ├── / (Root)
-│   └── GET - Welcome message
+│   ├── GET /health - Health check endpoint
+│   ├── GET /metrics - Prometheus metrics
+│   ├── GET /docs - Swagger UI (Interactive API docs)
+│   └── GET /redoc - ReDoc documentation
 │
-├── /api/v1/tenants (Tenant Management)
-│   ├── POST   - Create new tenant
-│   ├── GET    - List all tenants (paginated)
+├── /api/v1/tenants (Tenant Management - 9 endpoints)
+│   ├── POST   / - Create new tenant
+│   ├── POST   /register - Register tenant with owner account
+│   ├── GET    / - List all tenants (paginated)
 │   ├── GET    /{tenant_id} - Get tenant by ID
 │   ├── PUT    /{tenant_id} - Update tenant
-│   └── DELETE /{tenant_id} - Soft delete tenant
+│   ├── DELETE /{tenant_id} - Soft delete tenant
+│   ├── POST   /{tenant_id}/logo - Upload tenant logo (Owner/Admin) ✨ NEW
+│   ├── GET    /{tenant_id}/logo - Get tenant logo ✨ NEW
+│   └── DELETE /{tenant_id}/logo - Delete tenant logo (Owner/Admin) ✨ NEW
 │
-├── /api/v1/auth (Authentication)
+├── /api/v1/auth (Authentication - 7 endpoints)
 │   ├── POST /register - Register new user
 │   ├── POST /login    - Login and get tokens
 │   ├── POST /refresh  - Refresh access token
-│   ├── POST /verify-email - Verify email with token (Security: Token expires in 24h)
-│   └── POST /resend-verification-email - Resend verification email (Rate limited: 3/hour)
+│   ├── POST /verify-email - Verify email with token (Security: Token expires in 24h) ✨ NEW
+│   ├── POST /resend-verification-email - Resend verification email (Rate limited: 3/hour) ✨ NEW
+│   ├── POST /forgot-password - Request password reset (Rate limited: 3/hour) ✨ NEW
+│   └── POST /reset-password - Reset password with token (Rate limited: 5/hour) ✨ NEW
 │
-└── /api/v1/users (User Management)
-    ├── GET    /me - Get current user info (Authenticated)
-    ├── GET    /   - List users in tenant (Owner only)
-    ├── GET    /{user_id} - Get user by ID (Owner only)
-    ├── PUT    /{user_id} - Update user (Owner only)
-    └── DELETE /{user_id} - Soft delete user (Owner only)
+├── /api/v1/users (User Management - 5 endpoints)
+│   ├── GET    /me - Get current user info (Authenticated)
+│   ├── GET    /   - List users in tenant (Owner only)
+│   ├── GET    /{user_id} - Get user by ID (Owner only)
+│   ├── PUT    /{user_id} - Update user (Owner only)
+│   └── DELETE /{user_id} - Soft delete user (Owner only)
+│
+├── /api/v1/invoices (Invoice Management - 9 endpoints)
+│   ├── POST   / - Create new invoice (Manager+)
+│   ├── GET    / - List invoices with filters (All roles)
+│   ├── GET    /{invoice_id} - Get invoice by ID (All roles)
+│   ├── PUT    /{invoice_id} - Update draft invoice (Manager+)
+│   ├── PATCH  /{invoice_id}/status - Update invoice status (Manager+)
+│   ├── DELETE /{invoice_id} - Delete draft invoice (Admin+)
+│   ├── GET    /{invoice_id}/pdf - Download invoice as PDF (All roles) ✨ NEW
+│   ├── POST   /{invoice_id}/send - Send invoice via email (Manager+) ✨ NEW
+│   └── GET    /export/invoices - Export invoices (CSV/JSON) (Manager+)
+│
+├── /api/v1/analytics (Analytics & Reporting - 2 endpoints)
+│   ├── GET /invoice-summary - Invoice summary statistics (Manager+)
+│   └── GET /revenue-by-status - Revenue breakdown by status (Manager+)
+│
+├── /api/v1/audit-logs (Audit Logging - 4 endpoints) ✨ NEW
+│   ├── GET / - List audit logs (Admin+)
+│   ├── GET /{audit_log_id} - Get specific audit log (Admin+)
+│   ├── GET /user/{user_id} - Get user's audit logs (Admin+)
+│   └── GET /resource/{resource_type}/{resource_id} - Get resource audit logs (Admin+)
+│
+└── /api/v1/admin (Super Admin - Platform Management - 7 endpoints) ✨ NEW
+    ├── GET /tenants - List all tenants (Super Admin only)
+    ├── GET /tenants/{tenant_id} - Get tenant details (Super Admin only)
+    ├── PUT /tenants/{tenant_id}/suspend - Suspend tenant (Super Admin only)
+    ├── PUT /tenants/{tenant_id}/reactivate - Reactivate tenant (Super Admin only)
+    ├── GET /users - List all users across tenants (Super Admin only)
+    ├── GET /audit-logs - Platform-wide audit logs (Super Admin only)
+    └── GET /stats - Platform statistics (Super Admin only)
 ```
 
 ## Role Hierarchy
 
 ```bash
 ┌─────────────────────────────────────┐
+│         SUPER ADMIN                 │
+│  - Platform-level access ✨ NEW     │
+│  - Manage all tenants               │
+│  - View all users across tenants    │
+│  - Access platform-wide audit logs  │
+│  - Suspend/reactivate tenants       │
+│  - Not tied to any tenant           │
+│  - Bypasses tenant role checks      │
+└─────────────┬───────────────────────┘
+              │
+┌─────────────▼───────────────────────┐
 │            OWNER                    │
 │  - Full tenant management           │
 │  - Manage all users (CRUD)          │
