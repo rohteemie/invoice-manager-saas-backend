@@ -8,23 +8,39 @@ This directory contains comprehensive documentation for the Multi-Tenant SaaS Ba
 
 ```bash
 docs/
-├── API_STRUCTURE.md            # Visual API structure and endpoint overview
-├── authentication.md           # User authentication & authorization guide
-├── SECURITY.md                 # Security & compliance documentation (ISO 27001, GDPR)
-├── alembic_setup.md            # Database migration setup guide
-├── ci_cd_pipeline.md           # CI/CD pipeline documentation
-├── deployment.md               # Deployment guide with migration automation
-├── product_requirement.md      # Product Requirements Document (PRD)
-├── srs_technical_design.md     # System Requirements Document (SRD)
-├── INVOICE_IMPLEMENTATION.md   # Invoice feature with multi-currency & tax support
-├── EMAIL_VERIFICATION.md       # Email verification feature documentation
-├── sprint_1.2_summary.md       # Sprint 1.2 implementation summary
-├── activity_diagram.png        # Invoice workflow activity diagram
-├── api_sequence_diagram.png    # API request/response sequence
-├── erd_diagram.png             # Entity Relationship Diagram
-├── roadmap_timeline.png        # Project roadmap timeline
-├── system_architecture.png     # High-level system architecture
-└── use_case_diagram.png        # Use case diagram
+├── API_STRUCTURE.md                        # Visual API structure and endpoint overview (43 endpoints)
+├── authentication.md                       # User authentication & authorization guide
+├── SECURITY.md                             # Security & compliance documentation (ISO 27001, GDPR)
+├── SECURITY_GDPR_COMPLIANCE.md            # Security and GDPR compliance details
+├── alembic_setup.md                        # Database migration setup guide
+├── ci_cd_pipeline.md                       # CI/CD pipeline documentation
+├── deployment.md                           # Deployment guide with migration automation
+├── logging_monitoring.md                   # Logging and monitoring implementation
+├── rate_limiting.md                        # Rate limiting and throttling
+├── product_requirement.md                  # Product Requirements Document (PRD)
+├── srs_technical_design.md                 # System Requirements Document (SRD)
+├── INVOICE_IMPLEMENTATION.md               # Invoice feature with multi-currency & tax support
+├── PDF_GENERATION.md                       # Invoice PDF generation feature ✨ NEW
+├── EMAIL_VERIFICATION.md                   # Email verification feature documentation ✨ NEW
+├── EMAIL_VERIFICATION_IMPLEMENTATION_SUMMARY.md  # Email verification implementation details ✨ NEW
+├── FRONTEND_EMAIL_VERIFICATION.md          # Frontend integration guide for email verification ✨ NEW
+├── PASSWORD_RESET.md                       # Password reset feature documentation ✨ NEW
+├── AUDIT_LOGGING.md                        # Comprehensive audit logging system ✨ NEW
+├── SUPER_ADMIN.md                          # Super Admin platform management ✨ NEW
+├── branding.md                             # Tenant branding and logo upload ✨ NEW
+├── USER_ACCOUNT_MANAGEMENT.md              # User account management guide ✨ NEW
+├── IMPLEMENTATION_SUMMARY.md               # Overall implementation summary
+├── IMPLEMENTATION_SUMMARY_PDF.md           # PDF implementation summary
+├── sprint_1.2_summary.md                   # Sprint 1.2 implementation summary
+├── sprint_2_summary.md                     # Sprint 2 implementation summary
+├── sprint_3_summary.md                     # Sprint 3 implementation summary
+├── sprint_4_summary.md                     # Sprint 4 implementation summary
+├── activity_diagram.png                    # Invoice workflow activity diagram
+├── api_sequence_diagram.png                # API request/response sequence
+├── erd_diagram.png                         # Entity Relationship Diagram
+├── roadmap_timeline.png                    # Project roadmap timeline
+├── system_architecture.png                 # High-level system architecture
+└── use_case_diagram.png                    # Use case diagram
 ```
 
 ## Documentation Files
@@ -265,13 +281,190 @@ docs/
 
 - User model attributes (including verification tokens)
 - Email verification fields with security annotations
-- User role definitions and hierarchy
-- Authentication endpoints (register, login, refresh, verify-email)
+- Password reset fields with security annotations ✨ NEW
+- User role definitions and hierarchy (including Super Admin) ✨ NEW
+- Authentication endpoints (register, login, refresh, verify-email, forgot-password, reset-password)
 - JWT token structure
 - Security features (ISO 27001, GDPR)
 - Testing examples
 
 **Contents:**
+
+- Password hashing with bcrypt (ISO 27001 A.10)
+- JWT token generation and validation
+- Email verification token security ✨ NEW
+- Password reset token security ✨ NEW
+- Role-based access control implementation
+- Super Admin role documentation ✨ NEW
+- Soft deletion for GDPR compliance (Art. 17)
+- Token expiration for data minimization (GDPR Art. 5.1.c)
+- Code examples for each endpoint
+
+**Audience:** Frontend developers, API integrators, security reviewers
+
+---
+
+#### Password Reset (`PASSWORD_RESET.md`) ✨ **NEW**
+
+**Purpose:** Documentation of secure password reset functionality.
+
+**Key Sections:**
+
+- Password reset architecture
+- Forgot password endpoint
+- Reset password endpoint
+- Email templates
+- Security features and best practices
+- Rate limiting
+- Token management
+
+**Highlights:**
+
+- Secure token generation (30-minute expiration)
+- Email enumeration prevention
+- Rate limiting (3 requests/hour for forgot, 5/hour for reset)
+- OWASP security compliance
+- Audit logging for all reset requests
+- Single-use tokens
+
+**Audience:** Frontend developers, security reviewers, API integrators
+
+---
+
+#### Audit Logging (`AUDIT_LOGGING.md`) ✨ **NEW**
+
+**Purpose:** Comprehensive audit logging system documentation.
+
+**Key Sections:**
+
+- Automatic logging of critical operations
+- Audit log data structure
+- API endpoints for accessing logs
+- Filtering and querying capabilities
+- Security and compliance
+- Implementation details
+
+**Highlights:**
+
+- 40+ audited event types
+- Authentication events (login, logout, token refresh)
+- User management events (create, update, delete, role changes)
+- Tenant management events
+- Invoice operations
+- Password reset tracking
+- Data export logging
+- IP address and user agent tracking
+- Before/after state tracking for changes
+
+**Audience:** Security reviewers, compliance officers, administrators
+
+---
+
+#### Super Admin (`SUPER_ADMIN.md`) ✨ **NEW**
+
+**Purpose:** Platform-level administration and management documentation.
+
+**Key Sections:**
+
+- Super Admin role characteristics
+- Database schema changes
+- Platform management API endpoints
+- Tenant management operations
+- User management across tenants
+- Audit log access
+- Platform statistics
+
+**Highlights:**
+
+- Platform-level access (not tied to any tenant)
+- 7 dedicated admin endpoints
+- Tenant suspension/reactivation
+- Cross-tenant user visibility
+- Platform-wide audit logs
+- Aggregated statistics
+- Bypass tenant-level role checks
+
+**Audience:** Platform administrators, DevOps engineers, developers
+
+---
+
+#### Tenant Branding (`branding.md`) ✨ **NEW**
+
+**Purpose:** Tenant branding and logo management feature documentation.
+
+**Key Sections:**
+
+- Logo upload functionality
+- Supported file formats and sizes
+- Branded invoice generation
+- Tenant contact information
+- API endpoints
+- Security and validation
+
+**Highlights:**
+
+- Logo upload (PNG, JPG, JPEG, SVG up to 2MB)
+- Logo appears in invoice PDFs
+- Tenant contact details on invoices
+- Custom tax labels
+- File validation and storage
+- Owner/Admin access only
+
+**Audience:** Frontend developers, API integrators, business users
+
+---
+
+#### PDF Generation (`PDF_GENERATION.md`) ✨ **NEW**
+
+**Purpose:** Invoice PDF generation feature documentation.
+
+**Key Sections:**
+
+- PDF generation architecture
+- Invoice PDF endpoint
+- Template structure
+- Branding integration
+- Multi-currency formatting
+- Tax calculations
+
+**Highlights:**
+
+- On-demand PDF generation
+- Includes tenant logo and branding
+- Multi-currency support
+- Professional invoice layout
+- Automatic tax calculations
+- WeasyPrint-based rendering
+
+**Audience:** Developers, API consumers
+
+---
+
+#### User Account Management (`USER_ACCOUNT_MANAGEMENT.md`) ✨ **NEW**
+
+**Purpose:** User account management rules and permissions guide.
+
+**Key Sections:**
+
+- Role hierarchy
+- Account management rules
+- User deletion rules
+- User update rules
+- API endpoints
+- Error handling
+- Security considerations
+
+**Highlights:**
+
+- Only owners can delete users
+- Owners cannot delete themselves or other owners
+- Soft delete mechanism (GDPR compliant)
+- Role-based permissions
+- Comprehensive permission matrix
+
+**Audience:** Developers, API consumers, administrators
+
+---
 
 - Password hashing with bcrypt (ISO 27001 A.10)
 - JWT token generation and validation
