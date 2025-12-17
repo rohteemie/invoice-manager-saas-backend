@@ -7,7 +7,8 @@ This document provides a visual overview of the implemented API structure.
 ```bash
 Multi-Tenant SaaS Backend API
 │
-├── / (Root & Monitoring - 4 endpoints)
+├── / (Root & Monitoring - 5 endpoints)
+│   ├── GET / - Welcome/root endpoint
 │   ├── GET /health - Health check endpoint
 │   ├── GET /metrics - Prometheus metrics
 │   ├── GET /docs - Swagger UI (Interactive API docs)
@@ -70,7 +71,7 @@ Multi-Tenant SaaS Backend API
     ├── GET /audit-logs - Platform-wide audit logs (Super Admin only)
     └── GET /stats - Platform statistics (Super Admin only)
 
-Total API Endpoints: 47 (4 root/monitoring + 43 business API endpoints)
+Total API Endpoints: 48 (5 root/monitoring + 43 business API endpoints)
 ```
 
 ## Role Hierarchy

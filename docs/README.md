@@ -8,7 +8,7 @@ This directory contains comprehensive documentation for the Multi-Tenant SaaS Ba
 
 ```bash
 docs/
-├── API_STRUCTURE.md                        # Visual API structure (47 total endpoints: 4 root + 43 API)
+├── API_STRUCTURE.md                        # Visual API structure (48 total: 5 root/monitoring + 43 business API)
 ├── authentication.md                       # User authentication & authorization guide
 ├── SECURITY.md                             # Security & compliance documentation (ISO 27001, GDPR)
 ├── SECURITY_GDPR_COMPLIANCE.md            # Security and GDPR compliance details
@@ -107,7 +107,7 @@ docs/
 
 **Key Sections:**
 
-- Complete API endpoint tree (47 total endpoints: 4 root/monitoring + 43 business API)
+- Complete API endpoint tree (48 total: 5 root/monitoring + 43 business API)
 - Email verification endpoints
 - Role hierarchy visualization
 - Authentication flow diagram
@@ -120,7 +120,7 @@ docs/
 
 **Highlights:**
 
-- 47 total endpoints (4 root + 43 API endpoints across 7 categories)
+- 48 total endpoints (5 root/monitoring + 43 business API across 7 categories)
 - Visual ASCII diagrams for flows
 - Security layer architecture
 - ISO 27001 and GDPR compliance annotations

@@ -322,7 +322,7 @@ pytest tests/test_auth.py -v
 
 ### Quick API Reference
 
-**Note:** The application has 47 total endpoints: 4 root/monitoring endpoints + 43 business API endpoints under `/api/v1`.
+**Note:** The application has 48 total endpoints: 5 root/monitoring + 43 business API endpoints under `/api/v1`.
 
 **Authentication:**
 
