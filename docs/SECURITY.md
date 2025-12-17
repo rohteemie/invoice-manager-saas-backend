@@ -17,10 +17,13 @@ This document details the security measures and compliance standards implemented
 4. [Data Protection](#data-protection)
 5. [Financial Data Security](#financial-data-security)
 6. [Email Verification Security](#email-verification-security)
-7. [Multi-Currency & Tax Compliance](#multi-currency--tax-compliance)
-8. [Security Best Practices](#security-best-practices)
-9. [Incident Response](#incident-response)
-10. [Audit & Monitoring](#audit--monitoring)
+7. [Password Reset Security](#password-reset-security)
+8. [Multi-Currency & Tax Compliance](#multi-currency--tax-compliance)
+9. [Audit Logging](#audit-logging)
+10. [Super Admin Security](#super-admin-security)
+11. [Security Best Practices](#security-best-practices)
+12. [Incident Response](#incident-response)
+13. [Audit & Monitoring](#audit--monitoring)
 
 ---
 
@@ -516,6 +519,101 @@ if not user:
 
 ---
 
+## Password Reset Security ✨ **NEW**
+
+### Token Generation
+
+**Cryptographic Security**
+```python
+import secrets
+
+reset_token = secrets.token_urlsafe(32)  # 43-character URL-safe string
+```
+
+**Properties**
+- 32 bytes of randomness (256 bits)
+- URL-safe base64 encoding
+- Cryptographically secure random source
+- Unique per user (collision probability negligible)
+- Short expiration window (30 minutes)
+
+### Token Storage
+
+**Database Schema**
+```sql
+reset_password_token VARCHAR(255) NULL,
+reset_password_token_expires_at DATETIME NULL,
+INDEX ix_users_reset_password_token (reset_password_token)
+```
+
+**Security Measures**
+- Indexed for efficient lookup only
+- Not hashed (single-use, time-limited, short expiration)
+- Cleared immediately after use
+- Nullable (not required for normal operation)
+- Separate from email verification token
+
+### Token Lifecycle
+
+1. **Request** (forgot password)
+   - Secure random token created
+   - Expiration set to now + 30 minutes (configurable)
+   - Stored in user record
+   - Email sent with reset link
+   - Always returns success (prevents email enumeration)
+   - Request logged for audit
+
+2. **Reset** (on link click)
+   - Token looked up in database
+   - Expiration checked
+   - User account active status verified
+   - Password validated (min 8 characters)
+   - Password hashed and updated
+   - Token and expiration cleared
+   - User can immediately log in
+
+3. **Expiration** (after 30 minutes)
+   - Expired tokens rejected with clear error message
+   - User prompted to request new token
+   - Old token cannot be reused
+   - Short window limits attack surface
+
+### Rate Limiting
+
+**Forgot Password Endpoint**
+- Limit: 3 requests per hour per IP
+- Prevents account lockout attacks
+- Prevents email spam
+
+**Reset Password Endpoint**
+- Limit: 5 requests per hour per IP
+- Prevents brute-force token guessing
+- More permissive than forgot (allows retries for typos)
+
+### Privacy Protection
+
+**No User Enumeration**
+- Always returns success response
+- Same message whether user exists or not
+- Same response time (no timing attacks)
+- Prevents reconnaissance attacks
+
+**Password Security**
+- Minimum 8 characters
+- Hashed with bcrypt (cost factor: 12)
+- Automatic salt generation
+- No passwords logged
+
+### Audit Logging
+
+All password reset operations are logged:
+- Password reset requested (with IP and timestamp)
+- Password reset completed (with IP and timestamp)
+- Failed reset attempts (with reason)
+- Compliance: GDPR Article 32, ISO 27001 A.9
+
+---
+
 ## Multi-Currency & Tax Compliance
 
 ### Regional Compliance
@@ -575,6 +673,219 @@ total_amount = subtotal + tax_amount - discount_amount
 - Tax rate and label included
 - Period-based tax reports (future)
 - Compliance with regional filing requirements
+
+---
+
+## Audit Logging ✨ **NEW**
+
+### Comprehensive Event Tracking
+
+**Logged Events** (40+ event types)
+- Authentication events (login, logout, token refresh, failed login)
+- User management (create, update, delete, role changes)
+- Tenant management (create, update, delete, suspend, reactivate)
+- Invoice operations (create, update, delete, status changes)
+- Password operations (reset requested, reset completed)
+- Data exports (CSV, JSON, PDF generation)
+
+### Audit Log Structure
+
+**Data Captured**
+```python
+{
+    "id": "uuid",
+    "user_id": "uuid or null",
+    "tenant_id": "uuid",
+    "action": "LOGIN | USER_CREATED | etc.",
+    "resource_type": "User | Tenant | Invoice | Auth",
+    "resource_id": "uuid or null",
+    "ip_address": "IPv4/IPv6",
+    "user_agent": "browser/client info",
+    "changes": "JSON before/after state",
+    "description": "human-readable action",
+    "status": "success | failure",
+    "created_at": "timestamp"
+}
+```
+
+### Security Features
+
+**IP Address Tracking**
+- Supports IPv4 and IPv6
+- Handles proxy headers (X-Forwarded-For)
+- Geographic location tracking (optional)
+- Anomaly detection ready
+
+**User Agent Tracking**
+- Browser identification
+- Device fingerprinting
+- Session correlation
+- Bot detection
+
+**Change Tracking**
+- Before/after state for updates
+- JSON format for easy parsing
+- Sensitive data excluded (passwords, tokens)
+- Role changes tracked
+
+### Access Control
+
+**Admin+ Required**
+- Only Admin, Owner, and Super Admin can view logs
+- Tenant isolation enforced (except Super Admin)
+- Cannot modify audit logs
+- Cannot delete audit logs
+
+**API Endpoints**
+- `GET /api/v1/audit-logs/` - List logs (filtered, paginated)
+- `GET /api/v1/audit-logs/{id}` - Get specific log
+- `GET /api/v1/audit-logs/user/{user_id}` - User activity
+- `GET /api/v1/audit-logs/resource/{type}/{id}` - Resource history
+
+### Filtering Capabilities
+
+**Multi-dimensional Filtering**
+- By user (user_id)
+- By tenant (tenant_id)
+- By action type(s) - supports multiple
+- By resource type(s) - supports multiple
+- By resource ID
+- By status (success/failure)
+- By date range (start_date, end_date)
+
+### Compliance
+
+**Regulatory Requirements**
+- GDPR Article 30 (Records of Processing Activities)
+- ISO 27001 A.12.4 (Logging and Monitoring)
+- SOC 2 compliance ready
+- PCI DSS audit trail requirements
+
+**Retention Policy**
+- Recommended: 90 days minimum
+- 1 year for financial transactions
+- 7 years for legal/tax compliance
+- Configurable per tenant
+
+### Performance
+
+**Optimization**
+- Indexed fields for fast queries
+- Asynchronous logging (non-blocking)
+- Bulk insert for high-volume events
+- Pagination for large result sets
+
+---
+
+## Super Admin Security ✨ **NEW**
+
+### Platform-Level Access Control
+
+**Super Admin Characteristics**
+- Not tied to any tenant (tenant_id = null)
+- Bypasses tenant-level role checks
+- Dedicated `/admin/*` endpoints
+- Platform-wide visibility
+- Cannot be created via regular API
+
+**Security Model**
+```python
+# Super Admin check bypasses tenant isolation
+if user.is_superadmin:
+    # Full platform access
+    return True
+```
+
+### Database Schema
+
+**User Model Addition**
+```sql
+is_superadmin BOOLEAN DEFAULT FALSE,
+INDEX ix_users_is_superadmin (is_superadmin)
+```
+
+**Security Measures**
+- Default false (opt-in only)
+- Cannot be set via regular registration
+- Requires manual database update or special endpoint
+- Indexed for efficient filtering
+
+### API Endpoints
+
+**Platform Management** (Super Admin only)
+- `GET /api/v1/admin/tenants` - All tenants
+- `GET /api/v1/admin/tenants/{id}` - Tenant details
+- `PUT /api/v1/admin/tenants/{id}/suspend` - Suspend tenant
+- `PUT /api/v1/admin/tenants/{id}/reactivate` - Reactivate
+- `GET /api/v1/admin/users` - All users (cross-tenant)
+- `GET /api/v1/admin/audit-logs` - Platform logs
+- `GET /api/v1/admin/stats` - Platform statistics
+
+### Tenant Suspension
+
+**Suspension Features**
+- Sets tenant `is_active` to False
+- Prevents all tenant users from accessing system
+- Preserves data (no deletion)
+- Audit logged with reason
+- Reversible via reactivation
+
+**Use Cases**
+- Non-payment of subscription
+- Terms of service violations
+- Security incidents
+- Account review/investigation
+- Scheduled maintenance
+
+### Audit Logging
+
+**All Super Admin Actions Logged**
+- Tenant suspension/reactivation
+- Cross-tenant data access
+- User management across tenants
+- Platform statistics access
+- IP address and timestamp recorded
+
+### Access Control
+
+**Endpoint Protection**
+```python
+from app.core.deps import require_superadmin
+
+@router.get("/admin/tenants")
+def list_all_tenants(
+    current_user = Depends(require_superadmin)
+):
+    # Only Super Admins reach here
+    pass
+```
+
+**JWT Token Verification**
+- `is_superadmin` flag in JWT payload
+- Verified on every request
+- Cannot be forged (signed with secret)
+- Stateless authentication
+
+### Security Considerations
+
+**Separation of Concerns**
+- Super Admin accounts separate from tenant accounts
+- No tenant_id (null value)
+- Cannot perform tenant-specific operations without context
+- Dedicated authentication flow recommended
+
+**Monitoring**
+- All Super Admin actions heavily audited
+- Alerts for suspicious activity
+- Failed access attempts logged
+- Geographic anomaly detection recommended
+
+**Best Practices**
+- Limit number of Super Admin accounts (< 5)
+- Use strong, unique passwords
+- Enable 2FA (if implemented)
+- Regular access reviews
+- Principle of least privilege
 
 ---
 
