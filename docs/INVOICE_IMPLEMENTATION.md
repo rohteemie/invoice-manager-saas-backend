@@ -93,6 +93,40 @@ DRAFT ──────→ SENT ──────→ PAID
 - **Function**: Delete invoice (hard delete)
 - **Constraint**: Only DRAFT invoices can be deleted
 
+#### GET `/api/v1/invoices/{invoice_id}/pdf` ✨ **NEW**
+
+- **Permission**: All authenticated users
+- **Function**: Generate and download invoice as PDF
+- **Features**: 
+  - Includes tenant logo and branding
+  - Multi-currency formatting
+  - Tax calculations
+  - Professional invoice layout
+  - On-demand generation
+- **Tenant Isolation**: Only generates PDF for user's tenant invoices
+
+#### POST `/api/v1/invoices/{invoice_id}/send` ✨ **NEW**
+
+- **Permission**: Manager role and above
+- **Function**: Send invoice to customer via email
+- **Features**:
+  - Automatically transitions status from DRAFT to SENT
+  - Sends email to customer with invoice details
+  - Includes PDF attachment option
+  - Records send timestamp
+- **Validation**: Cannot send already-sent invoices
+- **Tenant Isolation**: Only sends invoices from user's tenant
+
+#### GET `/api/v1/invoices/export/invoices`
+
+- **Permission**: Manager role and above
+- **Function**: Export invoices in CSV or JSON format
+- **Query Parameters**: 
+  - `format`: csv or json (default: csv)
+  - `status`: Filter by invoice status
+  - `start_date`, `end_date`: Date range filters
+- **Tenant Isolation**: Only exports invoices from user's tenant
+
 ### 4. Role-Based Access Control
 
 | Action | Attendant | Manager | Admin | Owner |
@@ -102,6 +136,9 @@ DRAFT ──────→ SENT ──────→ PAID
 | Update Invoice | ❌ | ✅ | ✅ | ✅ |
 | Change Status | ❌ | ✅ | ✅ | ✅ |
 | Delete Invoice | ❌ | ❌ | ✅ | ✅ |
+| Download PDF | ✅ | ✅ | ✅ | ✅ |
+| Send Invoice | ❌ | ✅ | ✅ | ✅ |
+| Export Invoices | ❌ | ✅ | ✅ | ✅ |
 
 ### 5. Schemas (`app/schemas/invoice.py`)
 
@@ -208,6 +245,31 @@ valid_transitions = {
     InvoiceStatus.PAID: []
 }
 ```
+
+### PDF Generation ✨ **NEW**
+
+- **Service**: `app/services/pdf_generator.py`
+- **Features**:
+  - WeasyPrint-based PDF rendering
+  - HTML template-based invoice layout
+  - Tenant logo and branding integration
+  - Multi-currency formatting
+  - Tax calculations and display
+  - Professional invoice design
+- **Endpoint**: `GET /api/v1/invoices/{invoice_id}/pdf`
+- **Output**: Binary PDF file for download
+
+### Invoice Email Sending ✨ **NEW**
+
+- **Endpoint**: `POST /api/v1/invoices/{invoice_id}/send`
+- **Features**:
+  - Automatically transitions DRAFT → SENT
+  - Sends email to customer
+  - Professional email template
+  - Optional PDF attachment
+  - Records send timestamp
+- **Integration**: Uses SendGrid API for email delivery
+- **Validation**: Prevents re-sending already-sent invoices
 
 ## Database Schema
 

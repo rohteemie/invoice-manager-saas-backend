@@ -16,8 +16,11 @@ The User model implements the following attributes:
 - **tenant_id**: Foreign key to Tenant model for data isolation
 - **is_active**: Boolean flag for soft delete (GDPR-compliant: Art. 17)
 - **is_verified**: Boolean flag for email verification status
+- **is_superadmin**: Boolean flag for platform-level Super Admin access ✨ **NEW**
 - **verification_token**: Cryptographically secure token for email verification (nullable, indexed)
 - **verification_token_expires_at**: Token expiration timestamp (nullable, 24h default - GDPR: Data minimization)
+- **reset_password_token**: Secure token for password reset (nullable, indexed) ✨ **NEW**
+- **reset_password_token_expires_at**: Reset token expiration (nullable, 30min default) ✨ **NEW**
 - **created_at**: Timestamp of user creation (GDPR: Audit trail)
 - **updated_at**: Timestamp of last update (GDPR: Audit trail)
 
@@ -36,11 +39,35 @@ The User model implements the following attributes:
 - Automatically cleared after verification
 - **Privacy compliance**: GDPR Art. 5.1.c (Data Minimization)
 
+### Password Reset Fields (Security) ✨ **NEW**
+
+**reset_password_token** (String, 255 chars, nullable, indexed)
+- Generated using `secrets.token_urlsafe(32)` for cryptographic security
+- 43-character URL-safe token (32 bytes base64-encoded)
+- Indexed for efficient lookup during password reset
+- Single-use: cleared immediately after successful reset
+- **Security compliance**: ISO 27001 A.9 (Access Control)
+
+**reset_password_token_expires_at** (DateTime, nullable)
+- Default expiration: 30 minutes from generation (configurable)
+- Short expiration window for security
+- Automatically cleared after password reset
+- **Privacy compliance**: GDPR Art. 5.1.c (Data Minimization)
+
 ## User Roles
 
 The system implements a hierarchical role-based access control:
 
-1. **Owner** (Highest privileges)
+0. **Super Admin** (Platform-level privileges) ✨ **NEW**
+   - Not tied to any specific tenant (tenant_id = null)
+   - Full access to all tenants and platform resources
+   - Can suspend/reactivate tenants
+   - View all users across all tenants
+   - Access platform-wide audit logs and statistics
+   - Bypasses all tenant-level role checks
+   - Dedicated `/admin/*` endpoints
+
+1. **Owner** (Highest tenant-level privileges)
    - Full access to all tenant resources
    - Can manage all users in the tenant
    - Can delete users (soft delete)
@@ -113,6 +140,130 @@ password=SecurePassword123
 Get new access and refresh tokens using a valid refresh token.
 
 **Response:** New token pair
+
+### Email Verification ✨ **NEW**
+
+**POST** `/api/v1/auth/verify-email`
+
+Verify user's email address using a verification token sent during registration.
+
+**Request Body:**
+
+```json
+{
+  "token": "verification-token-from-email"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Email verified successfully. You can now log in.",
+  "email": "user@example.com"
+}
+```
+
+**Features:**
+- Tokens expire after 24 hours (configurable)
+- Single-use tokens (deleted after verification)
+- Cryptographically secure token generation
+- User must verify email before full account access
+
+### Resend Verification Email ✨ **NEW**
+
+**POST** `/api/v1/auth/resend-verification-email`
+
+Request a new verification email if the original token expired or was lost.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Verification email has been resent. Please check your inbox.",
+  "email": "user@example.com"
+}
+```
+
+**Features:**
+- Rate limited: 3 requests per hour per IP
+- Generates new token (invalidates old one)
+- Works for already-registered users only
+- Returns success even if email doesn't exist (prevents email enumeration)
+
+### Forgot Password ✨ **NEW**
+
+**POST** `/api/v1/auth/forgot-password`
+
+Request a password reset link via email.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "If the email exists in our system, a password reset link will be sent.",
+  "email": "user@example.com"
+}
+```
+
+**Features:**
+- Rate limited: 3 requests per hour per IP
+- Reset tokens expire after 30 minutes
+- Always returns success response (prevents email enumeration)
+- Secure token generation using `secrets.token_urlsafe(32)`
+- All requests are logged for audit purposes
+
+### Reset Password ✨ **NEW**
+
+**POST** `/api/v1/auth/reset-password`
+
+Reset user password using a valid reset token.
+
+**Request Body:**
+
+```json
+{
+  "token": "reset-token-from-email",
+  "new_password": "NewSecurePassword123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Password has been reset successfully. You can now log in with your new password.",
+  "email": "user@example.com"
+}
+```
+
+**Features:**
+- Rate limited: 5 requests per hour per IP
+- Token must be valid and not expired
+- Password must meet security requirements (min 8 characters)
+- Token is invalidated immediately after successful reset
+- User account must be active
+
+**Error Responses:**
+- 400 Bad Request - Invalid or expired token
+- 403 Forbidden - User account is inactive
+- 422 Validation Error - Password doesn't meet requirements
 
 ## User Management Endpoints
 
