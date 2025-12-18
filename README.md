@@ -239,11 +239,11 @@ multi-tenant-saas-backend/
 
 **Don't want to set up locally?** Try the live application:
 
-🔗 **[Live Demo: http://3.86.89.25:8000/](http://3.86.89.25:8000/)**
+🔗 **[Live Demo: Render Basic](https://multi-tenant-saas-backend.onrender.com)**
 
-- **ReDoc (Documentation):** [http://3.86.89.25:8000/redoc](http://3.86.89.25:8000/redoc)
-- **Swagger UI (Interactive):** [http://3.86.89.25:8000/docs](http://3.86.89.25:8000/docs)
-- **API Base URL:** [http://3.86.89.25:8000/api/v1](http://3.86.89.25:8000/api/v1)
+- **ReDoc (Documentation):** [Redoc](http://3.86.89.25:8000/redoc)
+- **Swagger UI (Interactive):** [Swagger docs](https://multi-tenant-saas-backend.onrender.com/docs)
+- **API Base URL:** [http://api/v1](https://multi-tenant-saas-backend.onrender.com/api/v1)
 
 ### Prerequisites
 
