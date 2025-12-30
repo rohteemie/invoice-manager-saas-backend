@@ -2,7 +2,7 @@
 Integration tests for login endpoint with progressive throttling.
 Tests the complete authentication flow with throttling enabled.
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from app.core.config import settings
 from app.models.audit_log import AuditAction
 
@@ -36,7 +36,7 @@ def test_login_failure_records_attempt(client, test_user):
         mock_throttle.get_failed_attempts.return_value = 0
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 1
-        mock_throttle.apply_delay.return_value = (0, 0)
+        mock_throttle.apply_delay = AsyncMock(return_value=(0, 0))
         mock_get.return_value = mock_throttle
 
         response = client.post(
@@ -60,9 +60,9 @@ def test_login_progressive_delay_applied(client, test_user):
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 5
         # Simulate 2 second delay
-        mock_throttle.apply_delay.return_value = (
+        mock_throttle.apply_delay = AsyncMock(return_value=(
             settings.LOGIN_DELAY_SHORT, settings.LOGIN_DELAY_SHORT
-        )
+        ))
         mock_get.return_value = mock_throttle
 
         response = client.post(
@@ -85,7 +85,7 @@ def test_login_inactive_user_records_attempt(client, inactive_user):
         mock_throttle.get_failed_attempts.return_value = 0
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 1
-        mock_throttle.apply_delay.return_value = (0, 0)
+        mock_throttle.apply_delay = AsyncMock(return_value=(0, 0))
         mock_get.return_value = mock_throttle
 
         response = client.post(
@@ -108,9 +108,9 @@ def test_login_nonexistent_user_applies_delay(client):
         mock_throttle.get_failed_attempts.return_value = 5
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 6
-        mock_throttle.apply_delay.return_value = (
+        mock_throttle.apply_delay = AsyncMock(return_value=(
             settings.LOGIN_DELAY_MEDIUM, settings.LOGIN_DELAY_MEDIUM
-        )
+        ))
         mock_get.return_value = mock_throttle
 
         response = client.post(
@@ -134,7 +134,7 @@ def test_login_error_messages_generic(client, test_user):
         mock_throttle.get_failed_attempts.return_value = 0
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 1
-        mock_throttle.apply_delay.return_value = (0, 0)
+        mock_throttle.apply_delay = AsyncMock(return_value=(0, 0))
         mock_get.return_value = mock_throttle
 
         # Wrong password
@@ -171,9 +171,9 @@ def test_login_audit_logs_throttle_events(client, test_user, db_session):
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 9
         # Simulate long delay being applied
-        mock_throttle.apply_delay.return_value = (
+        mock_throttle.apply_delay = AsyncMock(return_value=(
             settings.LOGIN_DELAY_LONG, settings.LOGIN_DELAY_LONG
-        )
+        ))
         mock_get.return_value = mock_throttle
 
         response = client.post(
@@ -205,6 +205,7 @@ def test_login_multiple_failures_progression(client, test_user):
     """Test progressive delay increases with multiple failures."""
     with patch('app.api.v1.endpoints.auth.get_login_throttle') as mock_get:
         mock_throttle = MagicMock()
+        mock_throttle.apply_delay = AsyncMock(return_value=(0, 0))
         mock_get.return_value = mock_throttle
 
         # Simulate progression: 0 -> 1 -> 2 -> 3 -> 4 attempts
@@ -212,7 +213,6 @@ def test_login_multiple_failures_progression(client, test_user):
             mock_throttle.get_failed_attempts.return_value = attempt - 1
             mock_throttle.is_in_cooldown.return_value = (False, 0)
             mock_throttle.record_failed_attempt.return_value = attempt
-            mock_throttle.apply_delay.return_value = (0, 0)
 
             response = client.post(
                 "/api/v1/auth/login",
@@ -236,7 +236,7 @@ def test_login_throttle_graceful_degradation_no_redis(client, test_user):
         mock_throttle.get_failed_attempts.return_value = 0
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 0
-        mock_throttle.apply_delay.return_value = (0, 0)
+        mock_throttle.apply_delay = AsyncMock(return_value=(0, 0))
         mock_throttle.clear_failed_attempts.return_value = False
         mock_get.return_value = mock_throttle
 
@@ -262,7 +262,7 @@ def test_login_case_insensitive_email_throttle(client, test_user):
         mock_throttle.get_failed_attempts.return_value = 0
         mock_throttle.is_in_cooldown.return_value = (False, 0)
         mock_throttle.record_failed_attempt.return_value = 1
-        mock_throttle.apply_delay.return_value = (0, 0)
+        mock_throttle.apply_delay = AsyncMock(return_value=(0, 0))
         mock_get.return_value = mock_throttle
 
         # Try with different case
