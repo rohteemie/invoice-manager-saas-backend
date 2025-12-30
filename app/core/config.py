@@ -65,6 +65,29 @@ class Settings(BaseSettings):
     POOL_RECYCLE: int = Field(1800, validation_alias="POOL_RECYCLE")
     CONNECT_TIMEOUT: int = Field(10, validation_alias="DB_CONNECT_TIMEOUT")
 
+    # Progressive Login Delay settings (OWASP ASVS & NIST 800-63B compliance)
+    LOGIN_DELAY_SHORT: int = Field(
+        2, validation_alias="LOGIN_DELAY_SHORT"
+    )  # seconds for 4-5 failed attempts
+    LOGIN_DELAY_MEDIUM: int = Field(
+        30, validation_alias="LOGIN_DELAY_MEDIUM"
+    )  # seconds for 6-8 failed attempts
+    LOGIN_DELAY_LONG: int = Field(
+        900, validation_alias="LOGIN_DELAY_LONG"
+    )  # seconds (15 min) for 9+ failed attempts
+    LOGIN_DELAY_THRESHOLD_SHORT: int = Field(
+        4, validation_alias="LOGIN_DELAY_THRESHOLD_SHORT"
+    )
+    LOGIN_DELAY_THRESHOLD_MEDIUM: int = Field(
+        6, validation_alias="LOGIN_DELAY_THRESHOLD_MEDIUM"
+    )
+    LOGIN_DELAY_THRESHOLD_LONG: int = Field(
+        9, validation_alias="LOGIN_DELAY_THRESHOLD_LONG"
+    )
+    LOGIN_FAILURE_WINDOW: int = Field(
+        3600, validation_alias="LOGIN_FAILURE_WINDOW"
+    )  # 1 hour window for failure tracking
+
     model_config = {
         "env_file": ".env",
         "extra": "ignore"
