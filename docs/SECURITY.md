@@ -36,6 +36,20 @@ This document details the security measures and compliance standards implemented
 - Access tokens expire after 30 minutes
 - Refresh tokens expire after 7 days
 - Email verification required for new tenant owners
+- **Progressive login delay (throttling) prevents brute-force attacks** ✨ **NEW**
+
+**Progressive Login Delay (OWASP ASVS & NIST 800-63B Compliance)** ✨ **NEW**
+- Per-account throttling with progressive delays
+- 1-3 failed attempts: No delay
+- 4-5 failed attempts: 2-second delay (configurable)
+- 6-8 failed attempts: 30-second delay (configurable)
+- 9+ failed attempts: 15-minute cooldown (configurable)
+- Constant-time responses to prevent account enumeration
+- No permanent account lockouts (NIST 800-63B 5.2.3 compliant)
+- Redis-backed distributed state management
+- Automatic counter reset on successful login
+- Comprehensive audit logging for security monitoring
+- See [LOGIN_THROTTLING.md](LOGIN_THROTTLING.md) for complete documentation
 
 **Authorization**
 - Role-Based Access Control (RBAC) with 4 hierarchical roles
@@ -74,6 +88,10 @@ This document details the security measures and compliance standards implemented
 - Structured logging with Sentry integration
 - Authentication events logged (login, verification)
 - Failed authentication attempts tracked
+- **Login throttling events logged for security monitoring** ✨ **NEW**
+  - `LOGIN_THROTTLED`: Delay enforced
+  - `LOGIN_EXCESSIVE_FAILURES`: 9+ failed attempts
+  - `LOGIN_FAILED`: Includes attempt count
 - No passwords or tokens in logs
 
 **Change Management**

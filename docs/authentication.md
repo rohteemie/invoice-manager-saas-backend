@@ -116,6 +116,12 @@ Register a new user in the system.
 
 Authenticate user and receive JWT tokens.
 
+**Security Features:** ✨ **NEW**
+- Progressive login delay (throttling) prevents brute-force attacks
+- Constant-time responses to prevent account enumeration
+- Comprehensive audit logging for security monitoring
+- See [LOGIN_THROTTLING.md](LOGIN_THROTTLING.md) for details
+
 **Request Body (Form Data):**
 
 ```bash
@@ -132,6 +138,15 @@ password=SecurePassword123
   "token_type": "bearer"
 }
 ```
+
+**Security Behavior:**
+
+- **1-3 failed attempts**: No delay (normal user mistakes)
+- **4-5 failed attempts**: 2-second delay (deter automated tools)
+- **6-8 failed attempts**: 30-second delay (significant slowdown)
+- **9+ failed attempts**: 15-minute cooldown (long delay)
+- **Successful login**: Clears all failure counters
+- **All failures**: Return same generic error "Incorrect email or password"
 
 ### Refresh Token
 
