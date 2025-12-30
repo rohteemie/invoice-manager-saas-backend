@@ -158,9 +158,9 @@ async def login(
     throttle = get_login_throttle()
     email = form_data.username.lower()
 
-    # Query user
+    # Query user using case-insensitive comparison
     user = db.query(UserModel).filter(
-        UserModel.email == form_data.username
+        UserModel.email.ilike(email)
     ).first()
 
     # Validate credentials
