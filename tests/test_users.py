@@ -249,8 +249,9 @@ def test_inactive_user_cannot_access_endpoints(client, inactive_user):
             "password": "TestPassword123"
         }
     )
-    assert response.status_code == 403
-    assert "inactive" in response.json()["detail"].lower()
+    # Returns 401 (not 403) to avoid account enumeration
+    assert response.status_code == 401
+    assert "incorrect" in response.json()["detail"].lower()
 
 
 def test_role_hierarchy_owner_highest(client, auth_headers, test_admin, test_manager, test_attendant):

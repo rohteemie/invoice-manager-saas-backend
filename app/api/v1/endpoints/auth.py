@@ -36,6 +36,7 @@ from app.core.security import (
 from app.core.rate_limit import limiter
 from app.core.email import send_verification_email, send_password_reset_email
 from app.core.config import settings
+from app.core.login_throttle import get_login_throttle
 from app.services.audit_logger import log_auth_event
 from app.models.audit_log import AuditAction
 
@@ -134,27 +135,45 @@ def register(
 
 @router.post("/login", response_model=Token)
 @limiter.limit("10/minute")
-def login(
+async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
     """
-    Login endpoint for OAuth2 password flow.
+    Login endpoint for OAuth2 password flow with progressive throttling.
 
     - Validates email and password
+    - Implements progressive delay based on failed attempts (OWASP ASVS)
     - Returns JWT access and refresh tokens
     - Access token expires in configured time (default: 30 min)
     - Refresh token expires in configured time (default: 7 days)
+
+    Progressive delay policy:
+    - 1-3 attempts: No delay
+    - 4-5 attempts: Short delay (default 2s)
+    - 6-8 attempts: Medium delay (default 30s)
+    - 9+ attempts: Long cooldown (default 15min)
     """
+    throttle = get_login_throttle()
+    email = form_data.username.lower()
+
+    # Query user using case-insensitive comparison
     user = db.query(UserModel).filter(
-        UserModel.email == form_data.username
+        UserModel.email.ilike(email)
     ).first()
 
-    if not user or not verify_password(
+    # Validate credentials
+    credentials_valid = user and verify_password(
         form_data.password, user.hashed_password
-    ):
-        # Log failed login attempt
+    )
+
+    # Handle failed authentication
+    if not credentials_valid:
+        # Record failed attempt
+        new_count = throttle.record_failed_attempt(email)
+
+        # Log failed login attempt with throttle info
         log_auth_event(
             db=db,
             request=request,
@@ -162,15 +181,60 @@ def login(
             user_id=user.id if user else None,
             tenant_id=user.tenant_id if user else None,
             status="failure",
-            description=f"Failed login attempt for {form_data.username}"
+            description=(
+                f"Failed login attempt for {form_data.username} "
+                f"(attempt {new_count})"
+            )
         )
+
+        # Log excessive failures for monitoring/alerting
+        if new_count >= settings.LOGIN_DELAY_THRESHOLD_LONG:
+            log_auth_event(
+                db=db,
+                request=request,
+                action=AuditAction.LOGIN_EXCESSIVE_FAILURES,
+                user_id=user.id if user else None,
+                tenant_id=user.tenant_id if user else None,
+                status="warning",
+                description=(
+                    f"Excessive login failures for {form_data.username} "
+                    f"({new_count} attempts)"
+                )
+            )
+
+        # Apply progressive delay (constant-time even for non-existent users)
+        delay_applied, _ = await throttle.apply_delay(email, new_count)
+
+        if delay_applied > 0:
+            # Log throttling action
+            log_auth_event(
+                db=db,
+                request=request,
+                action=AuditAction.LOGIN_THROTTLED,
+                user_id=user.id if user else None,
+                tenant_id=user.tenant_id if user else None,
+                status="info",
+                description=(
+                    f"Login throttled for {form_data.username} "
+                    f"({delay_applied}s delay)"
+                )
+            )
+
+        # Generic error message (no info leak)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Credentials valid - check if user is active
     if not user.is_active:
+        # Record as failed attempt to prevent enumeration
+        new_count = throttle.record_failed_attempt(email)
+
+        # Apply delay for inactive account (constant-time)
+        await throttle.apply_delay(email, new_count)
+
         # Log failed login for inactive user
         log_auth_event(
             db=db,
@@ -181,11 +245,18 @@ def login(
             status="failure",
             description="Login attempt for inactive user account"
         )
+
+        # Generic error message to avoid account enumeration
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user account"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Successful authentication - clear throttle counters
+    throttle.clear_failed_attempts(email)
+
+    # Generate tokens
     token_data = {
         "sub": user.id,
         "tenant_id": user.tenant_id,

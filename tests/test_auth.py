@@ -135,8 +135,9 @@ def test_login_inactive_user(client, inactive_user):
             "password": "TestPassword123"
         }
     )
-    assert response.status_code == 403
-    assert "inactive" in response.json()["detail"].lower()
+    # Should return 401 (not 403) to avoid account enumeration
+    assert response.status_code == 401
+    assert "incorrect" in response.json()["detail"].lower()
 
 
 def test_refresh_token_success(client, test_user):
