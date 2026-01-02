@@ -9,6 +9,7 @@ from app.db.database import init_db
 from app.core.sentry import init_sentry
 from app.core.logging import LoggingMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
+from app.core.rate_limit_middleware import RateLimitHeadersMiddleware
 from app.core.metrics import metrics_endpoint
 
 
@@ -68,6 +69,7 @@ app.add_middleware(
 
 # Add middleware
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(RateLimitHeadersMiddleware)
 
 # Add rate limiting
 app.state.limiter = limiter

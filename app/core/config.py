@@ -31,6 +31,45 @@ class Settings(BaseSettings):
         "60",
         validation_alias="RATE_LIMIT_RETRY_AFTER_FALLBACK"
     )
+    
+    # Tiered Rate Limiting Configuration
+    # Unauthenticated users
+    RATE_LIMIT_UNAUTHENTICATED: str = Field(
+        "20/minute",
+        validation_alias="RATE_LIMIT_UNAUTHENTICATED"
+    )
+    # Authenticated users by role
+    RATE_LIMIT_ATTENDANT: str = Field(
+        "100/minute",
+        validation_alias="RATE_LIMIT_ATTENDANT"
+    )
+    RATE_LIMIT_MANAGER: str = Field(
+        "200/minute",
+        validation_alias="RATE_LIMIT_MANAGER"
+    )
+    RATE_LIMIT_ADMIN: str = Field(
+        "500/minute",
+        validation_alias="RATE_LIMIT_ADMIN"
+    )
+    RATE_LIMIT_OWNER: str = Field(
+        "1000/minute",
+        validation_alias="RATE_LIMIT_OWNER"
+    )
+    # Read vs Write operations
+    RATE_LIMIT_READ_MULTIPLIER: float = Field(
+        2.0,
+        validation_alias="RATE_LIMIT_READ_MULTIPLIER"
+    )
+    RATE_LIMIT_WRITE_MULTIPLIER: float = Field(
+        1.0,
+        validation_alias="RATE_LIMIT_WRITE_MULTIPLIER"
+    )
+    # Exemption for specific IPs (comma-separated)
+    RATE_LIMIT_EXEMPT_IPS: Optional[str] = Field(
+        None,
+        validation_alias="RATE_LIMIT_EXEMPT_IPS"
+    )
+    
     API_V1_STR: str = "/api/v1"
     CORS_ORIGINS: List[str] = Field(
         ["*"],
