@@ -31,7 +31,7 @@ class Settings(BaseSettings):
         "60",
         validation_alias="RATE_LIMIT_RETRY_AFTER_FALLBACK"
     )
-    
+
     # Tiered Rate Limiting Configuration
     # Unauthenticated users
     RATE_LIMIT_UNAUTHENTICATED: str = Field(
@@ -69,7 +69,7 @@ class Settings(BaseSettings):
         None,
         validation_alias="RATE_LIMIT_EXEMPT_IPS"
     )
-    
+
     API_V1_STR: str = "/api/v1"
     CORS_ORIGINS: List[str] = Field(
         ["*"],
