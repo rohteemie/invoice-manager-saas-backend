@@ -227,7 +227,9 @@ def test_rate_limit_headers_in_error():
     request = Mock()
     request.state.user = None
     
-    exc = RateLimitExceeded("10 per 1 minute. Retry in 30 seconds")
+    # Create a mock exception with the expected attributes
+    exc = Mock(spec=RateLimitExceeded)
+    exc.detail = "10 per 1 minute. Retry in 30 seconds"
     
     with patch('app.core.rate_limit.get_role_based_limit', return_value="100/minute"):
         response = rate_limit_exceeded_handler(request, exc)
