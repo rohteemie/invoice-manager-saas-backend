@@ -1,4 +1,4 @@
-# FastAPI Multi-Tenant Invoicing SaaS Backend
+# Rechive - A FastAPI Multi-Tenant Invoicing SaaS Backend
 
 [![CI/CD Pipeline](https://github.com/rohteemie/multi-tenant-saas-backend/workflows/Backend%20CI%2FCD%20Pipeline/badge.svg)](https://github.com/rohteemie/multi-tenant-saas-backend/actions)
 [![Tests](https://img.shields.io/badge/tests-144%20passed-brightgreen)](tests/)
