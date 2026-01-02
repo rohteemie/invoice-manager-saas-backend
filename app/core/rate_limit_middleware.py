@@ -36,6 +36,15 @@ class RateLimitHeadersMiddleware(BaseHTTPMiddleware):
             limit_parts = limit_str.split("/")
             if len(limit_parts) == 2:
                 limit_value = limit_parts[0]
+                period = limit_parts[1]
+                
+                # Calculate reset time based on period (approximate)
+                period_seconds = {
+                    "second": 1,
+                    "minute": 60,
+                    "hour": 3600,
+                    "day": 86400
+                }.get(period, 60)  # Default to 60 seconds if unknown
                 
                 # Add headers if not already present (429 handler sets these)
                 if "X-RateLimit-Limit" not in response.headers:
@@ -44,8 +53,8 @@ class RateLimitHeadersMiddleware(BaseHTTPMiddleware):
                     # We don't track remaining count in this middleware
                     # as that would require accessing the rate limiter storage
                     # The headers are mainly informational
-                    response.headers["X-RateLimit-Reset"] = "60"
-        except Exception:
+                    response.headers["X-RateLimit-Reset"] = str(period_seconds)
+        except (ValueError, IndexError, KeyError, AttributeError):
             # Don't fail request if header addition fails
             pass
         

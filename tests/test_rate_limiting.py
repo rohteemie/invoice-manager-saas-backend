@@ -2,6 +2,7 @@
 Tests for rate limiting functionality.
 """
 from unittest.mock import Mock, patch
+from slowapi.errors import RateLimitExceeded
 from app.core.rate_limit import (
     limiter,
     get_role_based_limit,
@@ -9,7 +10,8 @@ from app.core.rate_limit import (
     get_write_limit,
     apply_multiplier,
     is_ip_exempt,
-    get_user_identifier
+    get_user_identifier,
+    rate_limit_exceeded_handler
 )
 from app.models.user import UserRole
 from app.core.config import settings
@@ -221,9 +223,6 @@ def test_user_identifier_unauthenticated_user():
 
 def test_rate_limit_headers_in_error():
     """Test that rate limit headers are included in error responses."""
-    from app.core.rate_limit import rate_limit_exceeded_handler
-    from slowapi.errors import RateLimitExceeded
-    
     request = Mock()
     request.state.user = None
     

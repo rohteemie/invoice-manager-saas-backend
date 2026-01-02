@@ -62,7 +62,7 @@ def get_role_based_limit(request: Request) -> str:
     if getattr(user, "is_superadmin", False):
         return "1000000/minute"  # Effectively unlimited
     
-    # Import UserRole here to avoid circular imports
+    # Import UserRole locally to avoid circular import (models imports core.security)
     from app.models.user import UserRole
     
     role = getattr(user, "role", None)
@@ -143,13 +143,19 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     Custom handler for rate limit exceeded errors.
     Adds rate limit headers to response.
     """
-    # Extract retry-after value
+    import re
+    
+    # Extract retry-after value using regex for robustness
     retry_after = settings.RATE_LIMIT_RETRY_AFTER_FALLBACK
-    if "Retry in" in exc.detail:
-        try:
-            retry_after = exc.detail.split("Retry in ")[1].split(" ")[0]
-        except (IndexError, ValueError):
-            pass
+    
+    # Try to extract from detail message
+    # Common formats: "Retry in 30 seconds", "30 seconds", etc.
+    if hasattr(exc, 'detail') and exc.detail:
+        detail_str = str(exc.detail)
+        # Look for numbers followed by optional time unit
+        match = re.search(r'(\d+)\s*(?:second|minute|hour)?s?', detail_str)
+        if match:
+            retry_after = match.group(1)
     
     # Get current limit info for headers
     user = getattr(request.state, "user", None)
@@ -159,7 +165,7 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     try:
         limit_parts = limit_str.split("/")
         limit_value = limit_parts[0] if len(limit_parts) > 0 else "100"
-    except (ValueError, IndexError):
+    except (ValueError, IndexError, AttributeError):
         limit_value = "100"
     
     return JSONResponse(
@@ -167,7 +173,7 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
         content={
             "error": "Rate limit exceeded",
             "message": "Too many requests. Please try again later.",
-            "detail": str(exc.detail)
+            "detail": str(exc.detail) if hasattr(exc, 'detail') else "Rate limit exceeded"
         },
         headers={
             "Retry-After": str(retry_after),
