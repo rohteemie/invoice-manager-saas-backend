@@ -27,7 +27,11 @@ from app.schemas.invoice import (
     InvoiceUpdate,
     InvoiceStatusUpdate
 )
-from app.core.deps import get_current_user, require_role, require_verified_email
+from app.core.deps import (
+    get_current_user,
+    require_role,
+    require_verified_email
+)
 from app.core.cache import invalidate_tenant_cache
 from app.services.pdf_generator import get_pdf_generator, PDFGenerationError
 from app.services.audit_logger import log_invoice_event, log_export_event

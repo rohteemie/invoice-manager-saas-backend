@@ -5,7 +5,7 @@ This module provides high-level email composition functions that use
 the modular email provider system. It separates email content generation
 from the actual sending mechanism.
 """
-from typing import Optional
+from typing import Optional, Tuple
 import logging
 import html
 import re
@@ -115,7 +115,7 @@ def get_configured_email_provider() -> Optional[EmailProvider]:
 def compose_verification_email(
     full_name: str,
     verification_link: str,
-) -> tuple[str, str]:
+) -> Tuple[str, str]:
     """
     Compose verification email content.
 
@@ -195,7 +195,7 @@ def compose_verification_email(
 def compose_password_reset_email(
     full_name: str,
     reset_link: str,
-) -> tuple[str, str]:
+) -> Tuple[str, str]:
     """
     Compose password reset email content.
 
@@ -296,7 +296,7 @@ def compose_password_reset_email(
 def compose_verification_reminder_email(
     full_name: str,
     verification_link: str,
-) -> tuple[str, str]:
+) -> Tuple[str, str]:
     """
     Compose verification reminder email content.
 
@@ -389,7 +389,7 @@ def compose_invoice_email(
     customer_name: str,
     invoice_number: str,
     total_amount: str,
-) -> tuple[str, str]:
+) -> Tuple[str, str]:
     """
     Compose invoice email content.
 

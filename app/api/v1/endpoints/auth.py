@@ -483,7 +483,7 @@ def resend_verification_email(
             email=user.email,
             token=verification_token,
             full_name=user.full_name,
-            base_url=settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173",
+            base_url=settings.EMAIL_VERIFICATION_BASE_URL,
         )
     except Exception as e:
         logger.warning(
@@ -607,7 +607,7 @@ async def forgot_password(
             email=user.email,
             token=reset_token,
             full_name=user.full_name,
-            base_url=settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173",
+            base_url=settings.EMAIL_VERIFICATION_BASE_URL
         )
         logger.info(
             "Password reset email task queued for %s", user.email

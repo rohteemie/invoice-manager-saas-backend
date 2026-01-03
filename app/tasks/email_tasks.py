@@ -6,8 +6,6 @@ with exponential backoff for transient failures.
 """
 from datetime import datetime, timezone
 import logging
-import base64
-from typing import Optional
 
 from app.core.celery_app import celery_app
 from app.services.email_service import (
@@ -77,7 +75,9 @@ def send_verification_email_task(
             }
 
         # Build verification link
-        verification_link = f"{base_url.rstrip('/')}/verify-email?token={token}"
+        verification_link = (
+            f"{base_url.rstrip('/')}/verify-email?token={token}"
+        )
 
         # Compose email content
         plain_text, html_content = compose_verification_email(
@@ -249,7 +249,9 @@ def send_verification_reminder_task(
             }
 
         # Build verification link
-        verification_link = f"{base_url.rstrip('/')}/verify-email?token={token}"
+        verification_link = (
+            f"{base_url.rstrip('/')}/verify-email?token={token}"
+        )
 
         # Compose email content
         plain_text, html_content = compose_verification_reminder_email(
@@ -432,14 +434,17 @@ def send_verification_reminders():
             UserModel.is_active == True,  # noqa: E712
             UserModel.verification_token.isnot(None),
             UserModel.verification_token_expires_at.isnot(None),
-            UserModel.verification_token_expires_at > datetime.now(timezone.utc),
+            (
+                UserModel.verification_token_expires_at
+                > datetime.now(timezone.utc)
+            ),
             UserModel.created_at < cutoff_time,
         ).all()
 
         sent_count = 0
         failed_count = 0
 
-        base_url = settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+        base_url = settings.EMAIL_VERIFICATION_BASE_URL
 
         for user in unverified_users:
             try:

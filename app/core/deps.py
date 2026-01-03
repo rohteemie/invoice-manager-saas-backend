@@ -170,6 +170,6 @@ def require_verified_email(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email verification required. "
                    "Please verify your email address to perform this action. "
-                   "Check your inbox for the verification link or request a new one."
+                   "Check inbox for verification link or request a new one."
         )
     return current_user
