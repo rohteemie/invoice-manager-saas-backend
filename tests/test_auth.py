@@ -41,7 +41,7 @@ def test_register_duplicate_email(client, test_user, test_tenant):
         }
     )
     assert response.status_code == 400
-    assert "already registered" in response.json()["detail"].lower()
+    assert "already registered" in response.json()["message"].lower()
 
 
 def test_register_invalid_email(client, test_tenant):
@@ -110,7 +110,7 @@ def test_login_incorrect_password(client, test_user):
         }
     )
     assert response.status_code == 401
-    assert "incorrect" in response.json()["detail"].lower()
+    assert "incorrect" in response.json()["message"].lower()
 
 
 def test_login_nonexistent_user(client):
@@ -123,7 +123,7 @@ def test_login_nonexistent_user(client):
         }
     )
     assert response.status_code == 401
-    assert "incorrect" in response.json()["detail"].lower()
+    assert "incorrect" in response.json()["message"].lower()
 
 
 def test_login_inactive_user(client, inactive_user):
@@ -137,7 +137,7 @@ def test_login_inactive_user(client, inactive_user):
     )
     # Should return 401 (not 403) to avoid account enumeration
     assert response.status_code == 401
-    assert "incorrect" in response.json()["detail"].lower()
+    assert "incorrect" in response.json()["message"].lower()
 
 
 def test_refresh_token_success(client, test_user):
@@ -178,7 +178,7 @@ def test_refresh_token_invalid(client):
         "/api/v1/auth/refresh?refresh_token=invalid-token"
     )
     assert response.status_code == 401
-    assert "invalid" in response.json()["detail"].lower()
+    assert "invalid" in response.json()["message"].lower()
 
 
 def test_refresh_token_inactive_user(client, test_user, db_session):
@@ -202,7 +202,7 @@ def test_refresh_token_inactive_user(client, test_user, db_session):
         f"/api/v1/auth/refresh?refresh_token={refresh_token}"
     )
     assert response.status_code == 401
-    assert "inactive" in response.json()["detail"].lower()
+    assert "inactive" in response.json()["message"].lower()
 
 
 def test_password_is_hashed(client, test_tenant, db_session):
