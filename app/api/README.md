@@ -513,37 +513,69 @@ def list_users(
 - ✅ Tenant isolation enforced
 - ✅ Principle of least privilege
 
+## Implemented API Features
+
+### Invoice Management ✅
+
+- `POST /api/v1/invoices` - Create new invoice
+- `GET /api/v1/invoices` - List invoices with filters
+- `GET /api/v1/invoices/{id}` - Get invoice by ID
+- `PUT /api/v1/invoices/{id}` - Update draft invoice
+- `PATCH /api/v1/invoices/{id}/status` - Update invoice status
+- `DELETE /api/v1/invoices/{id}` - Delete draft invoice
+- `GET /api/v1/invoices/{id}/pdf` - Download invoice as PDF
+- `POST /api/v1/invoices/{id}/send` - Send invoice via email
+
+### Data Export ✅
+
+- `GET /api/v1/invoices/export/invoices` - Export invoices (CSV/JSON)
+
+### Analytics & Reporting ✅
+
+- `GET /api/v1/analytics/invoice-summary` - Invoice summary statistics
+- `GET /api/v1/analytics/revenue-by-status` - Revenue breakdown by status
+
+### Audit Logging ✅
+
+- `GET /api/v1/audit-logs/` - List audit logs
+- `GET /api/v1/audit-logs/{id}` - Get specific audit log
+- `GET /api/v1/audit-logs/user/{user_id}` - Get user's audit logs
+- `GET /api/v1/audit-logs/resource/{type}/{id}` - Get resource audit logs
+
+### Super Admin (Platform Management) ✅
+
+- `GET /api/v1/admin/tenants` - List all tenants
+- `GET /api/v1/admin/tenants/{id}` - Get tenant details
+- `PUT /api/v1/admin/tenants/{id}/suspend` - Suspend tenant
+- `PUT /api/v1/admin/tenants/{id}/reactivate` - Reactivate tenant
+- `GET /api/v1/admin/users` - List all users across tenants
+- `GET /api/v1/admin/audit-logs` - Platform-wide audit logs
+- `GET /api/v1/admin/stats` - Platform statistics
+
 ## Future API Features
 
-### Implemented Endpoints
+### Potential Enhancements
 
-**Invoice Management:** ✅
+**Advanced Analytics:**
+- Time-series revenue analytics
+- Customer segmentation reports
+- Predictive analytics for payment dates
 
-- POST `/api/v1/invoices`
-- GET `/api/v1/invoices`
-- GET `/api/v1/invoices/{id}`
-- PUT `/api/v1/invoices/{id}`
-- DELETE `/api/v1/invoices/{id}`
-
-**Exports:** ✅
-
-- GET `/api/v1/invoices/export/invoices` (supports CSV and JSON formats)
-
-### Planned Endpoints
-
-**Analytics:**
-
-- GET `/api/v1/analytics/revenue`
-- GET `/api/v1/analytics/invoices`
+**Extended Functionality:**
+- Recurring invoices and subscriptions
+- Multiple payment gateways integration
+- Automated late payment reminders
+- Custom report builder
 
 ### API v2 (Future)
 
-Breaking changes will be introduced in v2:
+Potential breaking changes for v2:
 
-- GraphQL support
+- GraphQL support for flexible queries
 - WebSocket endpoints for real-time updates
-- Improved pagination (cursor-based)
-- Enhanced filtering and sorting
+- Cursor-based pagination for large datasets
+- Enhanced filtering with query language
+- Batch operations support
 
 ## Related Documentation
 
