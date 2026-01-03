@@ -43,16 +43,114 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def validate_invoice_number_format(format_string: str) -> bool:
+    """
+    Validate invoice number format string.
+
+    Args:
+        format_string: Format string to validate
+
+    Returns:
+        True if valid, False otherwise
+
+    Valid placeholders:
+        - {prefix}: Custom prefix from tenant configuration
+        - {date}: Current date in YYYYMMDD format
+        - {sequence}: Atomic sequence number with optional formatting
+          (e.g., {sequence:04d})
+    """
+    if not format_string:
+        return False
+
+    # Test formatting with sample values to ensure format is valid
+    # This will catch any malformed placeholders or invalid format strings
+    try:
+        test_result = format_string.format(
+            prefix="TEST",
+            date="20260103",
+            sequence=1
+        )
+        # Ensure result is not empty and has reasonable length
+        if len(test_result) == 0 or len(test_result) > 100:
+            return False
+
+        # Verify that at least one placeholder was used
+        # (result differs from input)
+        # This ensures the format string actually uses the placeholders
+        return test_result != format_string
+    except (KeyError, ValueError, IndexError):
+        return False
+
+
 def generate_invoice_number(db: Session, tenant_id: str) -> str:
-    """Generate unique invoice number for tenant."""
-    # Get count of invoices for this tenant
-    count = db.query(InvoiceModel).filter(
-        InvoiceModel.tenant_id == tenant_id
-    ).count()
-    # Format: INV-YYYYMMDD-XXXX
+    """
+    Generate unique invoice number for tenant using atomic counter.
+
+    This function uses the tenant's configuration to generate invoice
+    numbers in a customizable format while preventing race conditions
+    through atomic database updates.
+
+    IMPORTANT: This function acquires a row-level lock on the tenant
+    record and commits the transaction after incrementing the sequence
+    counter. This is necessary to release the lock immediately and
+    prevent blocking other invoice creations. The caller should handle
+    any additional database operations in a separate transaction after
+    this function completes.
+
+    Args:
+        db: Database session
+        tenant_id: Tenant ID
+
+    Returns:
+        Formatted invoice number
+
+    Raises:
+        HTTPException: If tenant not found or invalid format
+
+    Side Effects:
+        - Increments the tenant's invoice_number_sequence counter
+        - Commits the database transaction to release the row lock
+    """
+    # Fetch tenant with FOR UPDATE lock to prevent race conditions
+    tenant = db.query(TenantModel).filter(
+        TenantModel.id == tenant_id
+    ).with_for_update().first()
+
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Validate format if custom format is set
+    format_string = (
+        tenant.invoice_number_format
+        or "{prefix}-{date}-{sequence:04d}"
+    )
+    if not validate_invoice_number_format(format_string):
+        # Fallback to default format if invalid
+        format_string = "{prefix}-{date}-{sequence:04d}"
+
+    # Atomically increment the sequence number
+    new_sequence = (tenant.invoice_number_sequence or 0) + 1
+    tenant.invoice_number_sequence = new_sequence
+
+    # Generate invoice number using tenant configuration
+    prefix = tenant.invoice_number_prefix or "INV"
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-    number = f"INV-{date_str}-{count + 1:04d}"
-    return number
+
+    try:
+        invoice_number = format_string.format(
+            prefix=prefix,
+            date=date_str,
+            sequence=new_sequence
+        )
+    except (KeyError, ValueError, IndexError):
+        # Fallback to default format if formatting fails
+        invoice_number = f"{prefix}-{date_str}-{new_sequence:04d}"
+
+    # Commit the sequence update immediately to release the lock
+    # This allows other invoice creations to proceed without waiting
+    db.commit()
+
+    return invoice_number
 
 
 def calculate_totals(

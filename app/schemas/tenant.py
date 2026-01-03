@@ -37,6 +37,17 @@ class TenantBase(BaseModel):
     email: Optional[EmailStr] = Field(
         None, description="Tenant contact email for invoices"
     )
+    invoice_number_prefix: Optional[str] = Field(
+        "INV", max_length=20,
+        description="Custom prefix for invoice numbers"
+    )
+    invoice_number_format: Optional[str] = Field(
+        "{prefix}-{date}-{sequence:04d}", max_length=100,
+        description=(
+            "Format string for invoice numbers. "
+            "Supported placeholders: {prefix}, {date}, {sequence}"
+        )
+    )
 
 
 class TenantCreate(TenantBase):
@@ -71,12 +82,24 @@ class TenantUpdate(BaseModel):
     email: Optional[EmailStr] = Field(
         None, description="Tenant contact email for invoices"
     )
+    invoice_number_prefix: Optional[str] = Field(
+        None, max_length=20,
+        description="Custom prefix for invoice numbers"
+    )
+    invoice_number_format: Optional[str] = Field(
+        None, max_length=100,
+        description=(
+            "Format string for invoice numbers. "
+            "Supported placeholders: {prefix}, {date}, {sequence}"
+        )
+    )
 
 
 class TenantInDB(TenantBase):
     id: str
     is_active: bool
     logo_url: Optional[str] = None
+    invoice_number_sequence: int = 0
     created_at: datetime
     updated_at: datetime
 
