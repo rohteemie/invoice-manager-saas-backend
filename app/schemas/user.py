@@ -48,10 +48,11 @@ class UserUpdate(BaseModel):
 
 class UserInDB(UserBase):
     """
-    Complete user schema as stored in the database.
+    Complete user schema as stored in the database (without password hash).
     
     Includes all user fields including system-generated ones like ID and timestamps.
-    Note: Password hash is NOT included in this schema for security.
+    The password hash is stored in the database model but excluded from this schema
+    for security - it's never exposed through API responses.
     """
     id: str
     tenant_id: Optional[str]
