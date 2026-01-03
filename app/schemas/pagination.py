@@ -66,21 +66,24 @@ def create_paginated_response(
     Returns:
         Dictionary with pagination metadata and items
     """
+    # Ensure limit is at least 1 to avoid division by zero
+    safe_limit = max(1, limit)
+    
     # Calculate page number (1-indexed)
-    page = (skip // limit) + 1 if limit > 0 else 1
+    page = (skip // safe_limit) + 1
     
     # Calculate total pages
-    pages = ceil(total / limit) if limit > 0 else 0
+    pages = ceil(total / safe_limit) if total > 0 else 0
     
     # Determine if there are next/previous pages
-    has_next = skip + limit < total
+    has_next = skip + safe_limit < total
     has_previous = skip > 0
     
     return {
         "items": items,
         "total": total,
         "page": page,
-        "size": limit,
+        "size": limit,  # Return original limit value
         "pages": pages,
         "has_next": has_next,
         "has_previous": has_previous
