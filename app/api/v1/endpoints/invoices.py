@@ -61,14 +61,8 @@ def validate_invoice_number_format(format_string: str) -> bool:
     if not format_string:
         return False
     
-    # Check for required placeholders ('{sequence' matches both {sequence} and {sequence:04d})
-    allowed_placeholders = ['{prefix}', '{date}', '{sequence']
-    has_valid_placeholder = any(ph in format_string for ph in allowed_placeholders)
-    
-    if not has_valid_placeholder:
-        return False
-    
     # Test formatting with sample values to ensure format is valid
+    # This will catch any malformed placeholders or invalid format strings
     try:
         test_result = format_string.format(
             prefix="TEST",
@@ -76,7 +70,12 @@ def validate_invoice_number_format(format_string: str) -> bool:
             sequence=1
         )
         # Ensure result is not empty and has reasonable length
-        return len(test_result) > 0 and len(test_result) <= 100
+        if len(test_result) == 0 or len(test_result) > 100:
+            return False
+        
+        # Verify that at least one placeholder was used (result differs from input)
+        # This ensures the format string actually uses the placeholders
+        return test_result != format_string
     except (KeyError, ValueError, IndexError):
         return False
 
@@ -127,7 +126,7 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
             date=date_str,
             sequence=new_sequence
         )
-    except (KeyError, ValueError, IndexError) as e:
+    except (KeyError, ValueError, IndexError):
         # Fallback to default format if formatting fails
         invoice_number = f"{prefix}-{date_str}-{new_sequence:04d}"
     
