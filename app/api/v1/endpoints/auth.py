@@ -113,7 +113,10 @@ def register(
                 email=db_user.email,
                 token=verification_token,
                 full_name=db_user.full_name,
-                base_url=settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173",
+                base_url=(
+                    settings.EMAIL_VERIFICATION_BASE_URL
+                    or "http://localhost:5173"
+                ),
             )
             logger.info(
                 "Verification email task queued for %s", db_user.email

@@ -65,7 +65,7 @@ def sanitize_filename(filename: str) -> str:
 def get_configured_email_provider() -> Optional[EmailProvider]:
     """
     Get the configured email provider based on settings.
-    
+
     Returns:
         EmailProvider instance or None if not configured
     """
@@ -73,11 +73,11 @@ def get_configured_email_provider() -> Optional[EmailProvider]:
     provider_type = getattr(
         settings, 'EMAIL_PROVIDER', 'sendgrid'
     ).lower()
-    
+
     # For testing environment, use mock provider
     if settings.ENVIRONMENT == "testing":
         provider_type = "mock"
-    
+
     try:
         if provider_type == "sendgrid":
             config = {
@@ -85,25 +85,25 @@ def get_configured_email_provider() -> Optional[EmailProvider]:
                 "from_email": settings.EMAILS_FROM,
             }
             provider = get_email_provider("sendgrid", config)
-            
+
             # Validate configuration
             if not provider.validate_configuration():
                 logger.warning(
                     "SendGrid provider not properly configured"
                 )
                 return None
-            
+
             return provider
-        
+
         elif provider_type == "mock":
             return get_email_provider("mock")
-        
+
         else:
             logger.warning(
                 f"Unknown email provider type: {provider_type}"
             )
             return None
-    
+
     except Exception as e:
         logger.error(
             f"Failed to initialize email provider: {e}",
@@ -118,18 +118,18 @@ def compose_verification_email(
 ) -> tuple[str, str]:
     """
     Compose verification email content.
-    
+
     Args:
         full_name: Recipient's full name
         verification_link: Verification URL
-        
+
     Returns:
         Tuple of (plain_text, html_content)
     """
     # Sanitize inputs
     safe_full_name = sanitize_for_email(full_name)
     safe_project_name = sanitize_for_email(settings.PROJECT_NAME)
-    
+
     # Plain text content
     plain_text = (
         f"Hello {safe_full_name},\n\n"
@@ -139,7 +139,7 @@ def compose_verification_email(
         "This link will expire in 24 hours.\n\n"
         "If you didn't register, please ignore this email.\n"
     )
-    
+
     # HTML content with styling
     html_content = f"""
     <!DOCTYPE html>
@@ -188,7 +188,7 @@ def compose_verification_email(
     </body>
     </html>
     """
-    
+
     return plain_text, html_content
 
 
@@ -198,17 +198,17 @@ def compose_password_reset_email(
 ) -> tuple[str, str]:
     """
     Compose password reset email content.
-    
+
     Args:
         full_name: Recipient's full name
         reset_link: Password reset URL
-        
+
     Returns:
         Tuple of (plain_text, html_content)
     """
     safe_full_name = sanitize_for_email(full_name)
     safe_project_name = sanitize_for_email(settings.PROJECT_NAME)
-    
+
     plain_text = (
         f"Hello {safe_full_name},\n\n"
         "We received a request to reset your password. "
@@ -224,7 +224,7 @@ def compose_password_reset_email(
         "- Change your password regularly\n\n"
         f"Best regards,\n{safe_project_name}"
     )
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -289,7 +289,7 @@ def compose_password_reset_email(
     </body>
     </html>
     """
-    
+
     return plain_text, html_content
 
 
@@ -299,17 +299,17 @@ def compose_verification_reminder_email(
 ) -> tuple[str, str]:
     """
     Compose verification reminder email content.
-    
+
     Args:
         full_name: Recipient's full name
         verification_link: Verification URL
-        
+
     Returns:
         Tuple of (plain_text, html_content)
     """
     safe_full_name = sanitize_for_email(full_name)
     safe_project_name = sanitize_for_email(settings.PROJECT_NAME)
-    
+
     plain_text = (
         f"Hello {safe_full_name},\n\n"
         "We noticed that you haven't verified your email address yet.\n\n"
@@ -323,7 +323,7 @@ def compose_verification_reminder_email(
         "If you didn't register, please ignore this email.\n\n"
         f"Best regards,\n{safe_project_name}"
     )
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -381,7 +381,7 @@ def compose_verification_reminder_email(
     </body>
     </html>
     """
-    
+
     return plain_text, html_content
 
 
@@ -392,12 +392,12 @@ def compose_invoice_email(
 ) -> tuple[str, str]:
     """
     Compose invoice email content.
-    
+
     Args:
         customer_name: Customer's name
         invoice_number: Invoice number
         total_amount: Formatted total amount
-        
+
     Returns:
         Tuple of (plain_text, html_content)
     """
@@ -405,7 +405,7 @@ def compose_invoice_email(
     safe_invoice_number = sanitize_for_email(invoice_number)
     safe_total_amount = sanitize_for_email(total_amount)
     safe_project_name = sanitize_for_email(settings.PROJECT_NAME)
-    
+
     plain_text = (
         f"Dear {safe_customer_name},\n\n"
         f"Thank you for your business!\n\n"
@@ -415,7 +415,7 @@ def compose_invoice_email(
         "Best regards,\n"
         f"{safe_project_name}"
     )
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -450,5 +450,5 @@ def compose_invoice_email(
     </body>
     </html>
     """
-    
+
     return plain_text, html_content

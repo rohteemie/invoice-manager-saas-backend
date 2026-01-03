@@ -576,7 +576,7 @@ def send_invoice(
     # Send email with PDF asynchronously
     import base64
     pdf_bytes_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
-    
+
     try:
         send_invoice_email_task.delay(
             email=invoice.customer_email,

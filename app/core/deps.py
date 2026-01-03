@@ -164,7 +164,7 @@ def require_verified_email(
     # Superadmins bypass email verification requirement
     if current_user.is_superadmin:
         return current_user
-    
+
     if not current_user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -173,4 +173,3 @@ def require_verified_email(
                    "Check your inbox for the verification link or request a new one."
         )
     return current_user
-

@@ -37,14 +37,14 @@ def send_verification_email_task(
 ) -> dict:
     """
     Send verification email asynchronously with retry logic.
-    
+
     Args:
         self: Celery task instance (for retry)
         email: Recipient email address
         token: Verification token
         full_name: Recipient's full name
         base_url: Base URL for verification link
-        
+
     Returns:
         dict: Result status
     """
@@ -61,15 +61,15 @@ def send_verification_email_task(
                 "message": "Email provider not configured",
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-        
+
         # Build verification link
         verification_link = f"{base_url.rstrip('/')}/verify-email?token={token}"
-        
+
         # Compose email content
         plain_text, html_content = compose_verification_email(
             full_name, verification_link
         )
-        
+
         # Send email
         success = provider.send_email(
             to_email=email,
@@ -77,7 +77,7 @@ def send_verification_email_task(
             plain_text=plain_text,
             html_content=html_content,
         )
-        
+
         if success:
             return {
                 "status": "success",
@@ -90,18 +90,18 @@ def send_verification_email_task(
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send verification email"
             ))
-    
+
     except Exception as exc:
         logger.error(
             "Error sending verification email to %s: %s",
             email, str(exc), exc_info=True
         )
-        
+
         # Retry with exponential backoff if not max retries
         if self.request.retries < self.max_retries:
             retry_delay = 60 * (2 ** self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
-        
+
         return {
             "status": "error",
             "message": str(exc),
@@ -125,14 +125,14 @@ def send_password_reset_email_task(
 ) -> dict:
     """
     Send password reset email asynchronously with retry logic.
-    
+
     Args:
         self: Celery task instance (for retry)
         email: Recipient email address
         token: Password reset token
         full_name: Recipient's full name
         base_url: Base URL for reset link
-        
+
     Returns:
         dict: Result status
     """
@@ -148,15 +148,15 @@ def send_password_reset_email_task(
                 "message": "Email provider not configured",
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-        
+
         # Build reset link
         reset_link = f"{base_url.rstrip('/')}/reset-password?token={token}"
-        
+
         # Compose email content
         plain_text, html_content = compose_password_reset_email(
             full_name, reset_link
         )
-        
+
         # Send email
         success = provider.send_email(
             to_email=email,
@@ -164,7 +164,7 @@ def send_password_reset_email_task(
             plain_text=plain_text,
             html_content=html_content,
         )
-        
+
         if success:
             return {
                 "status": "success",
@@ -176,17 +176,17 @@ def send_password_reset_email_task(
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send password reset email"
             ))
-    
+
     except Exception as exc:
         logger.error(
             "Error sending password reset email to %s: %s",
             email, str(exc), exc_info=True
         )
-        
+
         if self.request.retries < self.max_retries:
             retry_delay = 60 * (2 ** self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
-        
+
         return {
             "status": "error",
             "message": str(exc),
@@ -210,14 +210,14 @@ def send_verification_reminder_task(
 ) -> dict:
     """
     Send verification reminder email asynchronously with retry logic.
-    
+
     Args:
         self: Celery task instance (for retry)
         email: Recipient email address
         token: Verification token
         full_name: Recipient's full name
         base_url: Base URL for verification link
-        
+
     Returns:
         dict: Result status
     """
@@ -233,15 +233,15 @@ def send_verification_reminder_task(
                 "message": "Email provider not configured",
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-        
+
         # Build verification link
         verification_link = f"{base_url.rstrip('/')}/verify-email?token={token}"
-        
+
         # Compose email content
         plain_text, html_content = compose_verification_reminder_email(
             full_name, verification_link
         )
-        
+
         # Send email
         success = provider.send_email(
             to_email=email,
@@ -249,7 +249,7 @@ def send_verification_reminder_task(
             plain_text=plain_text,
             html_content=html_content,
         )
-        
+
         if success:
             return {
                 "status": "success",
@@ -261,17 +261,17 @@ def send_verification_reminder_task(
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send reminder email"
             ))
-    
+
     except Exception as exc:
         logger.error(
             "Error sending reminder email to %s: %s",
             email, str(exc), exc_info=True
         )
-        
+
         if self.request.retries < self.max_retries:
             retry_delay = 60 * (2 ** self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
-        
+
         return {
             "status": "error",
             "message": str(exc),
@@ -296,7 +296,7 @@ def send_invoice_email_task(
 ) -> dict:
     """
     Send invoice email with PDF attachment asynchronously with retry logic.
-    
+
     Args:
         self: Celery task instance (for retry)
         email: Customer email address
@@ -304,7 +304,7 @@ def send_invoice_email_task(
         invoice_number: Invoice number
         pdf_bytes_b64: Base64 encoded PDF content
         total_amount: Formatted total amount
-        
+
     Returns:
         dict: Result status
     """
@@ -320,19 +320,19 @@ def send_invoice_email_task(
                 "message": "Email provider not configured",
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-        
+
         # Compose email content
         plain_text, html_content = compose_invoice_email(
             customer_name, invoice_number, total_amount
         )
-        
+
         # Prepare attachment
         from app.core.config import settings
         from app.services.email_service import sanitize_for_email
-        
+
         safe_invoice_number = sanitize_for_email(invoice_number)
         safe_project_name = sanitize_for_email(settings.PROJECT_NAME)
-        
+
         attachments = [
             {
                 "content": pdf_bytes_b64,  # Already base64 encoded
@@ -341,7 +341,7 @@ def send_invoice_email_task(
                 "disposition": "attachment"
             }
         ]
-        
+
         # Send email
         success = provider.send_email(
             to_email=email,
@@ -350,7 +350,7 @@ def send_invoice_email_task(
             html_content=html_content,
             attachments=attachments,
         )
-        
+
         if success:
             return {
                 "status": "success",
@@ -363,17 +363,17 @@ def send_invoice_email_task(
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send invoice email"
             ))
-    
+
     except Exception as exc:
         logger.error(
             "Error sending invoice email to %s: %s",
             email, str(exc), exc_info=True
         )
-        
+
         if self.request.retries < self.max_retries:
             retry_delay = 60 * (2 ** self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
-        
+
         return {
             "status": "error",
             "message": str(exc),
@@ -389,12 +389,12 @@ def send_invoice_email_task(
 def send_verification_reminders():
     """
     Background task to send verification reminders to unverified users.
-    
+
     This task runs periodically (daily by default) and:
     1. Finds all unverified users registered more than 24 hours ago
     2. Sends reminder emails to those who haven't verified
     3. Only sends one reminder per user per day
-    
+
     Returns:
         dict: Summary of processed reminders
     """
@@ -403,16 +403,16 @@ def send_verification_reminders():
     from sqlalchemy.orm import sessionmaker
     from app.core.config import settings
     from app.models.user import User as UserModel
-    
+
     # Create database engine for tasks
     engine = create_engine(settings.DATABASE_URL)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
+
     db = SessionLocal()
     try:
         # Find unverified users registered more than 24 hours ago
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
-        
+
         unverified_users = db.query(UserModel).filter(
             UserModel.is_verified == False,  # noqa: E712
             UserModel.is_active == True,  # noqa: E712
@@ -421,12 +421,12 @@ def send_verification_reminders():
             UserModel.verification_token_expires_at > datetime.now(timezone.utc),
             UserModel.created_at < cutoff_time,
         ).all()
-        
+
         sent_count = 0
         failed_count = 0
-        
+
         base_url = settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
-        
+
         for user in unverified_users:
             try:
                 # Send reminder email asynchronously
@@ -443,7 +443,7 @@ def send_verification_reminders():
                     user.email, str(e)
                 )
                 failed_count += 1
-        
+
         return {
             "status": "success",
             "sent_count": sent_count,
@@ -451,7 +451,7 @@ def send_verification_reminders():
             "total_unverified": len(unverified_users),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
-    
+
     except Exception as e:
         logger.error(
             "Error in send_verification_reminders: %s",
