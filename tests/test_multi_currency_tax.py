@@ -221,10 +221,11 @@ def test_list_invoices_shows_currency(client, auth_headers):
     # List invoices and verify currency is present
     list_response = client.get("/api/v1/invoices/", headers=auth_headers)
     assert list_response.status_code == 200
-    invoices = list_response.json()
+    data = list_response.json()
+    assert "items" in data
 
     # Find the NGN invoice we just created
-    ngn_invoice = next((inv for inv in invoices if inv["currency"] == "NGN"), None)
+    ngn_invoice = next((inv for inv in data["items"] if inv["currency"] == "NGN"), None)
     assert ngn_invoice is not None
     assert ngn_invoice["currency"] == "NGN"
 

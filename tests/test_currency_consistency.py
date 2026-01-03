@@ -395,8 +395,9 @@ def test_invoice_currency_consistency_through_lifecycle(client, auth_headers, db
         headers=auth_headers
     )
     assert list_response.status_code == 200
-    invoices = list_response.json()
-    eur_invoice = next((inv for inv in invoices if inv["id"] == invoice_id), None)
+    data = list_response.json()
+    assert "items" in data
+    eur_invoice = next((inv for inv in data["items"] if inv["id"] == invoice_id), None)
     assert eur_invoice is not None
     assert eur_invoice["currency"] == "EUR"
     
