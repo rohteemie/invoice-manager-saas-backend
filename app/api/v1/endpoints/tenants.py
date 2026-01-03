@@ -1,4 +1,3 @@
-from typing import List
 import logging
 
 from fastapi import (
@@ -179,7 +178,7 @@ def list_tenants(
 ):
     """
     Get list of tenants.
-    
+
     Returns paginated response with metadata:
     - items: List of tenants
     - total: Total count of tenants
@@ -190,13 +189,13 @@ def list_tenants(
     - has_previous: Whether there is a previous page
     """
     query = db.query(TenantModel)
-    
+
     # Get total count
     total = query.count()
-    
+
     # Get paginated items
     tenants = query.offset(skip).limit(limit).all()
-    
+
     return create_paginated_response(
         items=tenants,
         total=total,

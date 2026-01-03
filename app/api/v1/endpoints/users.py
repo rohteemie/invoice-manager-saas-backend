@@ -2,7 +2,6 @@
 User management endpoints with role-based access control.
 Supports CRUD operations with tenant-aware data isolation.
 """
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -42,7 +41,7 @@ def list_users(
     - Requires Owner role
     - Returns only users from same tenant (data isolation)
     - Supports pagination
-    
+
     Returns paginated response with metadata:
     - items: List of users
     - total: Total count of users
@@ -55,13 +54,13 @@ def list_users(
     query = db.query(UserModel).filter(
         UserModel.tenant_id == current_user.tenant_id
     )
-    
+
     # Get total count
     total = query.count()
-    
+
     # Get paginated items
     users = query.offset(skip).limit(limit).all()
-    
+
     return create_paginated_response(
         items=users,
         total=total,

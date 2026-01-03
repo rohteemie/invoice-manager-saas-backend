@@ -116,7 +116,7 @@ def list_audit_logs(
     Example:
         GET /audit-logs/?actions=login&actions=login_failed
         GET /audit-logs/?resource_types=user&resource_types=tenant
-    
+
     Returns paginated response with metadata:
     - items: List of audit logs
     - total: Total count of audit logs
@@ -212,7 +212,7 @@ def get_user_audit_logs(
 
     Example:
         GET /audit-logs/user/{user_id}?actions=login&actions=login_failed
-    
+
     Returns paginated response with metadata:
     - items: List of audit logs
     - total: Total count of audit logs
@@ -284,7 +284,7 @@ def get_resource_audit_logs(
 
     Example:
         GET /audit-logs/resource/invoice/{id}?actions=created&actions=updated
-    
+
     Returns paginated response with metadata:
     - items: List of audit logs
     - total: Total count of audit logs

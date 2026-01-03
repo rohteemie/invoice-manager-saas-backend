@@ -15,7 +15,7 @@ T = TypeVar('T')
 class PaginatedResponse(BaseModel, Generic[T]):
     """
     Generic paginated response schema.
-    
+
     Attributes:
         items: List of items in the current page
         total: Total count of items across all pages
@@ -56,29 +56,29 @@ def create_paginated_response(
 ) -> dict:
     """
     Create a paginated response dictionary.
-    
+
     Args:
         items: List of items for the current page
         total: Total count of all items
         skip: Number of items skipped (offset)
         limit: Maximum number of items per page
-        
+
     Returns:
         Dictionary with pagination metadata and items
     """
     # Ensure limit is at least 1 to avoid division by zero
     safe_limit = max(1, limit)
-    
+
     # Calculate page number (1-indexed)
     page = (skip // safe_limit) + 1
-    
+
     # Calculate total pages
     pages = ceil(total / safe_limit) if total > 0 else 0
-    
+
     # Determine if there are next/previous pages
     has_next = skip + safe_limit < total
     has_previous = skip > 0
-    
+
     return {
         "items": items,
         "total": total,

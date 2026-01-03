@@ -191,7 +191,7 @@ def list_invoices(
 
     Permissions: All authenticated users can list invoices.
     Results are automatically filtered by tenant_id.
-    
+
     Returns paginated response with metadata:
     - items: List of invoices
     - total: Total count of invoices
@@ -210,10 +210,10 @@ def list_invoices(
 
     # Get total count
     total = query.count()
-    
+
     # Get paginated items
     invoices = query.offset(skip).limit(limit).all()
-    
+
     return create_paginated_response(
         items=invoices,
         total=total,

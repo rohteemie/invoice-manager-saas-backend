@@ -2,7 +2,7 @@
 Admin routes for Super Admin platform management.
 Provides platform-level endpoints for managing tenants, users, and audit logs.
 """
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -64,7 +64,7 @@ def list_all_tenants(
 
     # Get paginated items
     tenants = query.offset(skip).limit(limit).all()
-    
+
     return create_paginated_response(
         items=tenants,
         total=total,
@@ -271,7 +271,7 @@ def list_all_users(
 
     # Get paginated items
     users = query.offset(skip).limit(limit).all()
-    
+
     return create_paginated_response(
         items=users,
         total=total,
@@ -333,13 +333,13 @@ def list_platform_audit_logs(
 
     # Order by created_at descending (most recent first)
     query = query.order_by(AuditLogModel.created_at.desc())
-    
+
     # Get total count
     total = query.count()
-    
+
     # Get paginated items
     logs = query.offset(skip).limit(limit).all()
-    
+
     return create_paginated_response(
         items=logs,
         total=total,
