@@ -200,8 +200,9 @@ def test_update_invoice_too_many_items(client, auth_headers, manager_auth_header
         json={
             "customer_name": "Test",
             "issue_date": "2024-01-15",
-            "items": [{"description": "Original Item", "quantity": 1,
-                       "unit_price": 100}]
+            "items": [
+                {"description": "Original Item", "quantity": 1, "unit_price": 100}
+            ]
         },
         headers=auth_headers
     )
@@ -233,8 +234,9 @@ def test_update_invoice_empty_items(client, auth_headers, manager_auth_headers):
         json={
             "customer_name": "Test",
             "issue_date": "2024-01-15",
-            "items": [{"description": "Original Item", "quantity": 1,
-                       "unit_price": 100}]
+            "items": [
+                {"description": "Original Item", "quantity": 1, "unit_price": 100}
+            ]
         },
         headers=auth_headers
     )
