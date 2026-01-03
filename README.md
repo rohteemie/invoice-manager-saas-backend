@@ -322,7 +322,7 @@ pytest tests/test_auth.py -v
 
 ### Quick API Reference
 
-**Note:** The application has 48 total endpoints: 5 root/monitoring + 43 business API endpoints under `/api/v1`.
+**Note:** The application has 46 total endpoints: 3 root/monitoring + 43 business API endpoints under `/api/v1`.
 
 **Authentication:**
 
@@ -388,12 +388,16 @@ pytest tests/test_auth.py -v
 - `GET /api/v1/admin/audit-logs` - Platform-wide audit logs (Super Admin only)
 - `GET /api/v1/admin/stats` - Platform statistics (Super Admin only)
 
-**Monitoring & Health:** ✨ **Sprint 4**
+**Monitoring & Health:**
 
+- `GET /` - API root and welcome endpoint
 - `GET /health` - Health check endpoint
 - `GET /metrics` - Prometheus metrics endpoint
-- `GET /docs` - Swagger UI documentation
-- `GET /redoc` - ReDoc documentation
+
+**Documentation:**
+
+- `GET /docs` - Swagger UI (interactive API documentation)
+- `GET /redoc` - ReDoc (alternative API documentation)
 
 **Comprehensive Documentation:**
 
@@ -473,31 +477,36 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 
 The project includes comprehensive test coverage:
 
-- **23 test files** covering all core functionality
+- **28 test files** covering all core functionality
 - **Test files:**
   - `test_auth.py` - Authentication endpoints
+  - `test_auth_throttle.py` - Authentication throttling ✨ **NEW**
+  - `test_login_throttle.py` - Login delay/brute-force protection ✨ **NEW**
   - `test_users.py` - User management
   - `test_tenants.py` - Tenant CRUD operations
   - `test_tenant_isolation.py` - Multi-tenant isolation
   - `test_tenant_logo.py` - Tenant branding and logo upload ✨ **NEW**
   - `test_invoices.py` - Invoice management
   - `test_invoice_pdf.py` - PDF generation ✨ **NEW**
+  - `test_invoice_number_config.py` - Invoice numbering configuration ✨ **NEW**
+  - `test_multi_currency_tax.py` - Multi-currency and tax ✨ **NEW**
+  - `test_currency_consistency.py` - Currency consistency ✨ **NEW**
+  - `test_payment_method_and_currency.py` - Payment methods ✨ **NEW**
   - `test_integration.py` - End-to-end workflows
   - `test_analytics.py` - Analytics endpoints ✨ **Sprint 3**
   - `test_performance.py` - Performance benchmarks ✨ **Sprint 3**
   - `test_background_tasks.py` - Celery tasks ✨ **Sprint 3**
   - `test_monitoring.py` - Health & metrics ✨ **Sprint 4**
   - `test_rate_limiting.py` - Rate limiting ✨ **Sprint 4**
-  - `test_audit_logs.py` - Audit logging ✨ **Sprint 4** **NEW**
+  - `test_audit_logs.py` - Audit logging ✨ **Sprint 4**
   - `test_superadmin.py` - Super Admin features ✨ **NEW**
   - `test_email_verification.py` - Email verification ✨ **NEW**
+  - `test_email_verification_enforcement.py` - Email verification enforcement ✨ **NEW**
   - `test_password_reset.py` - Password reset ✨ **NEW**
-  - `test_multi_currency_tax.py` - Multi-currency and tax ✨ **NEW**
-  - `test_currency_consistency.py` - Currency consistency ✨ **NEW**
-  - `test_payment_method_and_currency.py` - Payment methods ✨ **NEW**
   - `test_permission_checks.py` - Permission validation ✨ **NEW**
   - `test_pdf_generator.py` - PDF generation service ✨ **NEW**
   - `test_cors.py` - CORS configuration ✨ **NEW**
+  - `test_error_standardization.py` - Error response format ✨ **NEW**
 
 **Coverage includes:**
 
