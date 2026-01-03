@@ -1,6 +1,6 @@
 # Test Suite Documentation
 
-This directory contains comprehensive tests for the Multi-Tenant SaaS Backend, focusing on authentication, user management, tenant operations, and tenant isolation.
+This directory contains comprehensive tests for the Multi-Tenant SaaS Backend, covering all aspects of the application from authentication to invoice management, analytics, and platform administration.
 
 ## Table of Contents
 
@@ -14,27 +14,54 @@ This directory contains comprehensive tests for the Multi-Tenant SaaS Backend, f
 
 ## Overview
 
-The test suite validates the following core functionalities:
+The test suite validates all core functionalities across 28 test files:
 
-1. **Authentication & Authorization**: JWT-based authentication, token management, role-based access control (RBAC)
+1. **Authentication & Authorization**: JWT-based authentication, email verification, password reset, login throttling
 2. **User Management**: CRUD operations, role hierarchy, soft deletion (GDPR compliance)
-3. **Tenant Management**: Tenant CRUD operations, domain uniqueness, soft deletion
+3. **Tenant Management**: Tenant CRUD operations, branding with logos, domain uniqueness, suspension/reactivation
 4. **Tenant Isolation**: Cross-tenant access prevention, data isolation verification
-5. **Invoice Management**: Invoice CRUD, status lifecycle, export functionality
-6. **Integration Workflows**: End-to-end business processes, cross-module integration
+5. **Invoice Management**: Invoice CRUD, multi-currency support, tax calculations, PDF generation, email sending, status lifecycle
+6. **Analytics & Reporting**: Invoice summaries, revenue breakdowns
+7. **Audit Logging**: Comprehensive activity tracking and querying
+8. **Super Admin**: Platform-level administration and cross-tenant operations
+9. **Performance & Reliability**: Caching, background tasks, rate limiting, monitoring
+10. **Security**: CORS, error standardization, permission checks, authentication throttling
+11. **Integration Workflows**: End-to-end business processes, cross-module integration
 
 ## Test Structure
 
 ```bash
 tests/
-├── conftest.py                    # Test configuration and fixtures
-├── test_auth.py                   # Authentication tests
-├── test_users.py                  # User management tests
-├── test_tenants.py                # Tenant CRUD tests
-├── test_tenant_isolation.py       # Tenant isolation tests
-├── test_invoices.py               # Invoice CRUD and lifecycle tests
-├── test_integration.py            # End-to-end integration tests
-└── README.md                      # This file
+├── conftest.py                           # Test configuration and fixtures
+├── test_auth.py                          # Authentication tests
+├── test_auth_throttle.py                 # Authentication throttling tests
+├── test_users.py                         # User management tests
+├── test_tenants.py                       # Tenant CRUD tests
+├── test_tenant_isolation.py              # Tenant isolation tests
+├── test_tenant_logo.py                   # Tenant branding and logo tests
+├── test_invoices.py                      # Invoice CRUD and lifecycle tests
+├── test_invoice_pdf.py                   # Invoice PDF generation tests
+├── test_invoice_number_config.py         # Invoice numbering configuration tests
+├── test_multi_currency_tax.py            # Multi-currency and tax tests
+├── test_currency_consistency.py          # Currency consistency tests
+├── test_payment_method_and_currency.py   # Payment methods tests
+├── test_analytics.py                     # Analytics and reporting tests
+├── test_audit_logs.py                    # Audit logging tests
+├── test_superadmin.py                    # Super Admin functionality tests
+├── test_email_verification.py            # Email verification tests
+├── test_email_verification_enforcement.py # Email verification enforcement tests
+├── test_password_reset.py                # Password reset tests
+├── test_login_throttle.py                # Login delay/throttling tests
+├── test_permission_checks.py             # Permission validation tests
+├── test_rate_limiting.py                 # Rate limiting tests
+├── test_monitoring.py                    # Health checks and metrics tests
+├── test_background_tasks.py              # Celery background tasks tests
+├── test_performance.py                   # Performance benchmarking tests
+├── test_pdf_generator.py                 # PDF generation service tests
+├── test_cors.py                          # CORS configuration tests
+├── test_error_standardization.py         # Error response format tests
+├── test_integration.py                   # End-to-end integration tests
+└── README.md                             # This file
 ```
 
 ## Running Tests
@@ -71,94 +98,220 @@ pytest tests/test_auth.py::test_login_success
 ### Run Tests by Category
 
 ```bash
-# Authentication tests
-pytest tests/test_auth.py -v
+# Authentication and security tests
+pytest tests/test_auth.py tests/test_auth_throttle.py tests/test_login_throttle.py -v
+
+# Email verification tests
+pytest tests/test_email_verification.py tests/test_email_verification_enforcement.py -v
+
+# Password reset tests
+pytest tests/test_password_reset.py -v
 
 # User management tests
-pytest tests/test_users.py -v
+pytest tests/test_users.py tests/test_permission_checks.py -v
 
 # Tenant tests
-pytest tests/test_tenants.py -v
+pytest tests/test_tenants.py tests/test_tenant_logo.py tests/test_tenant_isolation.py -v
 
-# Tenant isolation tests
-pytest tests/test_tenant_isolation.py -v
+# Invoice tests
+pytest tests/test_invoices.py tests/test_invoice_pdf.py tests/test_invoice_number_config.py -v
+pytest tests/test_multi_currency_tax.py tests/test_currency_consistency.py -v
+
+# Analytics and reporting
+pytest tests/test_analytics.py -v
+
+# Audit logging and super admin
+pytest tests/test_audit_logs.py tests/test_superadmin.py -v
+
+# Performance and reliability
+pytest tests/test_performance.py tests/test_background_tasks.py tests/test_rate_limiting.py -v
+
+# Monitoring and infrastructure
+pytest tests/test_monitoring.py tests/test_cors.py tests/test_error_standardization.py -v
+
+# Integration tests
+pytest tests/test_integration.py -v
 ```
 
 ## Test Coverage
 
-### Authentication Tests (`test_auth.py`)
+The test suite includes **28 test files** with comprehensive coverage across all application features:
 
+### Authentication & Security Tests
+
+**test_auth.py** - Core authentication
 - ✅ User registration with validation
 - ✅ Duplicate email detection
-- ✅ Email format validation
-- ✅ Password length validation
+- ✅ Email and password validation
 - ✅ Password hashing verification
 - ✅ Successful login
 - ✅ Login with incorrect credentials
-- ✅ Login with non-existent user
 - ✅ Inactive user blocking
-- ✅ Token generation and structure
-- ✅ Token refresh flow
-- ✅ Invalid token handling
-- ✅ Token expiration inclusion
-- ✅ Different users get different tokens
+- ✅ Token generation and refresh
+- ✅ Token expiration and validation
 
-**Total**: 17+ test cases
+**test_auth_throttle.py** - Authentication throttling
+- ✅ Progressive login delays for failed attempts
+- ✅ OWASP ASVS compliance
 
-### User Management Tests (`test_users.py`)
+**test_login_throttle.py** - Login delay enforcement
+- ✅ Delay thresholds and time windows
+- ✅ Brute-force protection
 
+**test_email_verification.py** - Email verification
+- ✅ Verification token generation
+- ✅ Email verification flow
+- ✅ Verification email sending
+- ✅ Token expiration handling
+
+**test_email_verification_enforcement.py** - Email verification enforcement
+- ✅ Unverified user restrictions
+- ✅ Verification requirement checks
+
+**test_password_reset.py** - Password reset
+- ✅ Password reset request
+- ✅ Reset token generation
+- ✅ Password reset completion
+- ✅ Token expiration handling
+
+### User Management Tests
+
+**test_users.py** - User CRUD operations
 - ✅ Get current user info
-- ✅ Unauthorized access prevention
-- ✅ Invalid token rejection
-- ✅ List users (with role checks)
-- ✅ Pagination support
+- ✅ List users with pagination
 - ✅ Get user by ID
 - ✅ Update user information
-- ✅ Update verification status
 - ✅ Soft delete users (GDPR compliance)
+- ✅ Role-based access control validation
 - ✅ Self-deletion prevention
-- ✅ Role hierarchy validation
-  - Owner: Full access
-  - Admin: Manage users (except delete)
-  - Manager: Read-only self
-  - Attendant: Read-only self
-- ✅ Inactive user access prevention
 
-**Total**: 30+ test cases
+**test_permission_checks.py** - Permission validation
+- ✅ Role hierarchy enforcement
+- ✅ Owner, Admin, Manager, Attendant permissions
+- ✅ Cross-role access prevention
 
-### Tenant Tests (`test_tenants.py`)
+### Tenant Management Tests
 
+**test_tenants.py** - Tenant CRUD
 - ✅ Create tenant
-- ✅ Duplicate domain detection
-- ✅ Create tenant without domain
-- ✅ List all tenants
-- ✅ Pagination support
+- ✅ List tenants with pagination
 - ✅ Get tenant by ID
 - ✅ Update tenant information
-- ✅ Update tenant domain
-- ✅ Prevent duplicate domain on update
 - ✅ Soft delete tenant
-- ✅ Validation for name length (min/max)
-- ✅ Not found error handling
+- ✅ Domain uniqueness validation
 
-**Total**: 15+ test cases
+**test_tenant_logo.py** - Tenant branding
+- ✅ Logo upload
+- ✅ Logo retrieval
+- ✅ Logo deletion
+- ✅ File validation
 
-### Tenant Isolation Tests (`test_tenant_isolation.py`)
-
-- ✅ Users only see their tenant's users
-- ✅ Cannot access other tenant's users by ID
-- ✅ Cannot update other tenant's users
-- ✅ Cannot delete other tenant's users
+**test_tenant_isolation.py** - Multi-tenancy
+- ✅ User data isolation by tenant
+- ✅ Cross-tenant access prevention
+- ✅ JWT tenant_id enforcement
 - ✅ Bidirectional isolation verification
-- ✅ JWT tokens contain correct tenant_id
-- ✅ User list filtered by tenant
-- ✅ Cross-tenant access via auth token prevented
-- ✅ Global unique email constraint
-- ✅ Deactivated users don't affect other tenants
-- ✅ Registration enforces tenant_id
-- ✅ Comprehensive admin isolation test
 
-**Total**: 14+ test cases
+### Invoice Management Tests
+
+**test_invoices.py** - Invoice CRUD
+- ✅ Create invoice with items
+- ✅ List invoices with filters
+- ✅ Get invoice by ID
+- ✅ Update draft invoice
+- ✅ Delete draft invoice
+- ✅ Invoice status lifecycle
+- ✅ CSV/JSON export
+
+**test_invoice_pdf.py** - PDF generation
+- ✅ Generate invoice PDF
+- ✅ PDF download endpoint
+- ✅ Template rendering
+
+**test_invoice_number_config.py** - Invoice numbering
+- ✅ Custom number formats
+- ✅ Sequence management
+- ✅ Prefix configuration
+
+**test_multi_currency_tax.py** - Multi-currency and tax
+- ✅ Multi-currency invoices (USD, EUR, GBP, NGN)
+- ✅ Tax rate calculations
+- ✅ Currency-specific formatting
+
+**test_currency_consistency.py** - Currency consistency
+- ✅ Currency consistency across invoice items
+- ✅ Currency validation
+
+**test_payment_method_and_currency.py** - Payment methods
+- ✅ Payment method tracking
+- ✅ Payment-currency consistency
+
+### Analytics & Reporting Tests
+
+**test_analytics.py** - Analytics endpoints
+- ✅ Invoice summary statistics
+- ✅ Revenue breakdown by status
+- ✅ Tenant-scoped analytics
+
+### Audit & Administration Tests
+
+**test_audit_logs.py** - Audit logging
+- ✅ Action tracking
+- ✅ User audit logs
+- ✅ Resource audit logs
+- ✅ Audit log queries
+
+**test_superadmin.py** - Super Admin
+- ✅ Platform-wide tenant listing
+- ✅ Tenant suspension/reactivation
+- ✅ Cross-tenant user access
+- ✅ Platform statistics
+
+### Performance & Reliability Tests
+
+**test_performance.py** - Performance benchmarking
+- ✅ Response time measurements
+- ✅ Caching effectiveness
+- ✅ Query optimization
+
+**test_background_tasks.py** - Celery tasks
+- ✅ Email sending tasks
+- ✅ Background job processing
+- ✅ Task scheduling
+
+**test_rate_limiting.py** - Rate limiting
+- ✅ Tiered rate limits by role
+- ✅ Rate limit headers
+- ✅ Throttling behavior
+
+### Infrastructure Tests
+
+**test_monitoring.py** - Health & metrics
+- ✅ Health check endpoint
+- ✅ Prometheus metrics
+- ✅ Status reporting
+
+**test_cors.py** - CORS configuration
+- ✅ CORS headers
+- ✅ Origin validation
+
+**test_error_standardization.py** - Error handling
+- ✅ Standardized error responses
+- ✅ Error format consistency
+
+**test_pdf_generator.py** - PDF service
+- ✅ PDF generation service
+- ✅ Template handling
+- ✅ Error handling
+
+### Integration Tests
+
+**test_integration.py** - End-to-end workflows
+- ✅ Complete business process flows
+- ✅ Cross-module integration
+- ✅ Real-world scenarios
+
+**Total Test Coverage**: 28 test files, 144+ passing tests
 
 ## Test Files
 
