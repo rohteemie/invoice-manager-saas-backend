@@ -43,7 +43,10 @@ class TenantBase(BaseModel):
     )
     invoice_number_format: Optional[str] = Field(
         "{prefix}-{date}-{sequence:04d}", max_length=100,
-        description="Format string for invoice numbers. Supported placeholders: {prefix}, {date}, {sequence}"
+        description=(
+            "Format string for invoice numbers. "
+            "Supported placeholders: {prefix}, {date}, {sequence}"
+        )
     )
 
 
@@ -85,7 +88,10 @@ class TenantUpdate(BaseModel):
     )
     invoice_number_format: Optional[str] = Field(
         None, max_length=100,
-        description="Format string for invoice numbers. Supported placeholders: {prefix}, {date}, {sequence}"
+        description=(
+            "Format string for invoice numbers. "
+            "Supported placeholders: {prefix}, {date}, {sequence}"
+        )
     )
 
 

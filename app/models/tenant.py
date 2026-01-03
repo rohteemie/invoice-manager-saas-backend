@@ -19,9 +19,12 @@ class Tenant(Gen_Model, Base):
         address: Tenant business address for invoices (optional)
         phone: Tenant contact phone number (optional)
         email: Tenant contact email for invoices (optional)
-        invoice_number_prefix: Custom prefix for invoice numbers (default: 'INV')
-        invoice_number_format: Format string for invoice numbers (default: '{prefix}-{date}-{sequence:04d}')
-        invoice_number_sequence: Atomic counter for invoice numbering (default: 0)
+        invoice_number_prefix: Custom prefix for invoice numbers
+            (default: 'INV')
+        invoice_number_format: Format string for invoice numbers
+            (default: '{prefix}-{date}-{sequence:04d}')
+        invoice_number_sequence: Atomic counter for invoice numbering
+            (default: 0)
     """
     __tablename__ = "tenants"
 
@@ -37,8 +40,14 @@ class Tenant(Gen_Model, Base):
     address = Column(Text, nullable=True)
     phone = Column(String(20), nullable=True)
     email = Column(String(255), nullable=True)
-    invoice_number_prefix = Column(String(20), default="INV", nullable=False)
-    invoice_number_format = Column(String(100), default="{prefix}-{date}-{sequence:04d}", nullable=False)
+    invoice_number_prefix = Column(
+        String(20), default="INV", nullable=False
+    )
+    invoice_number_format = Column(
+        String(100),
+        default="{prefix}-{date}-{sequence:04d}",
+        nullable=False
+    )
     invoice_number_sequence = Column(Integer, default=0, nullable=False)
 
     def __init__(self, *args, **kwargs):
