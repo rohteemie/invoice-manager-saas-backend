@@ -69,7 +69,7 @@ def test_non_superadmin_cannot_access_admin_endpoints(
         headers=auth_headers
     )
     assert response.status_code == 403
-    assert "super admin" in response.json()["detail"].lower()
+    assert "super admin" in response.json()["message"].lower()
 
 
 def test_owner_cannot_access_admin_endpoints(
@@ -81,7 +81,7 @@ def test_owner_cannot_access_admin_endpoints(
         headers=auth_headers
     )
     assert response.status_code == 403
-    assert "super admin" in response.json()["detail"].lower()
+    assert "super admin" in response.json()["message"].lower()
 
 
 def test_superadmin_can_list_all_tenants(
@@ -166,7 +166,7 @@ def test_cannot_suspend_already_suspended_tenant(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 400
-    assert "already suspended" in response.json()["detail"].lower()
+    assert "already suspended" in response.json()["message"].lower()
 
 
 def test_cannot_reactivate_already_active_tenant(
@@ -180,7 +180,7 @@ def test_cannot_reactivate_already_active_tenant(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 400
-    assert "already active" in response.json()["detail"].lower()
+    assert "already active" in response.json()["message"].lower()
 
 
 def test_suspend_nonexistent_tenant_returns_404(
@@ -488,4 +488,4 @@ def test_cannot_register_user_without_tenant_if_not_superadmin(client, test_tena
         }
     )
     assert response.status_code == 400
-    assert "tenant_id is required" in response.json()["detail"].lower()
+    assert "tenant_id is required" in response.json()["message"].lower()

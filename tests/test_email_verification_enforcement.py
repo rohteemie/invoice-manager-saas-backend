@@ -66,8 +66,8 @@ def test_unverified_user_cannot_create_invoice(client, db_session):
 
     assert create_response.status_code == 403
     data = create_response.json()
-    assert "Email verification required" in data["detail"]
-    assert "verify your email" in data["detail"].lower()
+    assert "Email verification required" in data["message"]
+    assert "verify your email" in data["message"].lower()
 
 
 def test_verified_user_can_create_invoice(client, db_session):

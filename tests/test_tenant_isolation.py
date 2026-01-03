@@ -34,7 +34,7 @@ def test_user_cannot_access_other_tenant_user_by_id(
         headers=auth_headers
     )
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"].lower()
+    assert "not found" in response.json()["message"].lower()
 
 
 def test_user_cannot_update_other_tenant_user(

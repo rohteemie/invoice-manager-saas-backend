@@ -90,7 +90,7 @@ def test_verify_email_with_invalid_token(client):
 
     assert response.status_code == 400
     data = response.json()
-    assert "Invalid or expired" in data["detail"]
+    assert "Invalid or expired" in data["message"]
 
 
 def test_verify_email_already_verified(client, db_session):
@@ -131,7 +131,7 @@ def test_verify_email_already_verified(client, db_session):
     )
     assert second_verify.status_code == 400
     data = second_verify.json()
-    assert "Invalid or expired" in data["detail"]
+    assert "Invalid or expired" in data["message"]
 
 
 def test_verification_token_is_unique(client, db_session):
@@ -281,7 +281,7 @@ def test_verify_email_with_expired_token(client, db_session):
 
     assert verify_response.status_code == 400
     data = verify_response.json()
-    assert "expired" in data["detail"].lower()
+    assert "expired" in data["message"].lower()
 
 
 def test_resend_verification_email(client, db_session):
@@ -366,7 +366,7 @@ def test_resend_for_verified_user_fails(client, db_session):
 
     assert resend_response.status_code == 400
     data = resend_response.json()
-    assert "already verified" in data["detail"].lower()
+    assert "already verified" in data["message"].lower()
 
 
 def test_resend_for_nonexistent_email(client):

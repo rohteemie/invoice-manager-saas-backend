@@ -122,7 +122,7 @@ def test_login_nonexistent_user_applies_delay(client):
         )
 
         assert response.status_code == 401
-        assert "incorrect" in response.json()["detail"].lower()
+        assert "incorrect" in response.json()["message"].lower()
         # Verify delay was applied even for non-existent user
         mock_throttle.apply_delay.assert_called_once()
 
@@ -158,7 +158,7 @@ def test_login_error_messages_generic(client, test_user):
         # Both should have same generic error
         assert response1.status_code == 401
         assert response2.status_code == 401
-        assert response1.json()["detail"] == response2.json()["detail"]
+        assert response1.json()["message"] == response2.json()["message"]
 
 
 def test_login_audit_logs_throttle_events(client, test_user, db_session):

@@ -142,8 +142,9 @@ def test_payment_method_enum_invalid(
     )
     assert response.status_code == 422
     error = response.json()
-    assert "detail" in error
-    assert "Invalid payment method" in str(error["detail"])
+    assert "details" in error  # Changed from "detail" to "details" for validation errors
+    # Check details for validation error message
+    assert any("Invalid payment method" in str(detail) for detail in error["details"])
 
 
 def test_payment_method_enum_all_valid_values(
@@ -450,4 +451,4 @@ def test_payment_method_required_for_paid_status(
         headers=auth_headers
     )
     assert response.status_code == 400
-    assert "payment method" in response.json()["detail"].lower()
+    assert "payment method" in response.json()["message"].lower()

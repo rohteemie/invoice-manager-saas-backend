@@ -40,7 +40,7 @@ def test_list_users_as_admin_forbidden(client, admin_auth_headers, test_user, te
         headers=admin_auth_headers
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
 
 
 def test_list_users_as_owner(client, auth_headers):
@@ -60,7 +60,7 @@ def test_list_users_as_manager_forbidden(client, manager_auth_headers):
         headers=manager_auth_headers
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
 
 
 def test_list_users_as_attendant_forbidden(client, attendant_auth_headers):
@@ -90,7 +90,7 @@ def test_get_user_by_id_as_admin_forbidden(client, admin_auth_headers, test_user
         headers=admin_auth_headers
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
 
 
 def test_get_user_by_id_as_owner(client, auth_headers, test_admin):
@@ -120,7 +120,7 @@ def test_get_user_not_found(client, auth_headers):
         headers=auth_headers
     )
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"].lower()
+    assert "not found" in response.json()["message"].lower()
 
 
 def test_update_user_as_admin_forbidden(client, admin_auth_headers, test_attendant):
@@ -134,7 +134,7 @@ def test_update_user_as_admin_forbidden(client, admin_auth_headers, test_attenda
         }
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
 
 
 def test_update_user_as_owner(client, auth_headers, test_manager):
@@ -208,7 +208,7 @@ def test_delete_user_as_admin_forbidden(client, admin_auth_headers, test_attenda
         headers=admin_auth_headers
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
 
 
 def test_delete_user_as_manager_forbidden(client, manager_auth_headers, test_attendant):
@@ -227,7 +227,7 @@ def test_delete_self_forbidden(client, auth_headers, test_user):
         headers=auth_headers
     )
     assert response.status_code == 400
-    assert "cannot delete your own account" in response.json()["detail"].lower()
+    assert "cannot delete your own account" in response.json()["message"].lower()
 
 
 def test_delete_user_not_found(client, auth_headers):
@@ -251,7 +251,7 @@ def test_inactive_user_cannot_access_endpoints(client, inactive_user):
     )
     # Returns 401 (not 403) to avoid account enumeration
     assert response.status_code == 401
-    assert "incorrect" in response.json()["detail"].lower()
+    assert "incorrect" in response.json()["message"].lower()
 
 
 def test_role_hierarchy_owner_highest(client, auth_headers, test_admin, test_manager, test_attendant):
