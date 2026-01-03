@@ -20,7 +20,7 @@ from app.core.exception_handlers import (
     http_exception_handler,
     validation_exception_handler,
     database_exception_handler,
-    generic_exception_handler
+    generic_exception_handler,
 )
 
 
@@ -37,37 +37,37 @@ tags_metadata = [
     {
         "name": "auth",
         "description": "Authentication and authorization endpoints including user registration, login, "
-                       "email verification, and password reset functionality.",
+        "email verification, and password reset functionality.",
     },
     {
         "name": "tenants",
         "description": "Tenant (organization) management endpoints. Handles tenant CRUD operations, "
-                       "tenant registration with owner account, and tenant branding (logo management).",
+        "tenant registration with owner account, and tenant branding (logo management).",
     },
     {
         "name": "users",
         "description": "User management endpoints for CRUD operations on users within a tenant. "
-                       "Supports role-based access control and user profile management.",
+        "Supports role-based access control and user profile management.",
     },
     {
         "name": "invoices",
         "description": "Invoice management endpoints supporting full CRUD operations, multi-currency invoices, "
-                       "PDF generation, email sending, status lifecycle management, and data export (CSV/JSON).",
+        "PDF generation, email sending, status lifecycle management, and data export (CSV/JSON).",
     },
     {
         "name": "analytics",
         "description": "Analytics and reporting endpoints providing invoice summaries and revenue breakdowns "
-                       "for business intelligence and decision making.",
+        "for business intelligence and decision making.",
     },
     {
         "name": "audit-logs",
         "description": "Audit logging endpoints for tracking and querying user actions and system events. "
-                       "Provides comprehensive audit trails for compliance and security monitoring.",
+        "Provides comprehensive audit trails for compliance and security monitoring.",
     },
     {
         "name": "admin",
         "description": "Super Admin endpoints for platform-level administration. Allows cross-tenant operations, "
-                       "tenant suspension/reactivation, and platform-wide statistics. Restricted to Super Admin role only.",
+        "tenant suspension/reactivation, and platform-wide statistics. Restricted to Super Admin role only.",
     },
 ]
 
@@ -78,6 +78,7 @@ async def lifespan(app: FastAPI):
     init_db()
     init_sentry()
     yield
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -94,13 +95,13 @@ app = FastAPI(
         - Password reset functionality with secure token-based flow
         - Progressive login delay for brute-force protection (OWASP ASVS compliant)
         - Role-based access control (RBAC) with 5 role levels
-    
+
     * **👥 Multi-Tenancy**
         - Complete tenant isolation at database level
         - Tenant branding with custom logo upload
         - Tenant suspension and reactivation
         - Soft delete for GDPR compliance
-    
+
     * **📄 Invoice Management**
         - Full CRUD operations with draft, sent, paid, and overdue statuses
         - Multi-currency support (USD, EUR, GBP, NGN)
@@ -109,22 +110,22 @@ app = FastAPI(
         - Email sending for invoices
         - Branch and customer metadata tracking
         - CSV and JSON export capabilities
-    
+
     * **📊 Analytics & Reporting**
         - Invoice summary statistics
         - Revenue breakdown by status
         - Tenant-scoped analytics
-    
+
     * **🛡️ Platform Administration**
         - Super Admin role for platform-level management
         - Cross-tenant user and audit log visibility
         - Platform statistics and health monitoring
-    
+
     * **📝 Audit Logging**
         - Comprehensive audit trail for all critical operations
         - User action tracking
         - Resource-specific audit log queries
-    
+
     * **⚡ Performance & Reliability**
         - Redis caching for frequently accessed data
         - Background task processing with Celery
@@ -164,7 +165,7 @@ app = FastAPI(
     ### 📖 API Version
 
     Current: **v1.0.0**
-    
+
     ### 🔒 Security Notes
 
     All endpoints except public registration and login require JWT authentication via the `Authorization: Bearer <token>` header.
@@ -174,17 +175,14 @@ app = FastAPI(
     contact={
         "name": "Rotimi Owolabi",
         "url": "https://github.com/rohteemie/invoice-manager-saas-backend",
-        "email": "rotimijournal@outlook.com"
+        "email": "rotimijournal@outlook.com",
     },
-    license_info={
-        "name": "MIT License",
-        "url": "https://opensource.org/licenses/MIT"
-    },
+    license_info={"name": "MIT License", "url": "https://opensource.org/licenses/MIT"},
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     openapi_tags=tags_metadata,
     redoc_url="/redoc",
     docs_url="/docs",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -221,17 +219,17 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
     summary="API Root",
     description="Welcome endpoint providing basic API information and links to documentation.",
     tags=["Root"],
-    response_description="API welcome message with version and documentation links"
+    response_description="API welcome message with version and documentation links",
 )
 def root():
     """
     Root endpoint of the Multi-Tenant SaaS Backend API.
-    
+
     Returns basic API information including:
     - Welcome message
     - API version
     - Link to interactive documentation
-    
+
     This endpoint is publicly accessible and requires no authentication.
     """
     return {
@@ -239,7 +237,7 @@ def root():
         "version": "1.0.0",
         "docs": "/docs",
         "redoc": "/redoc",
-        "api_base": "/api/v1"
+        "api_base": "/api/v1",
     }
 
 
@@ -248,17 +246,17 @@ def root():
     summary="Health Check",
     description="Health check endpoint for monitoring systems, load balancers, and orchestrators.",
     tags=["Monitoring"],
-    response_description="Health status of the application"
+    response_description="Health status of the application",
 )
 def health_check():
     """
     Health check endpoint for monitoring and load balancers.
-    
+
     Returns the current health status of the application including:
     - Health status (healthy/unhealthy)
     - Application version
     - Current environment (development/staging/production)
-    
+
     This endpoint is publicly accessible and requires no authentication.
     Used by:
     - Kubernetes liveness/readiness probes
@@ -268,7 +266,7 @@ def health_check():
     return {
         "status": "healthy",
         "version": "1.0.0",
-        "environment": settings.ENVIRONMENT
+        "environment": settings.ENVIRONMENT,
     }
 
 
@@ -277,21 +275,21 @@ def health_check():
     summary="Prometheus Metrics",
     description="Prometheus-compatible metrics endpoint for performance monitoring and alerting.",
     tags=["Monitoring"],
-    response_description="Application metrics in Prometheus text format"
+    response_description="Application metrics in Prometheus text format",
 )
 def metrics():
     """
     Prometheus metrics endpoint for observability.
-    
+
     Provides application performance metrics including:
     - Request counts and latencies
     - Error rates
     - Active connections
     - Custom business metrics
-    
+
     This endpoint is publicly accessible but should be restricted to monitoring systems in production.
     Metrics are formatted in Prometheus text exposition format.
-    
+
     Typically scraped by:
     - Prometheus server
     - Grafana Cloud
