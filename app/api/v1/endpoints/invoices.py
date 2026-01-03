@@ -56,19 +56,19 @@ def validate_invoice_number_format(format_string: str) -> bool:
     Valid placeholders:
         - {prefix}: Custom prefix from tenant configuration
         - {date}: Current date in YYYYMMDD format
-        - {sequence}: Atomic sequence number with optional formatting
+        - {sequence}: Atomic sequence number with optional formatting (e.g., {sequence:04d})
     """
     if not format_string:
         return False
     
-    # Check for required placeholders
+    # Check for required placeholders ('{sequence' matches both {sequence} and {sequence:04d})
     allowed_placeholders = ['{prefix}', '{date}', '{sequence']
     has_valid_placeholder = any(ph in format_string for ph in allowed_placeholders)
     
     if not has_valid_placeholder:
         return False
     
-    # Test formatting with sample values
+    # Test formatting with sample values to ensure format is valid
     try:
         test_result = format_string.format(
             prefix="TEST",
