@@ -27,6 +27,7 @@ from app.schemas.invoice import (
     InvoiceUpdate,
     InvoiceStatusUpdate
 )
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.deps import (
     get_current_user,
     require_role,
@@ -176,7 +177,7 @@ def create_invoice(
         )
 
 
-@router.get("/", response_model=List[Invoice])
+@router.get("/", response_model=PaginatedResponse[Invoice])
 def list_invoices(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -190,6 +191,15 @@ def list_invoices(
 
     Permissions: All authenticated users can list invoices.
     Results are automatically filtered by tenant_id.
+    
+    Returns paginated response with metadata:
+    - items: List of invoices
+    - total: Total count of invoices
+    - page: Current page number
+    - size: Items per page
+    - pages: Total number of pages
+    - has_next: Whether there is a next page
+    - has_previous: Whether there is a previous page
     """
     query = db.query(InvoiceModel).filter(
         InvoiceModel.tenant_id == current_user.tenant_id
@@ -198,8 +208,18 @@ def list_invoices(
     if status:
         query = query.filter(InvoiceModel.status == status)
 
+    # Get total count
+    total = query.count()
+    
+    # Get paginated items
     invoices = query.offset(skip).limit(limit).all()
-    return invoices
+    
+    return create_paginated_response(
+        items=invoices,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 
 @router.get("/{invoice_id}", response_model=Invoice)

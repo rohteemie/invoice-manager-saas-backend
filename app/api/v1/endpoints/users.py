@@ -3,11 +3,12 @@ User management endpoints with role-based access control.
 Supports CRUD operations with tenant-aware data isolation.
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User as UserModel, UserRole
 from app.schemas.user import User, UserUpdate
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.deps import get_current_user, require_role
 from app.services.audit_logger import log_user_event
 from app.models.audit_log import AuditAction
@@ -28,10 +29,10 @@ def get_current_user_info(
     return current_user
 
 
-@router.get("/", response_model=List[User])
+@router.get("/", response_model=PaginatedResponse[User])
 def list_users(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -41,11 +42,32 @@ def list_users(
     - Requires Owner role
     - Returns only users from same tenant (data isolation)
     - Supports pagination
+    
+    Returns paginated response with metadata:
+    - items: List of users
+    - total: Total count of users
+    - page: Current page number
+    - size: Items per page
+    - pages: Total number of pages
+    - has_next: Whether there is a next page
+    - has_previous: Whether there is a previous page
     """
-    users = db.query(UserModel).filter(
+    query = db.query(UserModel).filter(
         UserModel.tenant_id == current_user.tenant_id
-    ).offset(skip).limit(limit).all()
-    return users
+    )
+    
+    # Get total count
+    total = query.count()
+    
+    # Get paginated items
+    users = query.offset(skip).limit(limit).all()
+    
+    return create_paginated_response(
+        items=users,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 
 @router.get("/{user_id}", response_model=User)
