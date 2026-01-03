@@ -68,7 +68,7 @@ class InvoiceBase(BaseModel):
 class InvoiceCreate(InvoiceBase):
     """Schema for creating a new invoice."""
     items: List[InvoiceItemCreate] = Field(
-        ..., min_length=1, description="Invoice line items"
+        ..., min_length=1, max_length=100, description="Invoice line items"
     )
 
 
@@ -85,7 +85,9 @@ class InvoiceUpdate(BaseModel):
     issue_date: Optional[str] = None
     due_date: Optional[str] = None
     notes: Optional[str] = Field(None, max_length=1000)
-    items: Optional[List[InvoiceItemCreate]] = None
+    items: Optional[List[InvoiceItemCreate]] = Field(
+        None, min_length=1, max_length=100
+    )
 
 
 class InvoiceStatusUpdate(BaseModel):

@@ -81,6 +81,176 @@ def test_create_invoice_no_items(client, auth_headers):
     assert response.status_code == 422  # Validation error
 
 
+def test_create_invoice_too_many_items(client, auth_headers):
+    """Test that invoice creation fails with more than 100 items."""
+    # Create 101 items to exceed the maximum
+    items = [
+        {
+            "description": f"Item {i}",
+            "quantity": 1,
+            "unit_price": 10.00
+        }
+        for i in range(101)
+    ]
+
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "issue_date": "2024-01-15",
+            "items": items
+        },
+        headers=auth_headers
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_create_invoice_negative_quantity(client, auth_headers):
+    """Test that invoice creation fails with negative quantity."""
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product A",
+                    "quantity": -1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=auth_headers
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_create_invoice_zero_quantity(client, auth_headers):
+    """Test that invoice creation fails with zero quantity."""
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product A",
+                    "quantity": 0,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=auth_headers
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_create_invoice_negative_unit_price(client, auth_headers):
+    """Test that invoice creation fails with negative unit price."""
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product A",
+                    "quantity": 1,
+                    "unit_price": -50.00
+                }
+            ]
+        },
+        headers=auth_headers
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_create_invoice_max_items_allowed(client, auth_headers):
+    """Test that invoice creation succeeds with exactly 100 items."""
+    # Create exactly 100 items (the maximum allowed)
+    items = [
+        {
+            "description": f"Item {i}",
+            "quantity": 1,
+            "unit_price": 10.00
+        }
+        for i in range(100)
+    ]
+
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "John Doe",
+            "issue_date": "2024-01-15",
+            "items": items
+        },
+        headers=auth_headers
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert len(data["items"]) == 100
+    assert float(data["subtotal"]) == 1000.00  # 100 items * 10.00 each
+
+
+def test_update_invoice_too_many_items(client, auth_headers, manager_auth_headers):
+    """Test that invoice update fails with more than 100 items."""
+    # Create an invoice first
+    create_response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Test",
+            "issue_date": "2024-01-15",
+            "items": [
+                {"description": "Original Item", "quantity": 1, "unit_price": 100}
+            ]
+        },
+        headers=auth_headers
+    )
+    invoice_id = create_response.json()["id"]
+
+    # Try to update with 101 items
+    items = [
+        {
+            "description": f"Item {i}",
+            "quantity": 1,
+            "unit_price": 10.00
+        }
+        for i in range(101)
+    ]
+
+    response = client.put(
+        f"/api/v1/invoices/{invoice_id}",
+        json={"items": items},
+        headers=manager_auth_headers
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_update_invoice_empty_items(client, auth_headers, manager_auth_headers):
+    """Test that invoice update fails with empty items list."""
+    # Create an invoice first
+    create_response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Test",
+            "issue_date": "2024-01-15",
+            "items": [
+                {"description": "Original Item", "quantity": 1, "unit_price": 100}
+            ]
+        },
+        headers=auth_headers
+    )
+    invoice_id = create_response.json()["id"]
+
+    # Try to update with empty items list
+    response = client.put(
+        f"/api/v1/invoices/{invoice_id}",
+        json={"items": []},
+        headers=manager_auth_headers
+    )
+    assert response.status_code == 422  # Validation error
+
+
 def test_create_invoice_unauthenticated(client):
     """Test that unauthenticated users cannot create invoices."""
     response = client.post(
@@ -113,7 +283,7 @@ def test_list_invoices(client, auth_headers):
     response = client.get("/api/v1/invoices/", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination metadata
     assert "items" in data
     assert "total" in data
@@ -122,7 +292,7 @@ def test_list_invoices(client, auth_headers):
     assert "pages" in data
     assert "has_next" in data
     assert "has_previous" in data
-    
+
     # Check items
     assert len(data["items"]) >= 3
     assert data["total"] >= 3
@@ -139,11 +309,11 @@ def test_list_invoices_with_status_filter(client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination metadata
     assert "items" in data
     assert "total" in data
-    
+
     # Check items
     for invoice in data["items"]:
         assert invoice["status"] == "draft"
@@ -157,7 +327,7 @@ def test_list_invoices_pagination(client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination metadata
     assert "items" in data
     assert "total" in data
@@ -166,7 +336,7 @@ def test_list_invoices_pagination(client, auth_headers):
     assert "pages" in data
     assert "has_next" in data
     assert "has_previous" in data
-    
+
     # Check items
     assert len(data["items"]) <= 2
     assert data["size"] == 2
@@ -196,7 +366,7 @@ def test_pagination_metadata(client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["total"] >= 10
     assert data["page"] == 1
     assert data["size"] == 5
@@ -212,7 +382,7 @@ def test_pagination_metadata(client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["page"] == 2
     assert data["size"] == 5
     assert data["has_previous"] is True
