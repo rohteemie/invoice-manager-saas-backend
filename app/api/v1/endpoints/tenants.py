@@ -1,4 +1,6 @@
 from typing import List
+import logging
+
 from fastapi import (
     APIRouter, Depends, HTTPException, UploadFile, File, Request
 )
@@ -21,6 +23,7 @@ from app.models.audit_log import AuditAction
 from app.tasks.email_tasks import send_verification_email_task
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/", response_model=Tenant, status_code=201)
@@ -136,8 +139,6 @@ def register_tenant_with_owner(
             )
         except Exception as e:
             # Log but don't fail registration if email fails
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(
                 "Failed to queue verification email for %s: %s",
                 db_owner.email, str(e)

@@ -22,6 +22,21 @@ from app.services.email_service import (
 logger = logging.getLogger(__name__)
 
 
+def calculate_retry_delay(retry_count: int, base_delay: int = 60) -> int:
+    """
+    Calculate exponential backoff delay for task retries.
+
+    Args:
+        retry_count: Current retry attempt number (0-indexed)
+        base_delay: Base delay in seconds (default: 60)
+
+    Returns:
+        Delay in seconds (base_delay * 2^retry_count)
+    """
+    return base_delay * (2 ** retry_count)
+
+
+
 @celery_app.task(
     name='app.tasks.email_tasks.send_verification_email_task',
     bind=True,
@@ -86,7 +101,7 @@ def send_verification_email_task(
             }
         else:
             # Retry with exponential backoff
-            retry_delay = 60 * (2 ** self.request.retries)  # Exponential backoff
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send verification email"
             ))
@@ -99,7 +114,7 @@ def send_verification_email_task(
 
         # Retry with exponential backoff if not max retries
         if self.request.retries < self.max_retries:
-            retry_delay = 60 * (2 ** self.request.retries)
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
 
         return {
@@ -172,7 +187,7 @@ def send_password_reset_email_task(
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
         else:
-            retry_delay = 60 * (2 ** self.request.retries)
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send password reset email"
             ))
@@ -184,7 +199,7 @@ def send_password_reset_email_task(
         )
 
         if self.request.retries < self.max_retries:
-            retry_delay = 60 * (2 ** self.request.retries)
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
 
         return {
@@ -257,7 +272,7 @@ def send_verification_reminder_task(
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
         else:
-            retry_delay = 60 * (2 ** self.request.retries)
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send reminder email"
             ))
@@ -269,7 +284,7 @@ def send_verification_reminder_task(
         )
 
         if self.request.retries < self.max_retries:
-            retry_delay = 60 * (2 ** self.request.retries)
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
 
         return {
@@ -359,7 +374,7 @@ def send_invoice_email_task(
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
         else:
-            retry_delay = 60 * (2 ** self.request.retries)
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=Exception(
                 "Failed to send invoice email"
             ))
@@ -371,7 +386,7 @@ def send_invoice_email_task(
         )
 
         if self.request.retries < self.max_retries:
-            retry_delay = 60 * (2 ** self.request.retries)
+            retry_delay = calculate_retry_delay(self.request.retries)
             raise self.retry(countdown=retry_delay, exc=exc)
 
         return {

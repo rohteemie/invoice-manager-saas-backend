@@ -100,13 +100,13 @@ def get_configured_email_provider() -> Optional[EmailProvider]:
 
         else:
             logger.warning(
-                f"Unknown email provider type: {provider_type}"
+                "Unknown email provider type: %s", provider_type
             )
             return None
 
     except Exception as e:
         logger.error(
-            f"Failed to initialize email provider: {e}",
+            "Failed to initialize email provider: %s", str(e),
             exc_info=True
         )
         return None

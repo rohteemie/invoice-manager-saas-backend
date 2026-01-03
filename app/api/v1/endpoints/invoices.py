@@ -1,4 +1,7 @@
 from typing import List, Optional
+import base64
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
@@ -8,7 +11,6 @@ from datetime import datetime, date, timezone
 import csv
 import io
 import json
-import logging
 
 from app.db.session import get_db
 from app.models.invoice import (
@@ -574,7 +576,6 @@ def send_invoice(
     total_amount = f"{currency_symbol}{invoice.total_amount:,.2f}"
 
     # Send email with PDF asynchronously
-    import base64
     pdf_bytes_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
 
     try:
