@@ -5,7 +5,7 @@ Provides a standardized pagination response format with metadata
 about total count, pages, and navigation helpers.
 """
 from typing import Generic, TypeVar, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from math import ceil
 
 
@@ -33,9 +33,8 @@ class PaginatedResponse(BaseModel, Generic[T]):
     has_next: bool = Field(..., description="Whether there is a next page")
     has_previous: bool = Field(..., description="Whether there is a previous page")
 
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": [],
                 "total": 150,
@@ -46,6 +45,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
                 "has_previous": False
             }
         }
+    )
 
 
 def create_paginated_response(

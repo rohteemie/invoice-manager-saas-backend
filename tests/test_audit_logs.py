@@ -302,7 +302,16 @@ def test_list_audit_logs_as_admin(client, admin_auth_headers, db_session):
     )
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    assert "pages" in data
+    assert "has_next" in data
+    assert "has_previous" in data
+    assert isinstance(data["items"], list)
 
 
 def test_list_audit_logs_with_filters(
@@ -318,7 +327,10 @@ def test_list_audit_logs_with_filters(
     )
     assert response.status_code == 200
     data = response.json()
-    for log in data:
+    
+    # Check pagination structure
+    assert "items" in data
+    for log in data["items"]:
         assert log["action"] == AuditAction.LOGIN.value
 
     # Filter by user_id
@@ -328,7 +340,7 @@ def test_list_audit_logs_with_filters(
     )
     assert response.status_code == 200
     data = response.json()
-    for log in data:
+    for log in data["items"]:
         if log["user_id"]:
             assert log["user_id"] == test_user.id
 
@@ -347,8 +359,12 @@ def test_list_audit_logs_with_multiple_filters(
     )
     assert response.status_code == 200
     data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    
     # Verify all returned logs have one of the specified actions
-    for log in data:
+    for log in data["items"]:
         assert log["action"] in [
             AuditAction.LOGIN.value,
             AuditAction.LOGIN_FAILED.value
@@ -363,7 +379,7 @@ def test_list_audit_logs_with_multiple_filters(
     assert response.status_code == 200
     data = response.json()
     # Verify all returned logs have one of the specified resource types
-    for log in data:
+    for log in data["items"]:
         assert log["resource_type"] in [
             ResourceType.USER.value,
             ResourceType.AUTH.value
@@ -378,7 +394,16 @@ def test_list_audit_logs_pagination(client, admin_auth_headers, db_session):
     )
     assert response.status_code == 200
     data = response.json()
-    assert len(data) <= 5
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    
+    assert len(data["items"]) <= 5
+    assert data["size"] == 5
+    assert data["page"] == 1
 
 
 def test_get_audit_log_by_id(client, admin_auth_headers, db_session):

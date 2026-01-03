@@ -93,9 +93,16 @@ def test_superadmin_can_list_all_tenants(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    tenants = response.json()
-    assert len(tenants) >= 2
-    tenant_ids = [t["id"] for t in tenants]
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    
+    assert len(data["items"]) >= 2
+    tenant_ids = [t["id"] for t in data["items"]]
     assert test_tenant.id in tenant_ids
     assert second_tenant.id in tenant_ids
 
@@ -203,9 +210,14 @@ def test_superadmin_can_list_all_users(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    users = response.json()
-    assert len(users) >= 2
-    user_ids = [u["id"] for u in users]
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    
+    assert len(data["items"]) >= 2
+    user_ids = [u["id"] for u in data["items"]]
     assert test_user.id in user_ids
     assert test_admin.id in user_ids
 
@@ -219,9 +231,13 @@ def test_superadmin_can_filter_users_by_tenant(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    users = response.json()
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    
     # All users should belong to the specified tenant
-    for user in users:
+    for user in data["items"]:
         if user["tenant_id"]:  # Skip superadmins
             assert user["tenant_id"] == test_tenant.id
 
@@ -378,8 +394,17 @@ def test_pagination_on_tenant_list(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    tenants = response.json()
-    assert len(tenants) == 1
+    data = response.json()
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    
+    assert len(data["items"]) == 1
+    assert data["size"] == 1
+    assert data["page"] == 1
 
 
 def test_pagination_on_user_list(
@@ -391,8 +416,13 @@ def test_pagination_on_user_list(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    users = response.json()
-    assert len(users) == 1
+    data = response.json()
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    
+    assert len(data["items"]) == 1
 
 
 def test_pagination_on_audit_log_list(
@@ -404,9 +434,13 @@ def test_pagination_on_audit_log_list(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    logs = response.json()
-    assert isinstance(logs, list)
-    assert len(logs) <= 10
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)
+    assert len(data["items"]) <= 10
 
 
 def test_superadmin_token_includes_is_superadmin_flag(
