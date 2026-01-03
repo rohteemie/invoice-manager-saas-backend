@@ -46,6 +46,14 @@ class TestInvoiceLifecycleIntegration:
         user_data = register_response.json()
         assert user_data["email"] == "workflow.manager@testcompany.com"
 
+        # Verify the user's email to allow invoice creation
+        from app.models.user import User as UserModel
+        user = db_session.query(UserModel).filter(
+            UserModel.email == "workflow.manager@testcompany.com"
+        ).first()
+        user.is_verified = True
+        db_session.commit()
+
         # Step 2: Login with the new user
         login_response = client.post(
             "/api/v1/auth/login",
@@ -533,7 +541,7 @@ class TestBusinessScenarios:
                 "issue_date": "2024-01-15",
                 "items": [
                     {
-                        "description": f"Order {i+1}",
+                        "description": f"Order {i + 1}",
                         "quantity": 1,
                         "unit_price": (i + 1) * 50
                     }
@@ -605,8 +613,8 @@ class TestBusinessScenarios:
             response = client.post(
                 "/api/v1/invoices/",
                 json={
-                    "customer_name": f"Customer {i+2}",
-                    "customer_email": f"customer{i+2}@example.com",
+                    "customer_name": f"Customer {i + 2}",
+                    "customer_email": f"customer{i + 2}@example.com",
                     "issue_date": "2024-01-15",
                     "items": [{"description": "Item", "quantity": 1, "unit_price": 150}]
                 },
