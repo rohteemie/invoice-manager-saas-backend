@@ -432,7 +432,11 @@ def test_get_user_audit_logs(
     )
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)
 
 
 def test_get_resource_audit_logs(
@@ -467,7 +471,11 @@ def test_get_resource_audit_logs(
     )
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)
 
 
 def test_audit_logs_tenant_isolation(
@@ -482,8 +490,11 @@ def test_audit_logs_tenant_isolation(
     assert response.status_code == 200
     data = response.json()
 
+    # Check pagination structure
+    assert "items" in data
+    
     # Verify all logs belong to the user's tenant
-    for log in data:
+    for log in data["items"]:
         # Logs may have tenant_id or be null for certain actions
         if log["tenant_id"]:
             # Cannot directly access current user's tenant from here,
@@ -561,4 +572,8 @@ def test_audit_log_date_filtering(client, admin_auth_headers, db_session):
     )
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)

@@ -57,7 +57,12 @@ def test_superadmin_can_access_admin_endpoints(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)
 
 
 def test_non_superadmin_cannot_access_admin_endpoints(
@@ -267,8 +272,11 @@ def test_superadmin_can_filter_users_by_active_status(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    users = response.json()
-    for user in users:
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    for user in data["items"]:
         assert user["is_active"] is True
     
     # Filter for inactive users
@@ -277,9 +285,9 @@ def test_superadmin_can_filter_users_by_active_status(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    users = response.json()
-    assert len(users) >= 1
-    assert any(u["email"] == "inactive@test.com" for u in users)
+    data = response.json()
+    assert len(data["items"]) >= 1
+    assert any(u["email"] == "inactive@test.com" for u in data["items"])
 
 
 def test_superadmin_can_filter_users_by_superadmin_status(
@@ -291,9 +299,12 @@ def test_superadmin_can_filter_users_by_superadmin_status(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    users = response.json()
-    assert len(users) >= 1
-    assert any(u["email"] == "superadmin@platform.com" for u in users)
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    assert len(data["items"]) >= 1
+    assert any(u["email"] == "superadmin@platform.com" for u in data["items"])
 
 
 def test_superadmin_can_view_platform_audit_logs(
@@ -305,8 +316,12 @@ def test_superadmin_can_view_platform_audit_logs(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    logs = response.json()
-    assert isinstance(logs, list)
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)
 
 
 def test_superadmin_can_filter_audit_logs_by_tenant(
@@ -318,9 +333,13 @@ def test_superadmin_can_filter_audit_logs_by_tenant(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    logs = response.json()
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    
     # All logs should belong to the specified tenant
-    for log in logs:
+    for log in data["items"]:
         if log["tenant_id"]:
             assert log["tenant_id"] == test_tenant.id
 
@@ -334,9 +353,13 @@ def test_superadmin_can_filter_audit_logs_by_user(
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
-    logs = response.json()
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    
     # All logs should belong to the specified user
-    for log in logs:
+    for log in data["items"]:
         if log["user_id"]:
             assert log["user_id"] == test_user.id
 
