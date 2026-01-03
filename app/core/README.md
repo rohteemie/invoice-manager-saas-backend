@@ -8,9 +8,21 @@ This directory contains core application utilities and configurations that are u
 
 ```bash
 core/
-├── config.py     # Application configuration and settings
-├── deps.py       # Dependency injection functions
-└── security.py   # Security utilities (JWT, password hashing)
+├── __init__.py              # Core module initialization
+├── config.py                # Application configuration and settings
+├── deps.py                  # Dependency injection functions
+├── security.py              # Security utilities (JWT, password hashing, tokens)
+├── email.py                 # Email sending utilities
+├── cache.py                 # Redis caching utilities
+├── celery_app.py            # Celery configuration for background tasks
+├── rate_limit.py            # Rate limiting configuration
+├── rate_limit_middleware.py # Rate limiting middleware
+├── login_throttle.py        # Progressive login delay/throttling
+├── metrics.py               # Prometheus metrics collection
+├── logging.py               # Structured logging middleware
+├── sentry.py                # Sentry error tracking integration
+├── exceptions.py            # Custom exception classes
+└── exception_handlers.py    # Global exception handlers
 ```
 
 ## Modules
@@ -388,6 +400,103 @@ def get_invoices(
     ).all()
     return invoices
 ```
+
+## Additional Core Modules
+
+### Email Service (`email.py`)
+
+Handles email sending for notifications, verification, and password reset:
+
+- Email verification token generation and sending
+- Password reset email functionality
+- Uses SendGrid for email delivery
+- Template-based email composition
+- Asynchronous email sending via Celery tasks
+
+### Caching (`cache.py`)
+
+Redis-based caching for performance optimization:
+
+- Cache configuration and initialization
+- Cache key generation utilities
+- TTL (time-to-live) management
+- Cache invalidation helpers
+- Used for frequently accessed data (analytics, tenant settings)
+
+### Background Tasks (`celery_app.py`)
+
+Celery configuration for asynchronous task processing:
+
+- Email sending tasks
+- Scheduled invoice status updates
+- Data export generation
+- PDF generation (when needed)
+- Task monitoring and error handling
+
+### Rate Limiting (`rate_limit.py`, `rate_limit_middleware.py`)
+
+Tiered rate limiting based on user role:
+
+- **Unauthenticated**: 20 requests/minute
+- **Attendant**: 100 requests/minute
+- **Manager**: 200 requests/minute
+- **Admin**: 500 requests/minute
+- **Owner**: 1000 requests/minute
+- Read operations get 2x multiplier
+- Custom rate limit exempt IPs
+- Rate limit headers in responses
+
+### Login Throttling (`login_throttle.py`)
+
+Progressive login delay for brute-force protection (OWASP ASVS compliant):
+
+- Short delay (2s) for 4-5 failed attempts
+- Medium delay (30s) for 6-8 failed attempts
+- Long delay (900s/15min) for 9+ failed attempts
+- Failure tracking with time windows
+- Per-account throttling
+
+### Monitoring (`metrics.py`, `logging.py`)
+
+Application observability and monitoring:
+
+**Metrics (`metrics.py`):**
+- Prometheus-compatible metrics endpoint
+- Request counts and latencies
+- Error rates and status codes
+- Custom business metrics
+
+**Logging (`logging.py`):**
+- Structured JSON logging
+- Request/response logging middleware
+- Correlation IDs for request tracking
+- Integration with Sentry for error tracking
+
+### Error Tracking (`sentry.py`)
+
+Sentry integration for production error monitoring:
+
+- Automatic error capture
+- Performance monitoring
+- Release tracking
+- Environment-specific configuration
+- User context capture
+
+### Exception Handling (`exceptions.py`, `exception_handlers.py`)
+
+Standardized error responses:
+
+**Custom Exceptions (`exceptions.py`):**
+- `AppException` - Base application exception
+- Domain-specific exception classes
+- Error codes and messages
+
+**Exception Handlers (`exception_handlers.py`):**
+- Centralized exception handling
+- Consistent error response format
+- HTTP exception normalization
+- Validation error formatting
+- Database error handling
 
 ### Password Update Example
 

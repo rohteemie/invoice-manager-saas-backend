@@ -12,7 +12,8 @@ models/
 ├── general_model.py      # Base model with common fields
 ├── tenant.py             # Tenant model for multi-tenancy
 ├── user.py               # User model with RBAC
-└── invoice.py            # Invoice and InvoiceItem models
+├── invoice.py            # Invoice and InvoiceItem models
+└── audit_log.py          # Audit log model for activity tracking
 ```
 
 ## Models
@@ -270,6 +271,62 @@ item = InvoiceItem(
 )
 ```
 
+### AuditLog Model (`audit_log.py`)
+
+Tracks all critical operations for security, compliance, and debugging purposes.
+
+**Table:** `audit_logs`
+
+**Fields:**
+
+- `id`: String (UUID) - Primary key (inherited from Gen_Model)
+- `user_id`: String(60) - Foreign key to users table (nullable for failed logins, indexed)
+- `tenant_id`: String(60) - Foreign key to tenants table (nullable for platform-wide events, indexed)
+- `action`: Enum(AuditAction) - Type of action performed (indexed)
+- `resource_type`: Enum(ResourceType) - Type of resource affected
+- `resource_id`: String(60) - ID of affected resource (nullable, indexed)
+- `ip_address`: String(45) - Client IP address
+- `user_agent`: String(255) - Client user agent
+- `changes`: Text - JSON string with before/after state for updates
+- `description`: Text - Human-readable action description
+- `status`: String(20) - Action status (success/failure)
+- `created_at`: DateTime - Creation timestamp (inherited)
+- `updated_at`: DateTime - Update timestamp (inherited)
+
+**AuditAction Enum:** Includes LOGIN, LOGOUT, USER_CREATED, TENANT_CREATED, INVOICE_CREATED, DATA_EXPORTED, and more.
+
+**ResourceType Enum:** USER, TENANT, INVOICE, INVOICE_ITEM, AUTH, EXPORT
+
+**Relationships:**
+
+- `user_id` → Foreign key to `users.id` (nullable)
+- `tenant_id` → Foreign key to `tenants.id` (nullable)
+
+**Use Cases:**
+
+- Security monitoring and intrusion detection
+- Compliance and regulatory requirements (GDPR, SOC 2)
+- Debugging and troubleshooting
+- User activity tracking
+- Forensic analysis of security incidents
+
+**Example:**
+
+```python
+from app.models.audit_log import AuditLog, AuditAction, ResourceType
+
+audit_log = AuditLog(
+    user_id="user-uuid",
+    tenant_id="tenant-uuid",
+    action=AuditAction.INVOICE_CREATED,
+    resource_type=ResourceType.INVOICE,
+    resource_id="invoice-uuid",
+    ip_address="192.168.1.1",
+    description="Created invoice INV-2024-0001",
+    status="success"
+)
+```
+
 ## Database Relationships
 
 ```bash
@@ -480,11 +537,12 @@ See [/tests/README.md](../../tests/README.md) for testing documentation.
 
 Planned models for upcoming features:
 
-- **Branch**: Physical locations within a tenant
+- **Branch**: Physical locations within a tenant (referenced in invoices)
 - **Customer**: Detailed customer information management
-- **AuditLog**: Tracking user actions for compliance
-- **Subscription**: Detailed subscription management
+- **Subscription**: Detailed subscription and billing management
 - **Payment**: Payment transaction records
+
+**Note**: AuditLog model has been implemented and is currently in use for tracking all critical operations.
 
 ## License
 

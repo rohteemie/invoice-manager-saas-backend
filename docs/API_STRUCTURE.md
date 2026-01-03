@@ -71,7 +71,7 @@ Multi-Tenant SaaS Backend API
     ├── GET /audit-logs - Platform-wide audit logs (Super Admin only)
     └── GET /stats - Platform statistics (Super Admin only)
 
-Total API Endpoints: 48 (5 root/monitoring + 43 business API endpoints)
+Total API Endpoints: 46 (3 root/monitoring + 43 business API endpoints)
 ```
 
 ## Role Hierarchy
