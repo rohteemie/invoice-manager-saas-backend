@@ -99,8 +99,6 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
     Raises:
         HTTPException: If tenant not found or invalid format
     """
-    from sqlalchemy import update
-    
     # Fetch tenant with FOR UPDATE lock to prevent race conditions
     tenant = db.query(TenantModel).filter(
         TenantModel.id == tenant_id
