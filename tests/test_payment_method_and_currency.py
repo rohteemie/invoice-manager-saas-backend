@@ -143,6 +143,7 @@ def test_payment_method_enum_invalid(
     assert response.status_code == 422
     error = response.json()
     assert "details" in error  # Changed from "detail" to "details" for validation errors
+    assert isinstance(error["details"], list)  # Ensure details is a list
     # Check details for validation error message
     assert any("Invalid payment method" in str(detail) for detail in error["details"])
 
