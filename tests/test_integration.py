@@ -263,7 +263,8 @@ class TestMultiTenantIntegration:
             headers=auth_headers
         )
         assert list1_response.status_code == 200
-        tenant1_invoices = list1_response.json()
+        data1 = list1_response.json()
+        tenant1_invoices = data1["items"]
         tenant1_ids = [inv["id"] for inv in tenant1_invoices]
         assert invoice1["id"] in tenant1_ids
         assert invoice2["id"] not in tenant1_ids
@@ -274,7 +275,8 @@ class TestMultiTenantIntegration:
             headers=second_tenant_auth_headers
         )
         assert list2_response.status_code == 200
-        tenant2_invoices = list2_response.json()
+        data2 = list2_response.json()
+        tenant2_invoices = data2["items"]
         tenant2_ids = [inv["id"] for inv in tenant2_invoices]
         assert invoice2["id"] in tenant2_ids
         assert invoice1["id"] not in tenant2_ids
@@ -507,7 +509,8 @@ class TestBusinessScenarios:
             headers=auth_headers
         )
         assert all_invoices_response.status_code == 200
-        all_invoices = all_invoices_response.json()
+        data = all_invoices_response.json()
+        all_invoices = data["items"]
 
         # Verify each branch has invoices
         for branch in branches:
@@ -561,7 +564,8 @@ class TestBusinessScenarios:
             headers=auth_headers
         )
         assert all_invoices_response.status_code == 200
-        all_invoices = all_invoices_response.json()
+        data = all_invoices_response.json()
+        all_invoices = data["items"]
 
         # Filter by customer email
         customer_invoices = [

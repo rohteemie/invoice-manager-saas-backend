@@ -19,7 +19,7 @@ def test_user_cannot_see_other_tenant_users(
     data = response.json()
 
     # Should not see second tenant's user
-    emails = [u["email"] for u in data]
+    emails = [u["email"] for u in data["items"]]
     assert "owner@secondcompany.com" not in emails
 
 
@@ -81,7 +81,7 @@ def test_second_tenant_cannot_see_first_tenant_users(
     data = response.json()
 
     # Should not see first tenant's users
-    emails = [u["email"] for u in data]
+    emails = [u["email"] for u in data["items"]]
     assert "owner@testcompany.com" not in emails
     assert "admin@testcompany.com" not in emails
 
@@ -138,7 +138,8 @@ def test_user_list_filtered_by_tenant(
         headers=auth_headers
     )
     assert response.status_code == 200
-    data = response.json()
+    response_data = response.json()
+    data = response_data["items"]
 
     # Count users in first tenant
     tenant_ids = [u["tenant_id"] for u in data]
@@ -261,7 +262,7 @@ def test_tenant_isolation_with_deactivated_user(
         headers=auth_headers
     )
     assert response.status_code == 200
-    emails = [u["email"] for u in response.json()]
+    data = response.json(); emails = [u["email"] for u in data.get("items", data)]
     assert "inactive@secondcompany.com" not in emails
 
 
@@ -312,11 +313,12 @@ def test_user_from_tenant_a_manages_only_tenant_a_users(
     # Admin from first tenant lists users
     response = client.get("/api/v1/users/", headers=auth_headers)
     assert response.status_code == 200
-    user_emails = [u["email"] for u in response.json()]
+    user_data = response.json()
+    emails = [u["email"] for u in user_data.get("items", user_data)]
 
     # Should see only first tenant users
-    assert "admin@testcompany.com" in user_emails
-    assert "admin@secondcompany.com" not in user_emails
+    assert "admin@testcompany.com" in emails
+    assert "admin@secondcompany.com" not in emails
 
     # Try to get second tenant admin - should fail
     response = client.get(

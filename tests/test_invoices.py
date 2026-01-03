@@ -113,7 +113,22 @@ def test_list_invoices(client, auth_headers):
     response = client.get("/api/v1/invoices/", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
-    assert len(data) >= 3
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    assert "pages" in data
+    assert "has_next" in data
+    assert "has_previous" in data
+    
+    # Check items
+    assert len(data["items"]) >= 3
+    assert data["total"] >= 3
+    assert data["page"] == 1
+    assert data["size"] == 100
+    assert data["has_previous"] is False
 
 
 def test_list_invoices_with_status_filter(client, auth_headers):
@@ -124,7 +139,13 @@ def test_list_invoices_with_status_filter(client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()
-    for invoice in data:
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    
+    # Check items
+    for invoice in data["items"]:
         assert invoice["status"] == "draft"
 
 
@@ -136,7 +157,66 @@ def test_list_invoices_pagination(client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()
-    assert len(data) <= 2
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    assert "pages" in data
+    assert "has_next" in data
+    assert "has_previous" in data
+    
+    # Check items
+    assert len(data["items"]) <= 2
+    assert data["size"] == 2
+    assert data["page"] == 1
+    assert data["has_previous"] is False
+
+
+def test_pagination_metadata(client, auth_headers):
+    """Test pagination metadata fields are correctly calculated."""
+    # Create 10 invoices
+    for i in range(10):
+        client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": f"Customer {i}",
+                "issue_date": "2024-01-15",
+                "items": [{"description": "Item", "quantity": 1,
+                           "unit_price": 100}]
+            },
+            headers=auth_headers
+        )
+
+    # Test first page
+    response = client.get(
+        "/api/v1/invoices/?skip=0&limit=5",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert data["total"] >= 10
+    assert data["page"] == 1
+    assert data["size"] == 5
+    assert data["pages"] >= 2
+    assert data["has_next"] is True
+    assert data["has_previous"] is False
+    assert len(data["items"]) == 5
+
+    # Test second page
+    response = client.get(
+        "/api/v1/invoices/?skip=5&limit=5",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert data["page"] == 2
+    assert data["size"] == 5
+    assert data["has_previous"] is True
+    assert len(data["items"]) <= 5
 
 
 def test_get_invoice_by_id(client, auth_headers):

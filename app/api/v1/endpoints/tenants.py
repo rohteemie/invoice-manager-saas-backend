@@ -1,8 +1,7 @@
-from typing import List
 import logging
 
 from fastapi import (
-    APIRouter, Depends, HTTPException, UploadFile, File, Request
+    APIRouter, Depends, HTTPException, UploadFile, File, Request, Query
 )
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -14,6 +13,7 @@ from app.models.user import User as UserModel, UserRole
 from app.schemas.tenant import (
     Tenant, TenantCreate, TenantUpdate, TenantRegister, TenantWithOwner
 )
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.security import get_password_hash, generate_verification_token
 from app.core.config import settings
 from app.core.deps import require_role
@@ -170,17 +170,38 @@ def register_tenant_with_owner(
         )
 
 
-@router.get("/", response_model=List[Tenant])
+@router.get("/", response_model=PaginatedResponse[Tenant])
 def list_tenants(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
     """
     Get list of tenants.
+
+    Returns paginated response with metadata:
+    - items: List of tenants
+    - total: Total count of tenants
+    - page: Current page number
+    - size: Items per page
+    - pages: Total number of pages
+    - has_next: Whether there is a next page
+    - has_previous: Whether there is a previous page
     """
-    tenants = db.query(TenantModel).offset(skip).limit(limit).all()
-    return tenants
+    query = db.query(TenantModel)
+
+    # Get total count
+    total = query.count()
+
+    # Get paginated items
+    tenants = query.offset(skip).limit(limit).all()
+
+    return create_paginated_response(
+        items=tenants,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 
 @router.get("/{tenant_id}", response_model=Tenant)

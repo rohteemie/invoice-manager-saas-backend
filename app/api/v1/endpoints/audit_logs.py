@@ -16,6 +16,7 @@ from app.models.audit_log import (
 )
 from app.models.user import User as UserModel, UserRole
 from app.schemas.audit_log import AuditLog
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.deps import require_role
 
 router = APIRouter()
@@ -74,7 +75,7 @@ def apply_common_filters(
     return query
 
 
-@router.get("/", response_model=List[AuditLog])
+@router.get("/", response_model=PaginatedResponse[AuditLog])
 def list_audit_logs(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(
@@ -115,6 +116,15 @@ def list_audit_logs(
     Example:
         GET /audit-logs/?actions=login&actions=login_failed
         GET /audit-logs/?resource_types=user&resource_types=tenant
+
+    Returns paginated response with metadata:
+    - items: List of audit logs
+    - total: Total count of audit logs
+    - page: Current page number
+    - size: Items per page
+    - pages: Total number of pages
+    - has_next: Whether there is a next page
+    - has_previous: Whether there is a previous page
     """
     # Build query with tenant isolation
     query = db.query(AuditLogModel).filter(
@@ -139,10 +149,18 @@ def list_audit_logs(
     # Order by created_at descending (newest first)
     query = query.order_by(desc(AuditLogModel.created_at))
 
+    # Get total count
+    total = query.count()
+
     # Apply pagination
     audit_logs = query.offset(skip).limit(limit).all()
 
-    return audit_logs
+    return create_paginated_response(
+        items=audit_logs,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 
 @router.get("/{audit_log_id}", response_model=AuditLog)
@@ -171,7 +189,7 @@ def get_audit_log(
     return audit_log
 
 
-@router.get("/user/{user_id}", response_model=List[AuditLog])
+@router.get("/user/{user_id}", response_model=PaginatedResponse[AuditLog])
 def get_user_audit_logs(
     user_id: str,
     skip: int = Query(0, ge=0),
@@ -194,6 +212,15 @@ def get_user_audit_logs(
 
     Example:
         GET /audit-logs/user/{user_id}?actions=login&actions=login_failed
+
+    Returns paginated response with metadata:
+    - items: List of audit logs
+    - total: Total count of audit logs
+    - page: Current page number
+    - size: Items per page
+    - pages: Total number of pages
+    - has_next: Whether there is a next page
+    - has_previous: Whether there is a previous page
     """
     # Build query with tenant isolation
     query = db.query(AuditLogModel).filter(
@@ -218,14 +245,22 @@ def get_user_audit_logs(
     # Order by created_at descending
     query = query.order_by(desc(AuditLogModel.created_at))
 
+    # Get total count
+    total = query.count()
+
     # Apply pagination
     audit_logs = query.offset(skip).limit(limit).all()
 
-    return audit_logs
+    return create_paginated_response(
+        items=audit_logs,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 
 @router.get("/resource/{resource_type}/{resource_id}",
-            response_model=List[AuditLog])
+            response_model=PaginatedResponse[AuditLog])
 def get_resource_audit_logs(
     resource_type: ResourceType,
     resource_id: str,
@@ -249,6 +284,15 @@ def get_resource_audit_logs(
 
     Example:
         GET /audit-logs/resource/invoice/{id}?actions=created&actions=updated
+
+    Returns paginated response with metadata:
+    - items: List of audit logs
+    - total: Total count of audit logs
+    - page: Current page number
+    - size: Items per page
+    - pages: Total number of pages
+    - has_next: Whether there is a next page
+    - has_previous: Whether there is a previous page
     """
     # Build query with tenant isolation and resource filters
     query = db.query(AuditLogModel).filter(
@@ -268,7 +312,15 @@ def get_resource_audit_logs(
     # Order by created_at descending
     query = query.order_by(desc(AuditLogModel.created_at))
 
+    # Get total count
+    total = query.count()
+
     # Apply pagination
     audit_logs = query.offset(skip).limit(limit).all()
 
-    return audit_logs
+    return create_paginated_response(
+        items=audit_logs,
+        total=total,
+        skip=skip,
+        limit=limit
+    )

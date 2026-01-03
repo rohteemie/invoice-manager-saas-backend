@@ -50,7 +50,17 @@ def test_list_users_as_owner(client, auth_headers):
         headers=auth_headers
     )
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    data = response.json()
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    assert "pages" in data
+    assert "has_next" in data
+    assert "has_previous" in data
+    assert isinstance(data["items"], list)
 
 
 def test_list_users_as_manager_forbidden(client, manager_auth_headers):
@@ -80,7 +90,16 @@ def test_list_users_pagination(client, auth_headers, test_admin, test_manager):
     )
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    
+    assert len(data["items"]) == 1
+    assert data["size"] == 1
+    assert data["page"] == 1
 
 
 def test_get_user_by_id_as_admin_forbidden(client, admin_auth_headers, test_user):

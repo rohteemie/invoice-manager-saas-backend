@@ -240,7 +240,8 @@ def test_invoice_list_performance(
 
     # Verify response
     data = response.json()
-    assert len(data) == 100
+    assert "items" in data
+    assert len(data["items"]) == 100
 
 
 @pytest.mark.benchmark

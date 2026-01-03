@@ -61,8 +61,15 @@ def test_list_tenants(client, test_tenant, second_tenant):
     response = client.get("/api/v1/tenants/")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) >= 2
-    tenant_names = [t["name"] for t in data]
+    
+    # Check pagination structure
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    
+    assert len(data["items"]) >= 2
+    tenant_names = [t["name"] for t in data["items"]]
     assert "Test Company" in tenant_names
     assert "Second Company" in tenant_names
 
@@ -72,7 +79,16 @@ def test_list_tenants_pagination(client, test_tenant):
     response = client.get("/api/v1/tenants/?skip=0&limit=1")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
+    
+    # Check pagination metadata
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "size" in data
+    
+    assert len(data["items"]) == 1
+    assert data["size"] == 1
+    assert data["page"] == 1
 
 
 def test_get_tenant_by_id(client, test_tenant):
