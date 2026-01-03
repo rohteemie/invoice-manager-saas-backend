@@ -9,7 +9,7 @@ from fastapi import status
 class AppException(Exception):
     """
     Base exception class for all application exceptions.
-    
+
     Attributes:
         message: Human-readable error message
         code: Machine-readable error code
@@ -123,7 +123,11 @@ class ExternalServiceException(AppException):
         message: str = "External service error",
         service: Optional[str] = None
     ):
-        code = f"{service.upper()}_ERROR" if service else "EXTERNAL_SERVICE_ERROR"
+        code = (
+            f"{service.upper()}_ERROR"
+            if service
+            else "EXTERNAL_SERVICE_ERROR"
+        )
         super().__init__(
             message=message,
             code=code,

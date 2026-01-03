@@ -12,7 +12,6 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError, OperationalError
-from pydantic import ValidationError
 
 from app.core.exceptions import AppException
 from app.core.config import settings
@@ -31,7 +30,7 @@ def create_error_response(
 ) -> JSONResponse:
     """
     Create a standardized error response.
-    
+
     Args:
         error_type: Type/category of error
         message: Human-readable error message
@@ -39,7 +38,7 @@ def create_error_response(
         status_code: HTTP status code
         details: Optional list of detailed error info
         request_id: Optional request ID for tracking
-        
+
     Returns:
         JSONResponse with standardized error format
     """
@@ -48,13 +47,13 @@ def create_error_response(
         "message": message,
         "code": code,
     }
-    
+
     if details:
         content["details"] = details
-    
+
     if request_id:
         content["request_id"] = request_id
-    
+
     return JSONResponse(
         status_code=status_code,
         content=content
@@ -67,16 +66,16 @@ async def app_exception_handler(
 ) -> JSONResponse:
     """
     Handler for custom AppException and its subclasses.
-    
+
     Returns standardized error response with error code.
     """
     request_id = str(uuid4())
-    
+
     logger.warning(
         f"AppException: {exc.code} - {exc.message} "
         f"[request_id={request_id}, path={request.url.path}]"
     )
-    
+
     return create_error_response(
         error_type=exc.__class__.__name__.replace("Exception", ""),
         message=exc.message,
@@ -93,11 +92,11 @@ async def http_exception_handler(
 ) -> JSONResponse:
     """
     Handler for FastAPI's HTTPException.
-    
+
     Converts to standardized error format.
     """
     request_id = str(uuid4())
-    
+
     # Map status codes to error codes
     status_code_map = {
         400: "BAD_REQUEST",
@@ -110,14 +109,14 @@ async def http_exception_handler(
         500: "INTERNAL_SERVER_ERROR",
         503: "SERVICE_UNAVAILABLE",
     }
-    
+
     code = status_code_map.get(exc.status_code, "ERROR")
-    
+
     logger.warning(
         f"HTTPException: {code} - {exc.detail} "
         f"[request_id={request_id}, path={request.url.path}]"
     )
-    
+
     return create_error_response(
         error_type="HTTPException",
         message=str(exc.detail),
@@ -133,11 +132,11 @@ async def validation_exception_handler(
 ) -> JSONResponse:
     """
     Handler for Pydantic validation errors.
-    
+
     Formats validation errors into standardized response with details.
     """
     request_id = str(uuid4())
-    
+
     # Extract validation error details
     details = []
     for error in exc.errors():
@@ -147,12 +146,12 @@ async def validation_exception_handler(
             "message": error["msg"],
             "code": error["type"].upper()
         })
-    
+
     logger.warning(
         f"ValidationError: {len(details)} validation error(s) "
         f"[request_id={request_id}, path={request.url.path}]"
     )
-    
+
     return create_error_response(
         error_type="ValidationError",
         message="Request validation failed",
@@ -169,23 +168,23 @@ async def database_exception_handler(
 ) -> JSONResponse:
     """
     Handler for database errors.
-    
+
     Hides internal database details in production.
     """
     request_id = str(uuid4())
-    
+
     # Log full error for debugging
     logger.error(
         f"DatabaseError: {str(exc)} [request_id={request_id}, "
         f"path={request.url.path}]",
         exc_info=True
     )
-    
+
     # Determine user-friendly message
     if isinstance(exc, IntegrityError):
         # Check for common constraint violations
         error_msg = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
-        
+
         if "unique" in error_msg.lower() or "duplicate" in error_msg.lower():
             message = "A record with this information already exists"
             code = "DUPLICATE_ENTRY"
@@ -195,13 +194,13 @@ async def database_exception_handler(
         else:
             message = "Database constraint violation"
             code = "CONSTRAINT_VIOLATION"
-        
+
         status_code = status.HTTP_409_CONFLICT
     else:
         message = "Database operation failed"
         code = "DATABASE_ERROR"
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    
+
     # In development, include more details
     details = None
     if settings.ENVIRONMENT == "development":
@@ -209,7 +208,7 @@ async def database_exception_handler(
             "message": str(exc),
             "code": "DEBUG_INFO"
         }]
-    
+
     return create_error_response(
         error_type="DatabaseError",
         message=message,
@@ -226,17 +225,17 @@ async def generic_exception_handler(
 ) -> JSONResponse:
     """
     Catch-all handler for unexpected exceptions.
-    
+
     Logs full error and returns generic message to avoid information leakage.
     """
     request_id = str(uuid4())
-    
+
     # Log full error with traceback
     logger.error(
         f"Unhandled exception: {str(exc)} [request_id={request_id}, "
         f"path={request.url.path}]\n{traceback.format_exc()}"
     )
-    
+
     # Generic error message in production
     if settings.ENVIRONMENT == "production":
         message = "An unexpected error occurred"
@@ -248,7 +247,7 @@ async def generic_exception_handler(
             "message": traceback.format_exc(),
             "code": "DEBUG_TRACEBACK"
         }]
-    
+
     return create_error_response(
         error_type="InternalError",
         message=message,
