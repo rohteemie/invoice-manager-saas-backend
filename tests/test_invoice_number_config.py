@@ -168,10 +168,18 @@ def test_invoice_number_format_with_date(client, auth_headers, test_tenant, db_s
     data = response.json()
     invoice_number = data["invoice_number"]
     
-    # Should include today's date in YYYYMMDD format
+    # Should include current date in YYYYMMDD format (not the issue_date from request)
+    # The {date} placeholder uses the current date when the invoice number is generated
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
     assert invoice_number.startswith(f"INV/{today}/")
     assert invoice_number.endswith("001")
+    
+    # Verify the format is correct: prefix/date/sequence
+    parts = invoice_number.split("/")
+    assert len(parts) == 3
+    assert parts[0] == "INV"
+    assert len(parts[1]) == 8  # YYYYMMDD format
+    assert parts[2] == "001"
 
 
 def test_invoice_number_no_gaps_with_deletion(client, auth_headers):

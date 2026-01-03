@@ -88,6 +88,12 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
     in a customizable format while preventing race conditions through atomic
     database updates.
     
+    IMPORTANT: This function acquires a row-level lock on the tenant record and
+    commits the transaction after incrementing the sequence counter. This is
+    necessary to release the lock immediately and prevent blocking other invoice
+    creations. The caller should handle any additional database operations in a
+    separate transaction after this function completes.
+    
     Args:
         db: Database session
         tenant_id: Tenant ID
@@ -97,6 +103,10 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
         
     Raises:
         HTTPException: If tenant not found or invalid format
+        
+    Side Effects:
+        - Increments the tenant's invoice_number_sequence counter
+        - Commits the database transaction to release the row lock
     """
     # Fetch tenant with FOR UPDATE lock to prevent race conditions
     tenant = db.query(TenantModel).filter(
@@ -131,6 +141,7 @@ def generate_invoice_number(db: Session, tenant_id: str) -> str:
         invoice_number = f"{prefix}-{date_str}-{new_sequence:04d}"
     
     # Commit the sequence update immediately to release the lock
+    # This allows other invoice creations to proceed without waiting
     db.commit()
     
     return invoice_number
