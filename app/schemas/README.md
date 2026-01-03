@@ -8,8 +8,14 @@ This directory contains Pydantic schemas (models) used for request validation an
 
 ```bash
 schemas/
-├── tenant.py    # Tenant-related schemas
-└── user.py      # User-related schemas (authentication & management)
+├── __init__.py      # Schema exports
+├── tenant.py        # Tenant-related schemas
+├── user.py          # User-related schemas (authentication & management)
+├── invoice.py       # Invoice and invoice item schemas
+├── analytics.py     # Analytics and reporting schemas
+├── audit_log.py     # Audit logging schemas
+├── pagination.py    # Pagination response schemas
+└── error.py         # Error response schemas
 ```
 
 ## Purpose of Schemas
@@ -266,6 +272,153 @@ Internal schema for JWT token payload:
 - `tenant_id`: String - User's tenant ID
 - `role`: String - User's role
 - `exp`: int - Expiration timestamp
+
+## Invoice Schemas (`invoice.py`)
+
+Schemas for invoice management with multi-currency support and status lifecycle.
+
+### Invoice
+
+Main invoice schema with all fields:
+
+- `id`: String - Invoice UUID
+- `invoice_number`: String - Unique invoice number
+- `tenant_id`: String - Tenant UUID
+- `branch_id`: Optional[String] - Branch location identifier
+- `customer_name`: String - Customer name
+- `customer_email`: Optional[String] - Customer email
+- `customer_phone`: Optional[String] - Customer phone
+- `customer_address`: Optional[String] - Customer address
+- `creator_id`: String - User who created the invoice
+- `status`: InvoiceStatus - Current invoice status (draft/sent/paid/overdue)
+- `issue_date`: String - Issue date
+- `due_date`: Optional[String] - Payment due date
+- `currency`: Currency - Invoice currency (USD/EUR/GBP/NGN)
+- `subtotal`: Decimal - Subtotal before tax
+- `tax_amount`: Decimal - Tax amount
+- `discount_amount`: Decimal - Discount amount
+- `total_amount`: Decimal - Final total
+- `items`: List[InvoiceItem] - Invoice line items
+
+### InvoiceCreate
+
+Schema for creating new invoices:
+
+- All required fields from Invoice
+- Includes items list for creating invoice with line items
+- Validates currency and tax calculations
+
+### InvoiceItem
+
+Line item schema:
+
+- `description`: String - Item description
+- `quantity`: Decimal - Quantity
+- `unit_price`: Decimal - Price per unit
+- `currency`: Currency - Item currency
+- `total_price`: Decimal - Total (quantity × unit_price)
+
+### InvoiceStatus
+
+Status enum for invoice lifecycle:
+
+- `DRAFT`: Initial state, can be edited
+- `SENT`: Sent to customer, awaiting payment
+- `PAID`: Payment received
+- `OVERDUE`: Past due date, not paid
+
+### Currency
+
+Supported currencies:
+
+- `USD`: US Dollar
+- `EUR`: Euro
+- `GBP`: British Pound
+- `NGN`: Nigerian Naira
+
+## Analytics Schemas (`analytics.py`)
+
+Schemas for reporting and analytics endpoints.
+
+### InvoiceSummary
+
+Tenant-level invoice statistics:
+
+- `total_invoices`: int - Total invoice count
+- `draft_count`: int - Invoices in draft status
+- `sent_count`: int - Invoices sent to customers
+- `paid_count`: int - Paid invoices
+- `overdue_count`: int - Overdue invoices
+- `total_revenue`: Decimal - Total revenue (paid invoices)
+- `pending_revenue`: Decimal - Revenue from unpaid invoices
+
+### RevenueByStatus
+
+Revenue breakdown by invoice status:
+
+- `status`: String - Invoice status
+- `count`: int - Number of invoices
+- `total_amount`: Decimal - Total amount for this status
+
+## Audit Log Schemas (`audit_log.py`)
+
+Schemas for audit trail and activity tracking.
+
+### AuditLog
+
+Complete audit log entry:
+
+- `id`: String - Audit log UUID
+- `user_id`: Optional[String] - User who performed action
+- `tenant_id`: Optional[String] - Associated tenant
+- `action`: AuditAction - Action type (LOGIN, USER_CREATED, etc.)
+- `resource_type`: ResourceType - Resource type (USER, TENANT, INVOICE)
+- `resource_id`: Optional[String] - ID of affected resource
+- `ip_address`: String - Client IP address
+- `user_agent`: String - Client user agent
+- `description`: String - Human-readable description
+- `status`: String - Action status (success/failure)
+- `created_at`: DateTime - Timestamp
+
+### AuditAction
+
+Enumeration of auditable actions including authentication events, user management, tenant management, invoice operations, and data exports.
+
+### ResourceType
+
+Enumeration of resource types: USER, TENANT, INVOICE, INVOICE_ITEM, AUTH, EXPORT.
+
+## Pagination Schemas (`pagination.py`)
+
+Generic pagination response wrapper.
+
+### PaginatedResponse[T]
+
+Generic paginated response:
+
+- `items`: List[T] - Items in current page
+- `total`: int - Total item count
+- `page`: int - Current page number (1-indexed)
+- `size`: int - Items per page
+- `pages`: int - Total number of pages
+- `has_next`: bool - Whether there is a next page
+- `has_previous`: bool - Whether there is a previous page
+
+Used for all list endpoints to provide consistent pagination.
+
+## Error Schemas (`error.py`)
+
+Standardized error response schemas.
+
+### ErrorResponse
+
+Standard error format:
+
+- `detail`: String or Dict - Error message or validation errors
+- `status_code`: int - HTTP status code
+- `error_type`: String - Error type classification
+
+Ensures consistent error responses across all endpoints.
 
 ## Validation Features
 
