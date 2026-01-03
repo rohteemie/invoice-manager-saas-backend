@@ -34,11 +34,14 @@ from app.core.security import (
     generate_verification_token, generate_password_reset_token
 )
 from app.core.rate_limit import limiter
-from app.core.email import send_verification_email, send_password_reset_email
 from app.core.config import settings
 from app.core.login_throttle import get_login_throttle
 from app.services.audit_logger import log_auth_event
 from app.models.audit_log import AuditAction
+from app.tasks.email_tasks import (
+    send_verification_email_task,
+    send_password_reset_email_task,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -104,17 +107,24 @@ def register(
             f"{base.rstrip('/')}/verify-email?token={verification_token}"
         )
 
-        # Send verification email (best as background task in prod)
-        sent = send_verification_email(
-            email=db_user.email,
-            token=verification_token,
-            full_name=db_user.full_name,
-            base_url=settings.EMAIL_VERIFICATION_BASE_URL,
-        )
-
-        if not sent:
+        # Send verification email asynchronously (background task)
+        try:
+            send_verification_email_task.delay(
+                email=db_user.email,
+                token=verification_token,
+                full_name=db_user.full_name,
+                base_url=(
+                    settings.EMAIL_VERIFICATION_BASE_URL
+                    or "http://localhost:5173"
+                ),
+            )
+            logger.info(
+                "Verification email task queued for %s", db_user.email
+            )
+        except Exception as e:
             logger.warning(
-                "Verification email not sent for %s", db_user.email
+                "Failed to queue verification email for %s: %s",
+                db_user.email, str(e)
             )
 
         # For non-production or test runs, expose the link in a header
@@ -467,13 +477,19 @@ def resend_verification_email(
     user.verification_token_expires_at = token_expires_at
     db.commit()
 
-    # Send verification email
-    send_verification_email(
-        email=user.email,
-        token=verification_token,
-        full_name=user.full_name,
-        base_url=settings.EMAIL_VERIFICATION_BASE_URL
-    )
+    # Send verification email asynchronously
+    try:
+        send_verification_email_task.delay(
+            email=user.email,
+            token=verification_token,
+            full_name=user.full_name,
+            base_url=settings.EMAIL_VERIFICATION_BASE_URL,
+        )
+    except Exception as e:
+        logger.warning(
+            "Failed to queue verification email for %s: %s",
+            user.email, str(e)
+        )
 
     return {
         "message": "Verification email has been resent.\
@@ -585,17 +601,21 @@ async def forgot_password(
         f"{base.rstrip('/')}/reset-password?token={reset_token}"
     )
 
-    # Send password reset email
-    sent = send_password_reset_email(
-        email=user.email,
-        token=reset_token,
-        full_name=user.full_name,
-        base_url=settings.EMAIL_VERIFICATION_BASE_URL
-    )
-
-    if not sent:
+    # Send password reset email asynchronously
+    try:
+        send_password_reset_email_task.delay(
+            email=user.email,
+            token=reset_token,
+            full_name=user.full_name,
+            base_url=settings.EMAIL_VERIFICATION_BASE_URL
+        )
+        logger.info(
+            "Password reset email task queued for %s", user.email
+        )
+    except Exception as e:
         logger.warning(
-            "Password reset email not sent for %s", user.email
+            "Failed to queue password reset email for %s: %s",
+            user.email, str(e)
         )
 
     # Log password reset action for audit

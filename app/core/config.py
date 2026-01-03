@@ -88,6 +88,11 @@ class Settings(BaseSettings):
         None,
         validation_alias="EMAILS_FROM"
     )
+    # Email provider type (sendgrid, mock)
+    EMAIL_PROVIDER: str = Field(
+        "sendgrid",
+        validation_alias="EMAIL_PROVIDER"
+    )
     # Email verification token expiration in hours (default 24 hours)
     EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS: int = Field(
         24,

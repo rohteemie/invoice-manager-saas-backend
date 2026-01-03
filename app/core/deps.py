@@ -141,3 +141,35 @@ def require_superadmin(
             detail="Super admin access required"
         )
     return current_user
+
+
+def require_verified_email(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Dependency to ensure user has verified their email.
+
+    This dependency should be used for critical operations that require
+    email verification, such as creating invoices, sending emails, etc.
+
+    Args:
+        current_user: Current user from token
+
+    Returns:
+        User object if email is verified
+
+    Raises:
+        HTTPException: If user's email is not verified
+    """
+    # Superadmins bypass email verification requirement
+    if current_user.is_superadmin:
+        return current_user
+
+    if not current_user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification required. "
+                   "Please verify your email address to perform this action. "
+                   "Check inbox for verification link or request a new one."
+        )
+    return current_user

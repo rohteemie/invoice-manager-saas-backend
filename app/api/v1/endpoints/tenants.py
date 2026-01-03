@@ -1,4 +1,6 @@
 from typing import List
+import logging
+
 from fastapi import (
     APIRouter, Depends, HTTPException, UploadFile, File, Request
 )
@@ -13,14 +15,15 @@ from app.schemas.tenant import (
     Tenant, TenantCreate, TenantUpdate, TenantRegister, TenantWithOwner
 )
 from app.core.security import get_password_hash, generate_verification_token
-from app.core.email import send_verification_email
 from app.core.config import settings
 from app.core.deps import require_role
 from app.services.file_upload import get_file_upload_service, FileUploadError
 from app.services.audit_logger import log_tenant_event
 from app.models.audit_log import AuditAction
+from app.tasks.email_tasks import send_verification_email_task
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/", response_model=Tenant, status_code=201)
@@ -123,13 +126,23 @@ def register_tenant_with_owner(
         db.refresh(db_tenant)
         db.refresh(db_owner)
 
-        # Send verification email
-        send_verification_email(
-            email=db_owner.email,
-            token=verification_token,
-            full_name=db_owner.full_name,
-            base_url=settings.EMAIL_VERIFICATION_BASE_URL
-        )
+        # Send verification email asynchronously
+        try:
+            send_verification_email_task.delay(
+                email=db_owner.email,
+                token=verification_token,
+                full_name=db_owner.full_name,
+                base_url=(
+                    settings.EMAIL_VERIFICATION_BASE_URL
+                    or "http://localhost:5173"
+                ),
+            )
+        except Exception as e:
+            # Log but don't fail registration if email fails
+            logger.warning(
+                "Failed to queue verification email for %s: %s",
+                db_owner.email, str(e)
+            )
 
         # Return combined response
         return {

@@ -14,7 +14,7 @@ celery_app = Celery(
     'multi_tenant_saas',
     broker=broker_url,
     backend=result_backend,
-    include=['app.tasks.invoice_tasks']
+    include=['app.tasks.invoice_tasks', 'app.tasks.email_tasks']
 )
 
 # Celery configuration
@@ -34,5 +34,9 @@ celery_app.conf.beat_schedule = {
     'check-overdue-invoices': {
         'task': 'app.tasks.invoice_tasks.check_overdue_invoices',
         'schedule': 3600.0,  # Run every hour
+    },
+    'send-verification-reminders': {
+        'task': 'app.tasks.email_tasks.send_verification_reminders',
+        'schedule': 86400.0,  # Run once daily (24 hours)
     },
 }

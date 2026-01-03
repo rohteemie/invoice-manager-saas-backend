@@ -1,4 +1,7 @@
 from typing import List, Optional
+import base64
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
@@ -8,7 +11,6 @@ from datetime import datetime, date, timezone
 import csv
 import io
 import json
-import logging
 
 from app.db.session import get_db
 from app.models.invoice import (
@@ -25,12 +27,16 @@ from app.schemas.invoice import (
     InvoiceUpdate,
     InvoiceStatusUpdate
 )
-from app.core.deps import get_current_user, require_role
+from app.core.deps import (
+    get_current_user,
+    require_role,
+    require_verified_email
+)
 from app.core.cache import invalidate_tenant_cache
 from app.services.pdf_generator import get_pdf_generator, PDFGenerationError
-from app.core.email import send_invoice_email
 from app.services.audit_logger import log_invoice_event, log_export_event
 from app.models.audit_log import AuditAction
+from app.tasks.email_tasks import send_invoice_email_task
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -84,13 +90,14 @@ def calculate_totals(
 @router.post("/", response_model=Invoice, status_code=201)
 def create_invoice(
     invoice_in: InvoiceCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_email),
     db: Session = Depends(get_db)
 ):
     """
     Create a new invoice.
 
-    Permissions: All authenticated users can create invoices.
+    Permissions: All authenticated AND VERIFIED users can create invoices.
+    Email verification is required to create invoices.
     Invoice is created in DRAFT status by default.
     Currency and tax are inherited from tenant settings unless specified.
     """
@@ -572,27 +579,31 @@ def send_invoice(
     }.get(invoice.currency, "$")
     total_amount = f"{currency_symbol}{invoice.total_amount:,.2f}"
 
-    # Send email with PDF
-    email_sent = send_invoice_email(
-        email=invoice.customer_email,
-        customer_name=invoice.customer_name,
-        invoice_number=invoice.invoice_number,
-        pdf_bytes=pdf_bytes,
-        total_amount=total_amount
-    )
+    # Send email with PDF asynchronously
+    pdf_bytes_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
 
-    if not email_sent:
-        logger.error(
-            "Failed to send invoice email for invoice %s to %s",
+    try:
+        send_invoice_email_task.delay(
+            email=invoice.customer_email,
+            customer_name=invoice.customer_name,
+            invoice_number=invoice.invoice_number,
+            pdf_bytes_b64=pdf_bytes_b64,
+            total_amount=total_amount
+        )
+        logger.info(
+            "Invoice email task queued for invoice %s to %s",
             invoice.invoice_number,
             invoice.customer_email
         )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to send invoice email. Please check the server "
-                   "logs for details or verify SendGrid is properly "
-                   "configured."
+    except Exception as e:
+        logger.error(
+            "Failed to queue invoice email for invoice %s to %s: %s",
+            invoice.invoice_number,
+            invoice.customer_email,
+            str(e)
         )
+        # Don't fail the entire operation if email queueing fails
+        # The invoice will still be marked as SENT
 
     # Update invoice status to SENT
     invoice.status = InvoiceStatus.SENT
