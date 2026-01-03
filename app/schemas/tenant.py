@@ -5,6 +5,12 @@ from decimal import Decimal
 
 
 class TenantBase(BaseModel):
+    """
+    Base tenant schema with common tenant attributes.
+    
+    Tenants represent organizations using the platform. Each tenant has complete
+    data isolation and can customize branding, currency, tax settings, and invoice formatting.
+    """
     name: str = Field(..., min_length=1, max_length=100,
                       description="Tenant name"
                       )
@@ -51,10 +57,17 @@ class TenantBase(BaseModel):
 
 
 class TenantCreate(TenantBase):
+    """Schema for creating a new tenant. Inherits all fields from TenantBase."""
     pass
 
 
 class TenantUpdate(BaseModel):
+    """
+    Schema for updating tenant information.
+    
+    All fields are optional. Only provided fields will be updated.
+    Used by tenant owners and admins to modify tenant settings.
+    """
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     domain: Optional[str] = Field(None, min_length=3, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
@@ -96,6 +109,11 @@ class TenantUpdate(BaseModel):
 
 
 class TenantInDB(TenantBase):
+    """
+    Complete tenant schema as stored in the database.
+    
+    Includes system-generated fields like ID, timestamps, and invoice sequence counter.
+    """
     id: str
     is_active: bool
     logo_url: Optional[str] = None
@@ -107,11 +125,17 @@ class TenantInDB(TenantBase):
 
 
 class Tenant(TenantInDB):
+    """Public tenant schema returned by API endpoints."""
     pass
 
 
 # Schema for owner user info in combined registration
 class OwnerCreate(BaseModel):
+    """
+    Schema for owner user information during tenant registration.
+    
+    Used when registering a new tenant with an owner account in a single operation.
+    """
     full_name: str = Field(..., min_length=1, max_length=100,
                            description="Owner's full name")
     email: EmailStr = Field(..., description="Owner's email address")
@@ -121,11 +145,22 @@ class OwnerCreate(BaseModel):
 
 # Schema for combined tenant + owner registration request
 class TenantRegister(TenantBase):
+    """
+    Schema for registering a new tenant with an owner account.
+    
+    Combines tenant information and owner user details for streamlined onboarding.
+    This creates both a tenant organization and its first user (owner) in one request.
+    """
     owner: OwnerCreate = Field(..., description="Owner user information")
 
 
 # Schema for combined tenant + owner response
 class TenantWithOwner(BaseModel):
+    """
+    Response schema for tenant registration endpoint.
+    
+    Returns both the created tenant and owner information (without sensitive data).
+    """
     tenant: Tenant
     owner: dict  # We'll return owner info without sensitive data
 

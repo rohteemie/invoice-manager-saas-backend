@@ -14,7 +14,12 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    """Schema for creating a new user."""
+    """
+    Schema for creating a new user.
+    
+    Requires password and optional tenant_id. Super admins can be created without a tenant_id.
+    Currency preference defaults to NGN and cannot be changed after account creation.
+    """
     password: str = Field(
         ..., min_length=8, max_length=100,
         description="User password (min 8 characters)"
@@ -42,7 +47,12 @@ class UserUpdate(BaseModel):
 
 
 class UserInDB(UserBase):
-    """Schema for user in database."""
+    """
+    Complete user schema as stored in the database.
+    
+    Includes all user fields including system-generated ones like ID and timestamps.
+    Note: Password hash is NOT included in this schema for security.
+    """
     id: str
     tenant_id: Optional[str]
     is_active: bool
@@ -56,25 +66,42 @@ class UserInDB(UserBase):
 
 
 class User(UserInDB):
-    """Public user schema (without password)."""
+    """
+    Public user schema returned by API endpoints.
+    
+    This is the schema used in API responses. Password hash is never exposed.
+    """
     pass
 
 
 class UserLogin(BaseModel):
-    """Schema for user login."""
+    """
+    Schema for user login credentials.
+    
+    Used for authentication via the login endpoint.
+    """
     email: EmailStr = Field(..., description="User's email address")
     password: str = Field(..., description="User password")
 
 
 class Token(BaseModel):
-    """JWT token response schema."""
+    """
+    JWT token response schema.
+    
+    Returned after successful login or token refresh.
+    Contains both access token (short-lived) and refresh token (long-lived).
+    """
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
 
 class TokenPayload(BaseModel):
-    """JWT token payload schema."""
+    """
+    JWT token payload schema.
+    
+    Internal schema representing the decoded JWT token contents.
+    """
     sub: str  # User ID
     tenant_id: Optional[str]
     role: str
@@ -83,12 +110,20 @@ class TokenPayload(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    """Schema for forgot password request."""
+    """
+    Schema for forgot password request.
+    
+    Used to initiate password reset flow. An email with reset link is sent.
+    """
     email: EmailStr = Field(..., description="User's email address")
 
 
 class ResetPasswordRequest(BaseModel):
-    """Schema for reset password request."""
+    """
+    Schema for password reset request.
+    
+    Used to complete password reset with token received via email.
+    """
     token: str = Field(..., description="Password reset token")
     new_password: str = Field(
         ...,
