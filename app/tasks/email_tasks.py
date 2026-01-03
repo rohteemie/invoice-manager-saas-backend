@@ -36,7 +36,6 @@ def calculate_retry_delay(retry_count: int, base_delay: int = 60) -> int:
     return base_delay * (2 ** retry_count)
 
 
-
 @celery_app.task(
     name='app.tasks.email_tasks.send_verification_email_task',
     bind=True,

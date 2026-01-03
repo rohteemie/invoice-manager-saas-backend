@@ -899,10 +899,10 @@ def test_export_json_includes_items(client, auth_headers):
 
 def test_send_invoice_success(client, manager_auth_headers, mocker):
     """Test successfully sending an invoice via email."""
-    # Mock the email sending function
-    mock_send_email = mocker.patch(
-        'app.api.v1.endpoints.invoices.send_invoice_email',
-        return_value=True
+    # Mock the Celery task instead of the old function
+    mock_send_task = mocker.patch(
+        'app.tasks.email_tasks.send_invoice_email_task.delay',
+        return_value=mocker.Mock(id='task-id')
     )
 
     # Create a draft invoice with customer email
@@ -936,13 +936,13 @@ def test_send_invoice_success(client, manager_auth_headers, mocker):
     assert data["status"] == "sent"
     assert data["id"] == invoice_id
 
-    # Verify email was sent
-    assert mock_send_email.called
-    call_args = mock_send_email.call_args[1]
-    assert call_args["email"] == "john@example.com"
-    assert call_args["customer_name"] == "John Doe"
-    assert "invoice_number" in call_args
-    assert isinstance(call_args["pdf_bytes"], bytes)
+    # Verify async task was called
+    assert mock_send_task.called
+    call_kwargs = mock_send_task.call_args[1]
+    assert call_kwargs["email"] == "john@example.com"
+    assert call_kwargs["customer_name"] == "John Doe"
+    assert "invoice_number" in call_kwargs
+    assert "pdf_bytes_b64" in call_kwargs  # Now base64 encoded
 
 
 def test_send_invoice_without_email(client, manager_auth_headers):
@@ -979,10 +979,10 @@ def test_send_invoice_without_email(client, manager_auth_headers):
 
 def test_send_invoice_not_draft(client, manager_auth_headers, mocker):
     """Test that only draft invoices can be sent."""
-    # Mock the email sending function
+    # Mock the Celery task instead of the old function
     mocker.patch(
-        'app.api.v1.endpoints.invoices.send_invoice_email',
-        return_value=True
+        'app.tasks.email_tasks.send_invoice_email_task.delay',
+        return_value=mocker.Mock(id='task-id')
     )
 
     # Create and send an invoice
@@ -1064,10 +1064,10 @@ def test_send_invoice_attendant_permission(client, attendant_auth_headers):
 
 def test_send_invoice_email_failure(client, manager_auth_headers, mocker):
     """Test handling of email sending failure."""
-    # Mock the email sending function to fail
+    # Mock the Celery task to raise an exception (simulate queueing failure)
     mocker.patch(
-        'app.api.v1.endpoints.invoices.send_invoice_email',
-        return_value=False
+        'app.tasks.email_tasks.send_invoice_email_task.delay',
+        side_effect=Exception("Failed to queue email")
     )
 
     # Create a draft invoice with customer email
@@ -1089,22 +1089,16 @@ def test_send_invoice_email_failure(client, manager_auth_headers, mocker):
     )
     invoice_id = response.json()["id"]
 
-    # Try to send the invoice
+    # Try to send the invoice - should succeed but log error
+    # (graceful degradation - invoice still marked as sent)
     response = client.post(
         f"/api/v1/invoices/{invoice_id}/send",
         headers=manager_auth_headers
     )
 
-    assert response.status_code == 500
-    assert "email" in response.json()["detail"].lower()
-
-    # Invoice should still be in draft status
-    response = client.get(
-        f"/api/v1/invoices/{invoice_id}",
-        headers=manager_auth_headers
-    )
+    # Invoice is still marked as sent despite email failure
     assert response.status_code == 200
-    assert response.json()["status"] == "draft"
+    assert response.json()["status"] == "sent"
 
 
 def test_send_invoice_tenant_isolation(
@@ -1114,10 +1108,10 @@ def test_send_invoice_tenant_isolation(
     mocker
 ):
     """Test that users can't send invoices from other tenants."""
-    # Mock the email sending function
+    # Mock the Celery task
     mocker.patch(
-        'app.api.v1.endpoints.invoices.send_invoice_email',
-        return_value=True
+        'app.tasks.email_tasks.send_invoice_email_task.delay',
+        return_value=mocker.Mock(id='task-id')
     )
 
     # Create an invoice in first tenant
@@ -1152,14 +1146,16 @@ def test_send_invoice_pdf_matches_download(client, manager_auth_headers, mocker)
     """Test that the PDF sent via email uses the same template as download."""
     # Variable to capture the PDF bytes sent via email
     sent_pdf_bytes = None
-    
+
     def mock_send_email(**kwargs):
         nonlocal sent_pdf_bytes
-        sent_pdf_bytes = kwargs['pdf_bytes']
-        return True
-    
+        # Decode the base64 PDF
+        import base64
+        sent_pdf_bytes = base64.b64decode(kwargs['pdf_bytes_b64'])
+        return mocker.Mock(id='task-id')
+
     mocker.patch(
-        'app.api.v1.endpoints.invoices.send_invoice_email',
+        'app.tasks.email_tasks.send_invoice_email_task.delay',
         side_effect=mock_send_email
     )
 
@@ -1202,7 +1198,7 @@ def test_send_invoice_pdf_matches_download(client, manager_auth_headers, mocker)
     assert sent_pdf_bytes is not None, "Email was not sent"
     assert downloaded_pdf_bytes.startswith(b'%PDF'), "Downloaded PDF invalid"
     assert sent_pdf_bytes.startswith(b'%PDF'), "Sent PDF invalid"
-    
+
     # Both PDFs should have similar sizes (within 5% due to metadata)
     size_diff = abs(len(sent_pdf_bytes) - len(downloaded_pdf_bytes))
     size_tolerance = max(len(sent_pdf_bytes), len(downloaded_pdf_bytes)) * 0.05
@@ -1218,31 +1214,24 @@ def test_send_invoice_xss_protection(client, manager_auth_headers, mocker):
     """Test that HTML in customer data is properly escaped to prevent XSS."""
     # Variable to capture the email content
     sent_email_html = None
-    
+
     def mock_send_email(**kwargs):
-        # We need to manually call the real function to test HTML escaping
-        # but capture the HTML content for verification
-        import html as html_lib
-        from app.core.config import settings
-        
+        # Simulate what the email task would do - compose the email
+        from app.services.email_service import compose_invoice_email
+
         customer_name = kwargs['customer_name']
         invoice_number = kwargs['invoice_number']
         total_amount = kwargs['total_amount']
-        
-        # This is the HTML content that would be generated
-        html_content = f"""
-            <p>Dear {html_lib.escape(customer_name)},</p>
-            <strong>{html_lib.escape(invoice_number)}</strong>
-            <strong>{html_lib.escape(total_amount)}</strong>
-            <p>{html_lib.escape(settings.PROJECT_NAME)}</p>
-        """
-        
+
+        # Compose the email to get HTML content
+        _, html_content = compose_invoice_email(customer_name, invoice_number, total_amount)
+
         nonlocal sent_email_html
         sent_email_html = html_content
-        return True
-    
+        return mocker.Mock(id='task-id')
+
     mocker.patch(
-        'app.api.v1.endpoints.invoices.send_invoice_email',
+        'app.tasks.email_tasks.send_invoice_email_task.delay',
         side_effect=mock_send_email
     )
 
