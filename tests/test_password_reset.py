@@ -137,7 +137,7 @@ def test_reset_password_with_invalid_token(client):
         }
     )
     assert response.status_code == 400
-    assert "invalid or expired" in response.json()["detail"].lower()
+    assert "invalid or expired" in response.json()["message"].lower()
 
 
 def test_reset_password_with_expired_token(client, test_user, db_session):
@@ -157,7 +157,7 @@ def test_reset_password_with_expired_token(client, test_user, db_session):
         }
     )
     assert response.status_code == 400
-    assert "expired" in response.json()["detail"].lower()
+    assert "expired" in response.json()["message"].lower()
 
     # Verify token was cleared
     db_session.refresh(test_user)
@@ -202,7 +202,7 @@ def test_reset_password_inactive_user(client, test_user, db_session):
         }
     )
     assert response.status_code == 403
-    assert "inactive" in response.json()["detail"].lower()
+    assert "inactive" in response.json()["message"].lower()
 
     # Reactivate user for other tests
     test_user.is_active = True
@@ -305,7 +305,7 @@ def test_reset_password_token_cannot_be_reused(client, test_user, db_session):
         }
     )
     assert response2.status_code == 400
-    assert "invalid or expired" in response2.json()["detail"].lower()
+    assert "invalid or expired" in response2.json()["message"].lower()
 
 
 def test_password_reset_full_flow(client, test_user, db_session):

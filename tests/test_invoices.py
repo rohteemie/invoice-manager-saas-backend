@@ -269,7 +269,7 @@ def test_update_non_draft_invoice_fails(
         headers=manager_auth_headers
     )
     assert response.status_code == 400
-    assert "DRAFT" in response.json()["detail"]
+    assert "DRAFT" in response.json()["message"]
 
 
 def test_update_invoice_requires_manager(client, auth_headers,
@@ -452,7 +452,7 @@ def test_invalid_status_transition(client, auth_headers,
         headers=manager_auth_headers
     )
     assert response.status_code == 400
-    assert "Invalid status transition" in response.json()["detail"]
+    assert "Invalid status transition" in response.json()["message"]
 
 
 def test_paid_status_requires_payment_method(client, auth_headers,
@@ -484,7 +484,7 @@ def test_paid_status_requires_payment_method(client, auth_headers,
         headers=manager_auth_headers
     )
     assert response.status_code == 400
-    assert "payment method" in response.json()["detail"].lower()
+    assert "payment method" in response.json()["message"].lower()
 
 
 def test_status_update_requires_manager(
@@ -571,7 +571,7 @@ def test_delete_non_draft_invoice_fails(client, auth_headers,
         headers=admin_auth_headers
     )
     assert response.status_code == 400
-    assert "DRAFT" in response.json()["detail"]
+    assert "DRAFT" in response.json()["message"]
 
 
 def test_delete_requires_admin(client, auth_headers, manager_auth_headers):
@@ -973,8 +973,8 @@ def test_send_invoice_without_email(client, manager_auth_headers):
     )
 
     assert response.status_code == 400
-    assert "email" in response.json()["detail"].lower()
-    assert "download" in response.json()["detail"].lower()
+    assert "email" in response.json()["message"].lower()
+    assert "download" in response.json()["message"].lower()
 
 
 def test_send_invoice_not_draft(client, manager_auth_headers, mocker):
@@ -1018,7 +1018,7 @@ def test_send_invoice_not_draft(client, manager_auth_headers, mocker):
     )
 
     assert response.status_code == 400
-    assert "DRAFT" in response.json()["detail"]
+    assert "DRAFT" in response.json()["message"]
 
 
 def test_send_invoice_not_found(client, manager_auth_headers):
@@ -1029,7 +1029,7 @@ def test_send_invoice_not_found(client, manager_auth_headers):
     )
 
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"].lower()
+    assert "not found" in response.json()["message"].lower()
 
 
 def test_send_invoice_attendant_permission(client, attendant_auth_headers):

@@ -19,7 +19,7 @@ def test_cannot_change_owner_role_to_other_role(client, auth_headers, test_user,
         }
     )
     assert response.status_code == 403
-    assert "owner role cannot be changed" in response.json()["detail"].lower()
+    assert "owner role cannot be changed" in response.json()["message"].lower()
     
     # Verify role was not changed
     db_session.refresh(test_user)
@@ -37,7 +37,7 @@ def test_cannot_change_user_role_to_owner(client, auth_headers, test_admin, db_s
         }
     )
     assert response.status_code == 403
-    assert "cannot assign owner role" in response.json()["detail"].lower()
+    assert "cannot assign owner role" in response.json()["message"].lower()
     
     # Verify role was not changed
     db_session.refresh(test_admin)
@@ -54,7 +54,7 @@ def test_cannot_change_owner_role_as_admin(client, admin_auth_headers, test_user
         }
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
     
     # Verify role was not changed
     db_session.refresh(test_user)
@@ -86,7 +86,7 @@ def test_owner_cannot_delete_another_owner(client, auth_headers, db_session, tes
         headers=auth_headers
     )
     assert response.status_code == 403
-    assert "cannot delete another owner" in response.json()["detail"].lower()
+    assert "cannot delete another owner" in response.json()["message"].lower()
     
     # Verify second owner was not deleted
     db_session.refresh(second_owner)
@@ -133,7 +133,7 @@ def test_admin_cannot_update_users(client, admin_auth_headers, test_manager, db_
         }
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
     
     # Verify role was not changed
     db_session.refresh(test_manager)
@@ -150,7 +150,7 @@ def test_admin_cannot_assign_owner_role(client, admin_auth_headers, test_attenda
         }
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
     
     # Verify role was not changed
     db_session.refresh(test_attendant)
@@ -164,7 +164,7 @@ def test_self_deletion_prevention(client, auth_headers, test_user):
         headers=auth_headers
     )
     assert response.status_code == 400
-    assert "cannot delete your own account" in response.json()["detail"].lower()
+    assert "cannot delete your own account" in response.json()["message"].lower()
 
 
 def test_manager_cannot_update_roles_forbidden(client, manager_auth_headers, test_attendant):
@@ -177,7 +177,7 @@ def test_manager_cannot_update_roles_forbidden(client, manager_auth_headers, tes
         }
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()
 
 
 def test_attendant_cannot_update_roles_forbidden(client, attendant_auth_headers, test_manager):
@@ -190,4 +190,4 @@ def test_attendant_cannot_update_roles_forbidden(client, attendant_auth_headers,
         }
     )
     assert response.status_code == 403
-    assert "insufficient" in response.json()["detail"].lower()
+    assert "insufficient" in response.json()["message"].lower()

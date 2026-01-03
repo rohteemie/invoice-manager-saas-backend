@@ -63,7 +63,7 @@ def test_download_invoice_pdf_not_found(client, auth_headers):
         headers=auth_headers
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Invoice not found"
+    assert response.json()["message"] == "Invoice not found"
 
 
 def test_download_invoice_pdf_unauthenticated(client):

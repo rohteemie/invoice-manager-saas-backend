@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.core.config import settings
 from app.api.v1.api import api_router
@@ -11,6 +14,14 @@ from app.core.logging import LoggingMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.core.rate_limit_middleware import RateLimitHeadersMiddleware
 from app.core.metrics import metrics_endpoint
+from app.core.exceptions import AppException
+from app.core.exception_handlers import (
+    app_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+    database_exception_handler,
+    generic_exception_handler
+)
 
 
 @asynccontextmanager
@@ -74,6 +85,14 @@ app.add_middleware(RateLimitHeadersMiddleware)
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Add custom exception handlers for standardized error responses
+app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(IntegrityError, database_exception_handler)
+app.add_exception_handler(OperationalError, database_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # Routers
 app.include_router(api_router, prefix=settings.API_V1_STR)

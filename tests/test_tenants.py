@@ -38,7 +38,7 @@ def test_create_tenant_duplicate_domain(client, test_tenant):
         }
     )
     assert response.status_code == 400
-    assert "domain" in response.json()["detail"].lower()
+    assert "domain" in response.json()["message"].lower()
 
 
 def test_create_tenant_without_domain(client):
@@ -89,7 +89,7 @@ def test_get_tenant_not_found(client):
     """Test retrieving a non-existent tenant."""
     response = client.get("/api/v1/tenants/nonexistent-id")
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"].lower()
+    assert "not found" in response.json()["message"].lower()
 
 
 def test_update_tenant(client, test_tenant):
@@ -128,7 +128,7 @@ def test_update_tenant_duplicate_domain(client, test_tenant, second_tenant):
         json={"domain": second_tenant.domain}
     )
     assert response.status_code == 400
-    assert "domain" in response.json()["detail"].lower()
+    assert "domain" in response.json()["message"].lower()
 
 
 def test_update_tenant_not_found(client):
@@ -255,7 +255,7 @@ def test_register_tenant_with_owner_duplicate_domain(client):
         }
     )
     assert response.status_code == 400
-    assert "domain" in response.json()["detail"].lower()
+    assert "domain" in response.json()["message"].lower()
 
 
 def test_register_tenant_with_owner_duplicate_email(client):
@@ -290,7 +290,7 @@ def test_register_tenant_with_owner_duplicate_email(client):
         }
     )
     assert response.status_code == 400
-    assert "email" in response.json()["detail"].lower()
+    assert "email" in response.json()["message"].lower()
 
 
 def test_register_tenant_with_owner_without_domain(client):

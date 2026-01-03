@@ -62,7 +62,7 @@ def test_upload_tenant_logo_invalid_extension(client: TestClient, auth_headers, 
     )
 
     assert response.status_code == 400
-    assert "Invalid file extension" in response.json()["detail"]
+    assert "Invalid file extension" in response.json()["message"]
 
 
 def test_upload_tenant_logo_invalid_mime_type(client: TestClient, auth_headers, test_tenant):
@@ -77,7 +77,7 @@ def test_upload_tenant_logo_invalid_mime_type(client: TestClient, auth_headers, 
     )
 
     assert response.status_code == 400
-    assert "Invalid file type" in response.json()["detail"]
+    assert "Invalid file type" in response.json()["message"]
 
 
 def test_upload_tenant_logo_file_too_large(client: TestClient, auth_headers, test_tenant):
@@ -93,7 +93,7 @@ def test_upload_tenant_logo_file_too_large(client: TestClient, auth_headers, tes
     )
 
     assert response.status_code == 400
-    assert "File size exceeds" in response.json()["detail"]
+    assert "File size exceeds" in response.json()["message"]
 
 
 def test_upload_tenant_logo_unauthenticated(client: TestClient, test_tenant):
@@ -166,7 +166,7 @@ def test_get_tenant_logo_not_found(client: TestClient, test_tenant):
     response = client.get(f"/api/v1/tenants/{test_tenant.id}/logo")
 
     assert response.status_code == 404
-    assert "does not have a logo" in response.json()["detail"]
+    assert "does not have a logo" in response.json()["message"]
 
 
 def test_delete_tenant_logo_success(client: TestClient, auth_headers, test_tenant):
