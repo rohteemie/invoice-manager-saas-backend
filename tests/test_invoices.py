@@ -1647,9 +1647,9 @@ def test_list_invoices_date_range_filter(client, auth_headers):
     assert "items" in data
     assert data["total"] >= 1
 
-    # Filter with future start_date (should return fewer/no results)
+    # Filter with future start_date (after the created invoice; should return no results)
     response = client.get(
-        "/api/v1/invoices/?start_date=2099-01-01",
+        "/api/v1/invoices/?start_date=2030-01-01",
         headers=auth_headers
     )
     assert response.status_code == 200
@@ -1695,7 +1695,7 @@ def test_list_invoices_date_range_combined(client, auth_headers):
 
     # Filter with date range that should include today
     response = client.get(
-        "/api/v1/invoices/?start_date=2024-01-01&end_date=2099-12-31",
+        "/api/v1/invoices/?start_date=2024-01-01&end_date=2030-12-31",
         headers=auth_headers
     )
     assert response.status_code == 200
@@ -1869,3 +1869,125 @@ def test_list_invoices_search_tenant_isolation(client, auth_headers,
     # Should not contain invoices from first tenant
     for invoice in data["items"]:
         assert "Isolated Search Customer" not in invoice["customer_name"]
+
+
+def test_list_invoices_wildcard_escape_customer_name(client, auth_headers):
+    """Test that SQL wildcards in customer name search are escaped."""
+    # Create invoices - one with underscore, one that would match if _ not escaped
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "test_user",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "testXuser",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search for "test_user" - should only match literal underscore
+    response = client.get(
+        "/api/v1/invoices/?customer_name=test_user",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find only the invoice with literal underscore
+    matching = [
+        inv for inv in data["items"]
+        if inv["customer_name"] == "test_user"
+    ]
+    assert len(matching) >= 1
+
+    # Should NOT match testXuser (if _ was treated as wildcard)
+    wrong_matches = [
+        inv for inv in data["items"]
+        if inv["customer_name"] == "testXuser"
+    ]
+    assert len(wrong_matches) == 0
+
+
+def test_list_invoices_wildcard_escape_percent(client, auth_headers):
+    """Test that percent sign in search is treated literally."""
+    # Create an invoice with percent sign
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "50% Discount Corp",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search for "50%" - should match literally
+    response = client.get(
+        "/api/v1/invoices/?customer_name=50%25",  # URL encoded %
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find the invoice with percent sign
+    matching = [
+        inv for inv in data["items"]
+        if "50%" in inv["customer_name"]
+    ]
+    assert len(matching) >= 1
+
+
+def test_list_invoices_wildcard_escape_invoice_number(client, auth_headers):
+    """Test that SQL wildcards in invoice number search are escaped."""
+    # Create an invoice
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Wildcard Test",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search with underscore that should be literal (not wildcard)
+    # This should not match if underscore is escaped properly
+    response = client.get(
+        "/api/v1/invoices/?invoice_number=INV_NONEXISTENT",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find no invoices (underscore is literal)
+    assert data["total"] == 0
+
+
+def test_list_invoices_date_range_validation(client, auth_headers):
+    """Test that start_date > end_date returns validation error."""
+    response = client.get(
+        "/api/v1/invoices/?start_date=2024-12-31&end_date=2024-01-01",
+        headers=auth_headers
+    )
+    assert response.status_code == 422
+    assert "start_date must be less than or equal to end_date" in \
+        response.json()["message"]
+
+
+def test_list_invoices_amount_range_validation(client, auth_headers):
+    """Test that min_amount > max_amount returns validation error."""
+    response = client.get(
+        "/api/v1/invoices/?min_amount=100&max_amount=50",
+        headers=auth_headers
+    )
+    assert response.status_code == 422
+    assert "min_amount must be less than or equal to max_amount" in \
+        response.json()["message"]

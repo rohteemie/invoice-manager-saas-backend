@@ -334,29 +334,49 @@ def list_invoices(
         InvoiceModel.tenant_id == current_user.tenant_id
     )
 
+    # Helper to escape SQL LIKE wildcards in search terms
+    def _escape_like(term: str) -> str:
+        """
+        Escape SQL LIKE wildcards in a search term so that % and _ are treated
+        as literal characters rather than wildcards.
+        """
+        # First escape backslash itself, then escape % and _
+        term = term.replace("\\", "\\\\")
+        term = term.replace("%", "\\%").replace("_", "\\_")
+        return term
+
     # Filter by status
     if status:
         query = query.filter(InvoiceModel.status == status)
 
     # Search by customer name (partial, case-insensitive)
     if customer_name:
+        escaped_customer_name = _escape_like(customer_name)
+        pattern = f"%{escaped_customer_name}%"
         query = query.filter(
-            InvoiceModel.customer_name.ilike(f"%{customer_name}%")
+            InvoiceModel.customer_name.ilike(pattern, escape="\\")
         )
 
     # Search by invoice number (partial, case-insensitive)
     if invoice_number:
+        escaped_invoice_number = _escape_like(invoice_number)
+        pattern = f"%{escaped_invoice_number}%"
         query = query.filter(
-            InvoiceModel.invoice_number.ilike(f"%{invoice_number}%")
+            InvoiceModel.invoice_number.ilike(pattern, escape="\\")
         )
 
     # Helper to parse ISO date/datetime query params into timezone-aware
     # datetimes
-    def _parse_date_param(value: str, param_name: str) -> datetime:
+    def _parse_date_param(value: str, param_name: str,
+                          end_of_day: bool = False) -> datetime:
         try:
             # Handle plain YYYY-MM-DD as a date
             if len(value) == 10 and value.count("-") == 2:
                 d = date.fromisoformat(value)
+                if end_of_day:
+                    # Set to end of day for inclusive end date filtering
+                    return datetime(d.year, d.month, d.day, 23, 59, 59,
+                                    999999, tzinfo=timezone.utc)
                 return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
 
             # Try full ISO datetime parsing
@@ -364,7 +384,7 @@ def list_invoices(
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt
-        except Exception:
+        except ValueError:
             raise HTTPException(
                 status_code=422,
                 detail=(
@@ -373,13 +393,35 @@ def list_invoices(
                 ),
             )
 
-    # Apply date range filters
+    # Parse and validate date range filters
+    sd = None
+    ed = None
+
     if start_date:
         sd = _parse_date_param(start_date, "start_date")
-        query = query.filter(InvoiceModel.created_at >= sd)
     if end_date:
-        ed = _parse_date_param(end_date, "end_date")
+        ed = _parse_date_param(end_date, "end_date", end_of_day=True)
+
+    # Validate that start_date is not after end_date
+    if sd is not None and ed is not None and sd > ed:
+        raise HTTPException(
+            status_code=422,
+            detail="start_date must be less than or equal to end_date.",
+        )
+
+    # Apply date range filters
+    if sd is not None:
+        query = query.filter(InvoiceModel.created_at >= sd)
+    if ed is not None:
         query = query.filter(InvoiceModel.created_at <= ed)
+
+    # Validate that min_amount is not greater than max_amount
+    if (min_amount is not None and max_amount is not None
+            and min_amount > max_amount):
+        raise HTTPException(
+            status_code=422,
+            detail="min_amount must be less than or equal to max_amount.",
+        )
 
     # Apply amount range filters
     if min_amount is not None:
