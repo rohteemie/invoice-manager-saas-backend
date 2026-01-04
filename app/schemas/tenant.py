@@ -1,7 +1,21 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 from decimal import Decimal
+import re
+
+
+# Regex pattern for hex color validation
+HEX_COLOR_PATTERN = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def validate_hex_color(v: Optional[str]) -> Optional[str]:
+    """Validate hex color format."""
+    if v is None:
+        return v
+    if not HEX_COLOR_PATTERN.match(v):
+        raise ValueError('Invalid hex color format. Use format like #2563eb')
+    return v
 
 
 class TenantBase(BaseModel):
@@ -48,6 +62,27 @@ class TenantBase(BaseModel):
             "Supported placeholders: {prefix}, {date}, {sequence}"
         )
     )
+    primary_color: Optional[str] = Field(
+        "#2563eb", max_length=7,
+        description="Primary brand color for PDF (hex format, e.g., '#2563eb')"
+    )
+    secondary_color: Optional[str] = Field(
+        "#1e40af", max_length=7,
+        description="Secondary brand color for PDF (hex, e.g., '#1e40af')"
+    )
+    custom_footer: Optional[str] = Field(
+        None, max_length=500,
+        description="Custom footer text for invoices"
+    )
+    draft_watermark_enabled: Optional[bool] = Field(
+        True,
+        description="Whether to show DRAFT watermark on draft invoices"
+    )
+
+    @field_validator('primary_color', 'secondary_color', mode='before')
+    @classmethod
+    def validate_colors(cls, v):
+        return validate_hex_color(v)
 
 
 class TenantCreate(TenantBase):
@@ -93,6 +128,27 @@ class TenantUpdate(BaseModel):
             "Supported placeholders: {prefix}, {date}, {sequence}"
         )
     )
+    primary_color: Optional[str] = Field(
+        None, max_length=7,
+        description="Primary brand color for PDF (hex format, e.g., '#2563eb')"
+    )
+    secondary_color: Optional[str] = Field(
+        None, max_length=7,
+        description="Secondary brand color for PDF (hex, e.g., '#1e40af')"
+    )
+    custom_footer: Optional[str] = Field(
+        None, max_length=500,
+        description="Custom footer text for invoices"
+    )
+    draft_watermark_enabled: Optional[bool] = Field(
+        None,
+        description="Whether to show DRAFT watermark on draft invoices"
+    )
+
+    @field_validator('primary_color', 'secondary_color', mode='before')
+    @classmethod
+    def validate_colors(cls, v):
+        return validate_hex_color(v)
 
 
 class TenantInDB(TenantBase):

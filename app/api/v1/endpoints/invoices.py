@@ -577,10 +577,17 @@ def download_invoice_pdf(
         TenantModel.id == current_user.tenant_id
     ).first()
 
+    # Fetch creator user for name on PDF
+    creator = db.query(User).filter(
+        User.id == invoice.creator_id
+    ).first()
+
     # Generate PDF
     try:
         pdf_generator = get_pdf_generator()
-        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice, tenant)
+        pdf_bytes = pdf_generator.generate_invoice_pdf(
+            invoice, tenant, creator
+        )
     except PDFGenerationError as e:
         raise HTTPException(
             status_code=500,
@@ -675,8 +682,15 @@ def send_invoice(
             TenantModel.id == current_user.tenant_id
         ).first()
 
+        # Fetch creator user for name on PDF
+        creator = db.query(User).filter(
+            User.id == invoice.creator_id
+        ).first()
+
         pdf_generator = get_pdf_generator()
-        pdf_bytes = pdf_generator.generate_invoice_pdf(invoice, tenant)
+        pdf_bytes = pdf_generator.generate_invoice_pdf(
+            invoice, tenant, creator
+        )
     except PDFGenerationError as e:
         raise HTTPException(
             status_code=500,

@@ -27,13 +27,31 @@
         font-size: 11pt;
         color: #333;
         line-height: 1.6;
+        position: relative;
       }
 
       .invoice-container {
         max-width: 800px;
         margin: 0 auto;
         padding: 20px;
+        position: relative;
       }
+
+      /* Draft Watermark */
+      {% if show_draft_watermark %}
+      .draft-watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 120pt;
+        font-weight: bold;
+        color: rgba(200, 200, 200, 0.3);
+        z-index: -1;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      {% endif %}
 
       /* Header Section */
       .invoice-header {
@@ -42,7 +60,7 @@
         align-items: flex-start;
         margin-bottom: 40px;
         padding-bottom: 20px;
-        border-bottom: 3px solid #2563eb;
+        border-bottom: 3px solid {{ primary_color }};
       }
 
       .company-info {
@@ -52,7 +70,7 @@
       .company-name {
         font-size: 24pt;
         font-weight: bold;
-        color: #2563eb;
+        color: {{ primary_color }};
         margin-bottom: 5px;
       }
 
@@ -95,7 +113,7 @@
 
       .status-sent {
         background-color: #dbeafe;
-        color: #1e40af;
+        color: {{ secondary_color }};
       }
 
       .status-paid {
@@ -121,7 +139,7 @@
 
       .detail-section h3 {
         font-size: 12pt;
-        color: #2563eb;
+        color: {{ primary_color }};
         margin-bottom: 10px;
         border-bottom: 1px solid #e5e7eb;
         padding-bottom: 5px;
@@ -151,7 +169,7 @@
       }
 
       .items-table thead {
-        background-color: #2563eb;
+        background-color: {{ primary_color }};
         color: white;
       }
 
@@ -212,12 +230,12 @@
       }
 
       .totals-row.total {
-        border-top: 2px solid #2563eb;
+        border-top: 2px solid {{ primary_color }};
         margin-top: 5px;
         padding-top: 12px;
         font-size: 14pt;
         font-weight: bold;
-        color: #2563eb;
+        color: {{ primary_color }};
       }
 
       /* Notes Section */
@@ -225,12 +243,12 @@
         margin-bottom: 30px;
         padding: 15px;
         background-color: #f9fafb;
-        border-left: 4px solid #2563eb;
+        border-left: 4px solid {{ primary_color }};
       }
 
       .notes-section h3 {
         font-size: 11pt;
-        color: #2563eb;
+        color: {{ primary_color }};
         margin-bottom: 8px;
       }
 
@@ -265,6 +283,9 @@
     </style>
   </head>
   <body>
+    {% if show_draft_watermark %}
+    <div class="draft-watermark">DRAFT</div>
+    {% endif %}
     <div class="invoice-container">
       <!-- Header -->
       <div class="invoice-header">
@@ -324,6 +345,12 @@
           <div class="detail-row">
             <span class="detail-label">Payment Method:</span>
             <span class="detail-value">{{ payment_method }}</span>
+          </div>
+          {% endif %}
+          {% if creator_name %}
+          <div class="detail-row">
+            <span class="detail-label">Created By:</span>
+            <span class="detail-value">{{ creator_name }}</span>
           </div>
           {% endif %}
         </div>
@@ -407,7 +434,11 @@
       <!-- Footer -->
       <div class="invoice-footer">
         <p>This document was generated on {{ generated_at }}</p>
+        {% if custom_footer %}
+        <p>{{ custom_footer }}</p>
+        {% else %}
         <p>Thank you for your business!</p>
+        {% endif %}
       </div>
     </div>
   </body>

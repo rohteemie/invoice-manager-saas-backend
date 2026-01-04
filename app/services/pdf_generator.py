@@ -6,6 +6,7 @@ WeasyPrint and Jinja2 templates. PDFs are generated in-memory without
 storage to maintain database as single source of truth.
 """
 
+import re
 from pathlib import Path
 from typing import Optional
 from decimal import Decimal
@@ -14,7 +15,16 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 
-from app.models.invoice import Invoice
+from app.models.invoice import Invoice, InvoiceStatus
+
+
+# Regex pattern for validating hex color codes
+HEX_COLOR_PATTERN = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def is_valid_hex_color(color: str) -> bool:
+    """Validate that a string is a valid hex color code."""
+    return bool(color and HEX_COLOR_PATTERN.match(color))
 
 
 class PDFGenerationError(Exception):
@@ -62,13 +72,19 @@ class PDFGenerator:
         # Configure fonts for WeasyPrint
         self.font_config = FontConfiguration()
 
-    def _prepare_invoice_data(self, invoice: Invoice, tenant=None) -> dict:
+    def _prepare_invoice_data(
+        self,
+        invoice: Invoice,
+        tenant=None,
+        creator=None
+    ) -> dict:
         """
         Prepare invoice data for template rendering.
 
         Args:
             invoice: Invoice model instance
             tenant: Optional Tenant model instance for branding
+            creator: Optional User model instance for creator name
 
         Returns:
             Dictionary with formatted invoice data
@@ -109,6 +125,11 @@ class PDFGenerator:
                 "total_price": format_money(item.total_price)
             })
 
+        # Determine if we should show draft watermark
+        is_draft = invoice.status == InvoiceStatus.DRAFT
+        draft_watermark_enabled = getattr(tenant, 'draft_watermark_enabled', True)
+        show_draft_watermark = is_draft and draft_watermark_enabled is not False
+
         # Prepare invoice data
         data = {
             "invoice_number": invoice.invoice_number,
@@ -133,8 +154,19 @@ class PDFGenerator:
                 "%B %d, %Y at %I:%M %p"
             ),
             "tenant": None,
-            "logo_url": None
+            "logo_url": None,
+            # PDF Customization defaults
+            "primary_color": "#2563eb",
+            "secondary_color": "#1e40af",
+            "custom_footer": None,
+            "show_draft_watermark": show_draft_watermark,
+            "creator_name": None
         }
+
+        # Add creator name if provided
+        creator_name = getattr(creator, 'full_name', None) if creator else None
+        if creator_name:
+            data["creator_name"] = creator_name
 
         # Add tenant information if provided
         if tenant:
@@ -153,15 +185,34 @@ class PDFGenerator:
                 if logo_path.exists():
                     data["logo_url"] = str(logo_path)
 
+            # Apply tenant PDF customization with validation
+            primary_color = getattr(tenant, 'primary_color', None)
+            if primary_color and is_valid_hex_color(primary_color):
+                data["primary_color"] = primary_color
+
+            secondary_color = getattr(tenant, 'secondary_color', None)
+            if secondary_color and is_valid_hex_color(secondary_color):
+                data["secondary_color"] = secondary_color
+
+            custom_footer = getattr(tenant, 'custom_footer', None)
+            if custom_footer:
+                data["custom_footer"] = custom_footer
+
         return data
 
-    def generate_invoice_pdf(self, invoice: Invoice, tenant=None) -> bytes:
+    def generate_invoice_pdf(
+        self,
+        invoice: Invoice,
+        tenant=None,
+        creator=None
+    ) -> bytes:
         """
         Generate PDF for an invoice.
 
         Args:
             invoice: Invoice model instance with loaded relationships
             tenant: Optional Tenant model instance for branding
+            creator: Optional User model instance for creator name
 
         Returns:
             PDF file content as bytes
@@ -178,7 +229,7 @@ class PDFGenerator:
             )
 
         # Prepare data
-        invoice_data = self._prepare_invoice_data(invoice, tenant)
+        invoice_data = self._prepare_invoice_data(invoice, tenant, creator)
 
         # Render HTML
         try:
