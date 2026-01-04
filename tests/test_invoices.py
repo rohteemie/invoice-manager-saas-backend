@@ -1518,3 +1518,476 @@ def test_send_invoice_xss_protection(client, manager_auth_headers, mocker):
     assert "&lt;script&gt;" in sent_email_html
     assert "<script>" not in sent_email_html
     assert "alert(&#x27;xss&#x27;)" in sent_email_html or "alert('xss')" not in sent_email_html
+
+
+# =============================
+# Invoice Search Enhancement Tests
+# =============================
+
+
+def test_list_invoices_search_by_customer_name(client, auth_headers):
+    """Test searching invoices by customer name (partial, case-insensitive)."""
+    # Create invoices with different customer names
+    customer_names = ["John Smith", "Jane Doe", "Johnny Appleseed"]
+    for name in customer_names:
+        client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": name,
+                "issue_date": "2024-01-15",
+                "items": [{"description": "Item", "quantity": 1,
+                           "unit_price": 100}]
+            },
+            headers=auth_headers
+        )
+
+    # Search for "john" - should match "John Smith" and "Johnny Appleseed"
+    response = client.get(
+        "/api/v1/invoices/?customer_name=john",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+
+    # Filter to only check our created invoices
+    john_invoices = [
+        inv for inv in data["items"]
+        if "john" in inv["customer_name"].lower()
+    ]
+    assert len(john_invoices) >= 2
+
+    # All returned "john" matches should contain "john" (case-insensitive)
+    for invoice in john_invoices:
+        assert "john" in invoice["customer_name"].lower()
+
+
+def test_list_invoices_search_by_customer_name_case_insensitive(
+    client, auth_headers
+):
+    """Test customer name search is case-insensitive."""
+    # Create an invoice
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "UPPERCASE Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search with lowercase
+    response = client.get(
+        "/api/v1/invoices/?customer_name=uppercase",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find the invoice regardless of case
+    found = any(
+        "uppercase" in inv["customer_name"].lower()
+        for inv in data["items"]
+    )
+    assert found
+
+
+def test_list_invoices_search_by_invoice_number(client, auth_headers):
+    """Test searching invoices by invoice number (partial, case-insensitive)."""
+    # Create an invoice
+    create_response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Test Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+    invoice_number = create_response.json()["invoice_number"]
+
+    # Search by partial invoice number (last 4 digits)
+    partial_number = invoice_number[-4:]
+    response = client.get(
+        f"/api/v1/invoices/?invoice_number={partial_number}",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find at least one invoice
+    matching = [
+        inv for inv in data["items"]
+        if partial_number in inv["invoice_number"]
+    ]
+    assert len(matching) >= 1
+
+
+def test_list_invoices_date_range_filter(client, auth_headers):
+    """Test filtering invoices by date range."""
+    # Create an invoice
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Date Range Test",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Filter with start_date (should include today's invoice)
+    response = client.get(
+        "/api/v1/invoices/?start_date=2024-01-01",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert data["total"] >= 1
+
+    # Filter with future start_date (after the created invoice; should return no results)
+    response = client.get(
+        "/api/v1/invoices/?start_date=2030-01-01",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 0
+
+
+def test_list_invoices_end_date_filter(client, auth_headers):
+    """Test filtering invoices by end_date."""
+    # Create an invoice
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "End Date Test",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Filter with past end_date (should return no new invoices)
+    response = client.get(
+        "/api/v1/invoices/?end_date=2020-01-01",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 0
+
+
+def test_list_invoices_date_range_combined(client, auth_headers):
+    """Test filtering invoices with both start_date and end_date."""
+    # Create an invoice
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Combined Date Test",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Filter with date range that should include today
+    response = client.get(
+        "/api/v1/invoices/?start_date=2024-01-01&end_date=2030-12-31",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] >= 1
+
+
+def test_list_invoices_invalid_date_format(client, auth_headers):
+    """Test that invalid date format returns validation error."""
+    response = client.get(
+        "/api/v1/invoices/?start_date=invalid-date",
+        headers=auth_headers
+    )
+    assert response.status_code == 422
+    assert "Invalid date format" in response.json()["message"]
+
+
+def test_list_invoices_amount_filter_min(client, auth_headers):
+    """Test filtering invoices by minimum amount."""
+    # Create invoices with different amounts
+    for amount in [50, 100, 200]:
+        client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": f"Amount Test {amount}",
+                "issue_date": "2024-01-15",
+                "items": [
+                    {"description": "Item", "quantity": 1, "unit_price": amount}
+                ]
+            },
+            headers=auth_headers
+        )
+
+    # Filter by minimum amount
+    response = client.get(
+        "/api/v1/invoices/?min_amount=150",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # All returned invoices should have total_amount >= 150
+    for invoice in data["items"]:
+        assert float(invoice["total_amount"]) >= 150
+
+
+def test_list_invoices_amount_filter_max(client, auth_headers):
+    """Test filtering invoices by maximum amount."""
+    # Create invoices with different amounts
+    for amount in [50, 100, 200]:
+        client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": f"Max Amount Test {amount}",
+                "issue_date": "2024-01-15",
+                "items": [
+                    {"description": "Item", "quantity": 1, "unit_price": amount}
+                ]
+            },
+            headers=auth_headers
+        )
+
+    # Filter by maximum amount
+    response = client.get(
+        "/api/v1/invoices/?max_amount=75",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # All returned invoices should have total_amount <= 75
+    for invoice in data["items"]:
+        assert float(invoice["total_amount"]) <= 75
+
+
+def test_list_invoices_amount_filter_range(client, auth_headers):
+    """Test filtering invoices by amount range (min and max)."""
+    # Create invoices with different amounts
+    for amount in [50, 100, 150, 200]:
+        client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": f"Range Amount Test {amount}",
+                "issue_date": "2024-01-15",
+                "items": [
+                    {"description": "Item", "quantity": 1, "unit_price": amount}
+                ]
+            },
+            headers=auth_headers
+        )
+
+    # Filter by amount range
+    response = client.get(
+        "/api/v1/invoices/?min_amount=75&max_amount=175",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # All returned invoices should have 75 <= total_amount <= 175
+    for invoice in data["items"]:
+        amount = float(invoice["total_amount"])
+        assert 75 <= amount <= 175
+
+
+def test_list_invoices_combined_filters(client, auth_headers,
+                                        manager_auth_headers):
+    """Test combining multiple filters."""
+    # Create a specific invoice we can search for
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Combined Filter Customer",
+            "issue_date": "2024-01-15",
+            "items": [
+                {"description": "Item", "quantity": 1, "unit_price": 300}
+            ]
+        },
+        headers=auth_headers
+    )
+
+    # Combine status, customer_name, and amount filters
+    response = client.get(
+        "/api/v1/invoices/?status=draft&customer_name=Combined&min_amount=250",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # All matching invoices should satisfy all conditions
+    for invoice in data["items"]:
+        assert invoice["status"] == "draft"
+        assert "combined" in invoice["customer_name"].lower()
+        assert float(invoice["total_amount"]) >= 250
+
+
+def test_list_invoices_search_no_results(client, auth_headers):
+    """Test search that returns no results."""
+    response = client.get(
+        "/api/v1/invoices/?customer_name=NonExistentCustomerXYZ123",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 0
+    assert data["items"] == []
+
+
+def test_list_invoices_search_tenant_isolation(client, auth_headers,
+                                               second_tenant_auth_headers):
+    """Test that search respects tenant isolation."""
+    # Create invoice in first tenant
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Isolated Search Customer",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search from second tenant - should not find first tenant's invoice
+    response = client.get(
+        "/api/v1/invoices/?customer_name=Isolated",
+        headers=second_tenant_auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should not contain invoices from first tenant
+    for invoice in data["items"]:
+        assert "Isolated Search Customer" not in invoice["customer_name"]
+
+
+def test_list_invoices_wildcard_escape_customer_name(client, auth_headers):
+    """Test that SQL wildcards in customer name search are escaped."""
+    # Create invoices - one with underscore, one that would match if _ not escaped
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "test_user",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "testXuser",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search for "test_user" - should only match literal underscore
+    response = client.get(
+        "/api/v1/invoices/?customer_name=test_user",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find only the invoice with literal underscore
+    matching = [
+        inv for inv in data["items"]
+        if inv["customer_name"] == "test_user"
+    ]
+    assert len(matching) >= 1
+
+    # Should NOT match testXuser (if _ was treated as wildcard)
+    wrong_matches = [
+        inv for inv in data["items"]
+        if inv["customer_name"] == "testXuser"
+    ]
+    assert len(wrong_matches) == 0
+
+
+def test_list_invoices_wildcard_escape_percent(client, auth_headers):
+    """Test that percent sign in search is treated literally."""
+    # Create an invoice with percent sign
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "50% Discount Corp",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search for "50%" - should match literally
+    response = client.get(
+        "/api/v1/invoices/?customer_name=50%25",  # URL encoded %
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find the invoice with percent sign
+    matching = [
+        inv for inv in data["items"]
+        if "50%" in inv["customer_name"]
+    ]
+    assert len(matching) >= 1
+
+
+def test_list_invoices_wildcard_escape_invoice_number(client, auth_headers):
+    """Test that SQL wildcards in invoice number search are escaped."""
+    # Create an invoice
+    client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Wildcard Test",
+            "issue_date": "2024-01-15",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 100}]
+        },
+        headers=auth_headers
+    )
+
+    # Search with underscore that should be literal (not wildcard)
+    # This should not match if underscore is escaped properly
+    response = client.get(
+        "/api/v1/invoices/?invoice_number=INV_NONEXISTENT",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should find no invoices (underscore is literal)
+    assert data["total"] == 0
+
+
+def test_list_invoices_date_range_validation(client, auth_headers):
+    """Test that start_date > end_date returns validation error."""
+    response = client.get(
+        "/api/v1/invoices/?start_date=2024-12-31&end_date=2024-01-01",
+        headers=auth_headers
+    )
+    assert response.status_code == 422
+    assert "start_date must be less than or equal to end_date" in \
+        response.json()["message"]
+
+
+def test_list_invoices_amount_range_validation(client, auth_headers):
+    """Test that min_amount > max_amount returns validation error."""
+    response = client.get(
+        "/api/v1/invoices/?min_amount=100&max_amount=50",
+        headers=auth_headers
+    )
+    assert response.status_code == 422
+    assert "min_amount must be less than or equal to max_amount" in \
+        response.json()["message"]
