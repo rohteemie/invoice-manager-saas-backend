@@ -48,6 +48,22 @@ class TenantBase(BaseModel):
             "Supported placeholders: {prefix}, {date}, {sequence}"
         )
     )
+    primary_color: Optional[str] = Field(
+        "#2563eb", max_length=7,
+        description="Primary brand color for PDF (hex format, e.g., '#2563eb')"
+    )
+    secondary_color: Optional[str] = Field(
+        "#1e40af", max_length=7,
+        description="Secondary brand color for PDF (hex, e.g., '#1e40af')"
+    )
+    custom_footer: Optional[str] = Field(
+        None, max_length=500,
+        description="Custom footer text for invoices"
+    )
+    draft_watermark_enabled: Optional[bool] = Field(
+        True,
+        description="Whether to show DRAFT watermark on draft invoices"
+    )
 
 
 class TenantCreate(TenantBase):
@@ -92,6 +108,22 @@ class TenantUpdate(BaseModel):
             "Format string for invoice numbers. "
             "Supported placeholders: {prefix}, {date}, {sequence}"
         )
+    )
+    primary_color: Optional[str] = Field(
+        None, max_length=7,
+        description="Primary brand color for PDF (hex format, e.g., '#2563eb')"
+    )
+    secondary_color: Optional[str] = Field(
+        None, max_length=7,
+        description="Secondary brand color for PDF (hex, e.g., '#1e40af')"
+    )
+    custom_footer: Optional[str] = Field(
+        None, max_length=500,
+        description="Custom footer text for invoices"
+    )
+    draft_watermark_enabled: Optional[bool] = Field(
+        None,
+        description="Whether to show DRAFT watermark on draft invoices"
     )
 
 

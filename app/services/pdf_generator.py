@@ -14,7 +14,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 
-from app.models.invoice import Invoice
+from app.models.invoice import Invoice, InvoiceStatus
 
 
 class PDFGenerationError(Exception):
@@ -62,13 +62,19 @@ class PDFGenerator:
         # Configure fonts for WeasyPrint
         self.font_config = FontConfiguration()
 
-    def _prepare_invoice_data(self, invoice: Invoice, tenant=None) -> dict:
+    def _prepare_invoice_data(
+        self,
+        invoice: Invoice,
+        tenant=None,
+        creator=None
+    ) -> dict:
         """
         Prepare invoice data for template rendering.
 
         Args:
             invoice: Invoice model instance
             tenant: Optional Tenant model instance for branding
+            creator: Optional User model instance for creator name
 
         Returns:
             Dictionary with formatted invoice data
@@ -109,6 +115,16 @@ class PDFGenerator:
                 "total_price": format_money(item.total_price)
             })
 
+        # Determine if we should show draft watermark
+        is_draft = invoice.status == InvoiceStatus.DRAFT
+        show_draft_watermark = is_draft
+        if tenant and hasattr(tenant, 'draft_watermark_enabled'):
+            # Only show if tenant has enabled it (or default True)
+            show_draft_watermark = (
+                is_draft
+                and (tenant.draft_watermark_enabled is not False)
+            )
+
         # Prepare invoice data
         data = {
             "invoice_number": invoice.invoice_number,
@@ -133,8 +149,18 @@ class PDFGenerator:
                 "%B %d, %Y at %I:%M %p"
             ),
             "tenant": None,
-            "logo_url": None
+            "logo_url": None,
+            # PDF Customization defaults
+            "primary_color": "#2563eb",
+            "secondary_color": "#1e40af",
+            "custom_footer": None,
+            "show_draft_watermark": show_draft_watermark,
+            "creator_name": None
         }
+
+        # Add creator name if provided
+        if creator and hasattr(creator, 'full_name'):
+            data["creator_name"] = creator.full_name
 
         # Add tenant information if provided
         if tenant:
@@ -153,15 +179,29 @@ class PDFGenerator:
                 if logo_path.exists():
                     data["logo_url"] = str(logo_path)
 
+            # Apply tenant PDF customization
+            if hasattr(tenant, 'primary_color') and tenant.primary_color:
+                data["primary_color"] = tenant.primary_color
+            if hasattr(tenant, 'secondary_color') and tenant.secondary_color:
+                data["secondary_color"] = tenant.secondary_color
+            if hasattr(tenant, 'custom_footer') and tenant.custom_footer:
+                data["custom_footer"] = tenant.custom_footer
+
         return data
 
-    def generate_invoice_pdf(self, invoice: Invoice, tenant=None) -> bytes:
+    def generate_invoice_pdf(
+        self,
+        invoice: Invoice,
+        tenant=None,
+        creator=None
+    ) -> bytes:
         """
         Generate PDF for an invoice.
 
         Args:
             invoice: Invoice model instance with loaded relationships
             tenant: Optional Tenant model instance for branding
+            creator: Optional User model instance for creator name
 
         Returns:
             PDF file content as bytes
@@ -178,7 +218,7 @@ class PDFGenerator:
             )
 
         # Prepare data
-        invoice_data = self._prepare_invoice_data(invoice, tenant)
+        invoice_data = self._prepare_invoice_data(invoice, tenant, creator)
 
         # Render HTML
         try:

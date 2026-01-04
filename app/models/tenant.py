@@ -25,6 +25,10 @@ class Tenant(Gen_Model, Base):
             (default: '{prefix}-{date}-{sequence:04d}')
         invoice_number_sequence: Atomic counter for invoice numbering
             (default: 0)
+        primary_color: Primary brand color for PDF (hex, default: '#2563eb')
+        secondary_color: Secondary brand color for PDF (hex, default: '#1e40af')
+        custom_footer: Custom footer text for invoices (optional)
+        draft_watermark_enabled: Whether to show DRAFT watermark (default: True)
     """
     __tablename__ = "tenants"
 
@@ -49,6 +53,11 @@ class Tenant(Gen_Model, Base):
         nullable=False
     )
     invoice_number_sequence = Column(Integer, default=0, nullable=False)
+    # PDF Customization fields
+    primary_color = Column(String(7), default="#2563eb", nullable=False)
+    secondary_color = Column(String(7), default="#1e40af", nullable=False)
+    custom_footer = Column(Text, nullable=True)
+    draft_watermark_enabled = Column(Boolean, default=True, nullable=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
