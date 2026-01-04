@@ -281,6 +281,28 @@ def list_invoices(
     limit: int = Query(100, ge=1, le=100),
     status: Optional[InvoiceStatus] = Query(None,
                                             description="Filter by status"),
+    customer_name: Optional[str] = Query(
+        None,
+        max_length=100,
+        description="Search by customer name (partial, case-insensitive)"
+    ),
+    invoice_number: Optional[str] = Query(
+        None,
+        max_length=50,
+        description="Search by invoice number (partial, case-insensitive)"
+    ),
+    start_date: Optional[str] = Query(
+        None, description="Filter invoices created on or after (ISO 8601)"
+    ),
+    end_date: Optional[str] = Query(
+        None, description="Filter invoices created on or before (ISO 8601)"
+    ),
+    min_amount: Optional[Decimal] = Query(
+        None, ge=0, description="Minimum total amount filter"
+    ),
+    max_amount: Optional[Decimal] = Query(
+        None, ge=0, description="Maximum total amount filter"
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -289,6 +311,15 @@ def list_invoices(
 
     Permissions: All authenticated users can list invoices.
     Results are automatically filtered by tenant_id.
+
+    Filters:
+    - status: Filter by invoice status (draft, sent, paid, overdue)
+    - customer_name: Search by customer name (partial, case-insensitive)
+    - invoice_number: Search by invoice number (partial, case-insensitive)
+    - start_date: Filter invoices created on or after this date (ISO 8601)
+    - end_date: Filter invoices created on or before this date (ISO 8601)
+    - min_amount: Filter invoices with total_amount >= min_amount
+    - max_amount: Filter invoices with total_amount <= max_amount
 
     Returns paginated response with metadata:
     - items: List of invoices
@@ -303,8 +334,58 @@ def list_invoices(
         InvoiceModel.tenant_id == current_user.tenant_id
     )
 
+    # Filter by status
     if status:
         query = query.filter(InvoiceModel.status == status)
+
+    # Search by customer name (partial, case-insensitive)
+    if customer_name:
+        query = query.filter(
+            InvoiceModel.customer_name.ilike(f"%{customer_name}%")
+        )
+
+    # Search by invoice number (partial, case-insensitive)
+    if invoice_number:
+        query = query.filter(
+            InvoiceModel.invoice_number.ilike(f"%{invoice_number}%")
+        )
+
+    # Helper to parse ISO date/datetime query params into timezone-aware
+    # datetimes
+    def _parse_date_param(value: str, param_name: str) -> datetime:
+        try:
+            # Handle plain YYYY-MM-DD as a date
+            if len(value) == 10 and value.count("-") == 2:
+                d = date.fromisoformat(value)
+                return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+
+            # Try full ISO datetime parsing
+            dt = datetime.fromisoformat(value)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except Exception:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Invalid date format for {param_name}. Use YYYY-MM-DD or "
+                    "an ISO 8601 datetime string."
+                ),
+            )
+
+    # Apply date range filters
+    if start_date:
+        sd = _parse_date_param(start_date, "start_date")
+        query = query.filter(InvoiceModel.created_at >= sd)
+    if end_date:
+        ed = _parse_date_param(end_date, "end_date")
+        query = query.filter(InvoiceModel.created_at <= ed)
+
+    # Apply amount range filters
+    if min_amount is not None:
+        query = query.filter(InvoiceModel.total_amount >= min_amount)
+    if max_amount is not None:
+        query = query.filter(InvoiceModel.total_amount <= max_amount)
 
     # Get total count
     total = query.count()
