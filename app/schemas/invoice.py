@@ -33,7 +33,7 @@ class InvoiceItemInDB(InvoiceItemBase):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class InvoiceItem(InvoiceItemInDB):
@@ -138,7 +138,7 @@ class InvoiceInDB(InvoiceBase):
     updated_at: datetime
     items: List[InvoiceItem] = []
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class Invoice(InvoiceInDB):
