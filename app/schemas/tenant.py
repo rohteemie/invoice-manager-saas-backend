@@ -1,7 +1,21 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 from decimal import Decimal
+import re
+
+
+# Regex pattern for hex color validation
+HEX_COLOR_PATTERN = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def validate_hex_color(v: Optional[str]) -> Optional[str]:
+    """Validate hex color format."""
+    if v is None:
+        return v
+    if not HEX_COLOR_PATTERN.match(v):
+        raise ValueError('Invalid hex color format. Use format like #2563eb')
+    return v
 
 
 class TenantBase(BaseModel):
@@ -65,6 +79,11 @@ class TenantBase(BaseModel):
         description="Whether to show DRAFT watermark on draft invoices"
     )
 
+    @field_validator('primary_color', 'secondary_color', mode='before')
+    @classmethod
+    def validate_colors(cls, v):
+        return validate_hex_color(v)
+
 
 class TenantCreate(TenantBase):
     pass
@@ -125,6 +144,11 @@ class TenantUpdate(BaseModel):
         None,
         description="Whether to show DRAFT watermark on draft invoices"
     )
+
+    @field_validator('primary_color', 'secondary_color', mode='before')
+    @classmethod
+    def validate_colors(cls, v):
+        return validate_hex_color(v)
 
 
 class TenantInDB(TenantBase):

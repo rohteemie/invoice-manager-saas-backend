@@ -6,6 +6,7 @@ WeasyPrint and Jinja2 templates. PDFs are generated in-memory without
 storage to maintain database as single source of truth.
 """
 
+import re
 from pathlib import Path
 from typing import Optional
 from decimal import Decimal
@@ -15,6 +16,15 @@ from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 
 from app.models.invoice import Invoice, InvoiceStatus
+
+
+# Regex pattern for validating hex color codes
+HEX_COLOR_PATTERN = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def is_valid_hex_color(color: str) -> bool:
+    """Validate that a string is a valid hex color code."""
+    return bool(color and HEX_COLOR_PATTERN.match(color))
 
 
 class PDFGenerationError(Exception):
@@ -117,13 +127,8 @@ class PDFGenerator:
 
         # Determine if we should show draft watermark
         is_draft = invoice.status == InvoiceStatus.DRAFT
-        show_draft_watermark = is_draft
-        if tenant and hasattr(tenant, 'draft_watermark_enabled'):
-            # Only show if tenant has enabled it (or default True)
-            show_draft_watermark = (
-                is_draft
-                and (tenant.draft_watermark_enabled is not False)
-            )
+        draft_watermark_enabled = getattr(tenant, 'draft_watermark_enabled', True)
+        show_draft_watermark = is_draft and draft_watermark_enabled is not False
 
         # Prepare invoice data
         data = {
@@ -159,8 +164,9 @@ class PDFGenerator:
         }
 
         # Add creator name if provided
-        if creator and hasattr(creator, 'full_name'):
-            data["creator_name"] = creator.full_name
+        creator_name = getattr(creator, 'full_name', None) if creator else None
+        if creator_name:
+            data["creator_name"] = creator_name
 
         # Add tenant information if provided
         if tenant:
@@ -179,13 +185,18 @@ class PDFGenerator:
                 if logo_path.exists():
                     data["logo_url"] = str(logo_path)
 
-            # Apply tenant PDF customization
-            if hasattr(tenant, 'primary_color') and tenant.primary_color:
-                data["primary_color"] = tenant.primary_color
-            if hasattr(tenant, 'secondary_color') and tenant.secondary_color:
-                data["secondary_color"] = tenant.secondary_color
-            if hasattr(tenant, 'custom_footer') and tenant.custom_footer:
-                data["custom_footer"] = tenant.custom_footer
+            # Apply tenant PDF customization with validation
+            primary_color = getattr(tenant, 'primary_color', None)
+            if primary_color and is_valid_hex_color(primary_color):
+                data["primary_color"] = primary_color
+
+            secondary_color = getattr(tenant, 'secondary_color', None)
+            if secondary_color and is_valid_hex_color(secondary_color):
+                data["secondary_color"] = secondary_color
+
+            custom_footer = getattr(tenant, 'custom_footer', None)
+            if custom_footer:
+                data["custom_footer"] = custom_footer
 
         return data
 

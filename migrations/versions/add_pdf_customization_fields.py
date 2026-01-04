@@ -46,7 +46,7 @@ def upgrade():
             'draft_watermark_enabled',
             sa.Boolean(),
             nullable=False,
-            server_default='1'
+            server_default=sa.true()
         )
     )
 

@@ -439,3 +439,30 @@ def test_prepare_invoice_data_defaults(pdf_generator, sample_invoice):
     assert data["secondary_color"] == "#1e40af"
     assert data["custom_footer"] is None
     assert data["creator_name"] is None
+
+
+def test_invalid_hex_colors_fallback_to_defaults(pdf_generator, sample_invoice):
+    """Test that invalid hex colors fall back to defaults."""
+    tenant = MockTenant(
+        primary_color="invalid-color",
+        secondary_color="123456"  # Missing #
+    )
+
+    data = pdf_generator._prepare_invoice_data(sample_invoice, tenant)
+
+    # Invalid colors should fall back to defaults
+    assert data["primary_color"] == "#2563eb"
+    assert data["secondary_color"] == "#1e40af"
+
+
+def test_valid_hex_colors_accepted(pdf_generator, sample_invoice):
+    """Test that valid hex colors are accepted."""
+    tenant = MockTenant(
+        primary_color="#FF5500",
+        secondary_color="#aabbcc"
+    )
+
+    data = pdf_generator._prepare_invoice_data(sample_invoice, tenant)
+
+    assert data["primary_color"] == "#FF5500"
+    assert data["secondary_color"] == "#aabbcc"
