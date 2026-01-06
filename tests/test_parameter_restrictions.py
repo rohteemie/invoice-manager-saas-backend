@@ -421,7 +421,6 @@ def test_superadmin_can_update_tenant_domain_uniqueness(
     response1 = client.post("/api/v1/tenants/", json=tenant1_data)
     response2 = client.post("/api/v1/tenants/", json=tenant2_data)
     
-    tenant1_id = response1.json()["id"]
     tenant2_id = response2.json()["id"]
     
     # Try to update tenant2 with tenant1's domain
@@ -461,7 +460,6 @@ def test_superadmin_can_update_tenant_business_number_uniqueness(
     response1 = client.post("/api/v1/tenants/", json=tenant1_data)
     response2 = client.post("/api/v1/tenants/", json=tenant2_data)
     
-    tenant1_id = response1.json()["id"]
     tenant2_id = response2.json()["id"]
     
     # Try to update tenant2 with tenant1's business registration number
@@ -478,3 +476,92 @@ def test_superadmin_can_update_tenant_business_number_uniqueness(
     assert response.status_code == 400
     response_data = response.json()
     assert "business registration number already exists" in response_data.get("message", "").lower()
+
+
+def test_tenant_update_cannot_remove_all_unique_identifiers(
+    client: TestClient,
+    db_session: Session,
+    test_tenant: TenantModel,
+    auth_headers: dict
+):
+    """Test that updating tenant cannot remove all unique identifiers."""
+    # Test tenant has only a domain, try to set it to null
+    update_data = {
+        "domain": None
+    }
+    
+    response = client.put(
+        f"/api/v1/tenants/{test_tenant.id}",
+        json=update_data,
+        headers=auth_headers
+    )
+    
+    assert response.status_code == 400
+    response_data = response.json()
+    assert "at least one unique identifier" in response_data.get("message", "").lower()
+
+
+def test_superadmin_update_cannot_remove_all_unique_identifiers(
+    client: TestClient,
+    db_session: Session,
+    superadmin_token_headers: dict
+):
+    """Test that superadmin update cannot remove all unique identifiers."""
+    # Create tenant with only domain
+    tenant_data = {
+        "name": "Test Tenant",
+        "domain": "onlydomain.com",
+        "default_currency": "USD"
+    }
+    
+    response = client.post("/api/v1/tenants/", json=tenant_data)
+    tenant_id = response.json()["id"]
+    
+    # Try to set domain to null without providing business_registration_number
+    update_data = {
+        "domain": None
+    }
+    
+    response = client.put(
+        f"/api/v1/admin/tenants/{tenant_id}",
+        json=update_data,
+        headers=superadmin_token_headers
+    )
+    
+    assert response.status_code == 400
+    response_data = response.json()
+    assert "at least one unique identifier" in response_data.get("message", "").lower()
+
+
+def test_tenant_can_swap_unique_identifiers(
+    client: TestClient,
+    db_session: Session,
+    superadmin_token_headers: dict
+):
+    """Test that tenant can swap from domain to business_registration_number."""
+    # Create tenant with only domain
+    tenant_data = {
+        "name": "Swap Test",
+        "domain": "swaptest.com",
+        "default_currency": "USD"
+    }
+    
+    response = client.post("/api/v1/tenants/", json=tenant_data)
+    tenant_id = response.json()["id"]
+    
+    # Swap: add business_registration_number and remove domain
+    update_data = {
+        "domain": None,
+        "business_registration_number": "BRN-SWAP-123"
+    }
+    
+    response = client.put(
+        f"/api/v1/admin/tenants/{tenant_id}",
+        json=update_data,
+        headers=superadmin_token_headers
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["domain"] is None
+    assert data["business_registration_number"] == "BRN-SWAP-123"

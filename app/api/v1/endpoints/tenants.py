@@ -312,6 +312,21 @@ def update_tenant(
                     detail="A tenant with this business registration number already exists"
                 )
     
+    # Ensure at least one unique identifier remains after the update
+    final_domain = update_data.get("domain", tenant.domain)
+    final_business_registration_number = update_data.get(
+        "business_registration_number",
+        tenant.business_registration_number,
+    )
+    if final_domain is None and final_business_registration_number is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Tenant must have at least one unique identifier: "
+                "domain or business_registration_number"
+            ),
+        )
+    
     for field, value in update_data.items():
         setattr(tenant, field, value)
 

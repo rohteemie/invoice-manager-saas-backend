@@ -216,7 +216,7 @@ def reactivate_tenant(
 
 
 @router.put("/tenants/{tenant_id}", response_model=Tenant)
-def update_tenant_plan(
+def superadmin_update_tenant(
     tenant_id: str,
     tenant_update: SuperAdminTenantUpdate,
     request: Request,
@@ -224,17 +224,24 @@ def update_tenant_plan(
     db: Session = Depends(get_db)
 ):
     """
-    Update a tenant's plan type and other settings.
-    
+    Update a tenant's plan type and any other fields defined in the
+    SuperAdminTenantUpdate schema.
+
     Requires Super Admin access.
     Only super admins can change the plan_type.
-    
+
+    All fields present in the SuperAdminTenantUpdate request body and allowed by
+    that schema are candidates for update (for example: plan_type, domain,
+    name, activation/status flags, business_registration_number, and other
+    tenant-level configuration fields). Uniqueness constraints apply to some
+    fields such as domain and business_registration_number.
+
     Args:
-        tenant_id: ID of the tenant to update
-        tenant_update: Updated tenant fields
-        
+        tenant_id: ID of the tenant to update.
+        tenant_update: Updated tenant fields, following SuperAdminTenantUpdate.
+
     Returns:
-        Updated tenant
+        Updated tenant.
     """
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     
@@ -281,6 +288,21 @@ def update_tenant_plan(
                     status_code=400,
                     detail="A tenant with this business registration number already exists"
                 )
+    
+    # Ensure at least one unique identifier remains after the update
+    final_domain = update_data.get("domain", tenant.domain)
+    final_business_registration_number = update_data.get(
+        "business_registration_number",
+        tenant.business_registration_number,
+    )
+    if final_domain is None and final_business_registration_number is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Tenant must have at least one unique identifier: "
+                "domain or business_registration_number"
+            ),
+        )
     
     # Apply updates
     for field, value in update_data.items():
