@@ -9,7 +9,8 @@ class Tenant(Gen_Model, Base):
     Attributes:
         name: Tenant name
         domain: Unique tenant domain (optional)
-        plan_type: Subscription plan type
+        business_registration_number: Unique business registration number (optional)
+        plan_type: Subscription plan type (only super admin can modify)
         description: Tenant description (optional)
         is_active: Whether tenant is active
         default_currency: Default currency for invoices (NGN, USD, GBP, EUR)
@@ -34,7 +35,8 @@ class Tenant(Gen_Model, Base):
 
     name = Column(String(100), nullable=False)
     domain = Column(String(100), nullable=True, unique=True)
-    plan_type = Column(String(20), default="free")
+    business_registration_number = Column(String(100), nullable=True, unique=True)
+    plan_type = Column(String(20), default="Standard")
     description = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
     default_currency = Column(String(3), default="NGN", nullable=False)

@@ -25,10 +25,14 @@ class TenantBase(BaseModel):
     domain: Optional[str] = Field(None, min_length=3, max_length=100,
                                   description="Unique tenant domain"
                                   )
+    business_registration_number: Optional[str] = Field(
+        None, min_length=3, max_length=100,
+        description="Unique business registration number"
+    )
     description: Optional[str] = Field(None, max_length=500,
                                        description="Tenant description"
                                        )
-    plan_type: str = Field("free", description="Tenant plan type")
+    plan_type: str = Field("Standard", description="Tenant plan type (only super admin can modify)")
     default_currency: Optional[str] = Field(
         "USD", description="Default currency (NGN, USD, GBP, EUR)"
     )
@@ -92,8 +96,11 @@ class TenantCreate(TenantBase):
 class TenantUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     domain: Optional[str] = Field(None, min_length=3, max_length=100)
+    business_registration_number: Optional[str] = Field(
+        None, min_length=3, max_length=100,
+        description="Unique business registration number"
+    )
     description: Optional[str] = Field(None, max_length=500)
-    plan_type: Optional[str] = None
     is_active: Optional[bool] = None
     default_currency: Optional[str] = Field(
         None, description="Default currency (NGN, USD, GBP, EUR)"
@@ -160,6 +167,11 @@ class TenantInDB(TenantBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SuperAdminTenantUpdate(TenantUpdate):
+    """Schema for super admin to update tenant, including plan_type."""
+    plan_type: Optional[str] = Field(None, description="Tenant plan type")
 
 
 class Tenant(TenantInDB):

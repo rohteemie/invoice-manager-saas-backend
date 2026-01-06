@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.models.tenant import Tenant as TenantModel
 from app.models.user import User as UserModel
 from app.models.audit_log import AuditLog as AuditLogModel
-from app.schemas.tenant import Tenant
+from app.schemas.tenant import Tenant, SuperAdminTenantUpdate
 from app.schemas.user import User
 from app.schemas.audit_log import AuditLog
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
@@ -213,6 +213,99 @@ def reactivate_tenant(
         "message": f"Tenant {tenant.name} has been reactivated",
         "tenant": tenant
     }
+
+
+@router.put("/tenants/{tenant_id}", response_model=Tenant)
+def update_tenant_plan(
+    tenant_id: str,
+    tenant_update: SuperAdminTenantUpdate,
+    request: Request,
+    current_user: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a tenant's plan type and other settings.
+    
+    Requires Super Admin access.
+    Only super admins can change the plan_type.
+    
+    Args:
+        tenant_id: ID of the tenant to update
+        tenant_update: Updated tenant fields
+        
+    Returns:
+        Updated tenant
+    """
+    tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    
+    if not tenant:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Tenant with ID {tenant_id} not found"
+        )
+    
+    update_data = tenant_update.model_dump(exclude_unset=True)
+    
+    # Track changes for audit
+    changes = {}
+    for field, value in update_data.items():
+        if hasattr(tenant, field):
+            old_value = getattr(tenant, field)
+            if old_value != value:
+                changes[field] = {"before": old_value, "after": value}
+    
+    # Check for domain uniqueness if domain is being updated
+    if "domain" in update_data and update_data["domain"] is not None:
+        new_domain = update_data["domain"]
+        if new_domain != tenant.domain:
+            existing_tenant = db.query(TenantModel).filter(
+                TenantModel.domain == new_domain,
+                TenantModel.id != tenant_id
+            ).first()
+            if existing_tenant:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A tenant with this domain already exists"
+                )
+    
+    # Check for business_registration_number uniqueness if being updated
+    if "business_registration_number" in update_data and update_data["business_registration_number"] is not None:
+        new_brn = update_data["business_registration_number"]
+        if new_brn != tenant.business_registration_number:
+            existing_tenant = db.query(TenantModel).filter(
+                TenantModel.business_registration_number == new_brn,
+                TenantModel.id != tenant_id
+            ).first()
+            if existing_tenant:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A tenant with this business registration number already exists"
+                )
+    
+    # Apply updates
+    for field, value in update_data.items():
+        setattr(tenant, field, value)
+    
+    db.commit()
+    db.refresh(tenant)
+    
+    # Log the update
+    if changes:
+        log_tenant_event(
+            db=db,
+            request=request,
+            action=AuditAction.TENANT_UPDATED,
+            resource_id=tenant_id,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            description=(
+                f"Tenant {tenant.name} updated by "
+                f"super admin {current_user.email}"
+            ),
+            changes=changes
+        )
+    
+    return tenant
 
 
 @router.get("/users", response_model=PaginatedResponse[User])
