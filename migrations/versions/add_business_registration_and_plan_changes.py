@@ -18,15 +18,21 @@ depends_on = None
 
 def upgrade():
     """Add business_registration_number column and update plan_type default."""
-    # Add business_registration_number column with unique constraint
+    # Add business_registration_number column
     op.add_column(
         'tenants',
         sa.Column(
             'business_registration_number',
             sa.String(length=100),
-            nullable=True,
-            unique=True
+            nullable=True
         )
+    )
+    
+    # Create unique constraint for business_registration_number
+    op.create_unique_constraint(
+        'uq_tenants_business_registration_number',
+        'tenants',
+        ['business_registration_number']
     )
     
     # Update existing tenants to have 'Standard' plan_type instead of 'free'
@@ -54,6 +60,13 @@ def downgrade():
         server_default='free',
         existing_type=sa.String(length=20),
         existing_nullable=True
+    )
+    
+    # Drop unique constraint
+    op.drop_constraint(
+        'uq_tenants_business_registration_number',
+        'tenants',
+        type_='unique'
     )
     
     # Drop business_registration_number column
