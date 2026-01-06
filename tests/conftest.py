@@ -84,7 +84,7 @@ def test_tenant(db_session):
     tenant = Tenant(
         name="Test Company",
         domain="testcompany.com",
-        plan_type="free",
+        plan_type="Standard",
         description="A test company"
     )
     db_session.add(tenant)
@@ -101,7 +101,7 @@ def second_tenant(db_session):
     tenant = Tenant(
         name="Second Company",
         domain="secondcompany.com",
-        plan_type="free",
+        plan_type="Standard",
         description="A second test company"
     )
     db_session.add(tenant)
