@@ -42,18 +42,20 @@ def test_create_tenant_duplicate_domain(client, test_tenant):
 
 
 def test_create_tenant_without_domain(client):
-    """Test creating a tenant without a domain."""
+    """Test creating a tenant without a domain but with business registration number."""
     response = client.post(
         "/api/v1/tenants/",
         json={
             "name": "No Domain Company",
-            "plan_type": "free"
+            "business_registration_number": "BRN-NO-DOMAIN",
+            "plan_type": "Standard"
         }
     )
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "No Domain Company"
     assert data["domain"] is None
+    assert data["business_registration_number"] == "BRN-NO-DOMAIN"
 
 
 def test_list_tenants(client, test_tenant, second_tenant):
@@ -114,15 +116,14 @@ def test_update_tenant(client, test_tenant):
         f"/api/v1/tenants/{test_tenant.id}",
         json={
             "name": "Updated Company Name",
-            "description": "Updated description",
-            "plan_type": "enterprise"
+            "description": "Updated description"
         }
     )
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Updated Company Name"
     assert data["description"] == "Updated description"
-    assert data["plan_type"] == "enterprise"
+    assert data["plan_type"] == "Standard"  # plan_type should not change
     assert data["domain"] == test_tenant.domain  # Unchanged
 
 
@@ -310,12 +311,13 @@ def test_register_tenant_with_owner_duplicate_email(client):
 
 
 def test_register_tenant_with_owner_without_domain(client):
-    """Test creating a tenant with owner without domain."""
+    """Test creating a tenant with owner without domain but with business registration number."""
     response = client.post(
         "/api/v1/tenants/register",
         json={
             "name": "No Domain Company",
-            "plan_type": "free",
+            "business_registration_number": "BRN-REGISTER-NO-DOMAIN",
+            "plan_type": "Standard",
             "owner": {
                 "full_name": "Owner Name",
                 "email": "owner@nodomain.com",
@@ -327,6 +329,7 @@ def test_register_tenant_with_owner_without_domain(client):
     data = response.json()
     assert data["tenant"]["name"] == "No Domain Company"
     assert data["tenant"]["domain"] is None
+    assert data["tenant"]["business_registration_number"] == "BRN-REGISTER-NO-DOMAIN"
     assert data["owner"]["email"] == "owner@nodomain.com"
 
 
@@ -371,7 +374,8 @@ def test_register_tenant_with_owner_can_login(client):
         "/api/v1/tenants/register",
         json={
             "name": "Login Test Company",
-            "plan_type": "free",
+            "domain": "logintest.com",
+            "plan_type": "Standard",
             "owner": {
                 "full_name": "Login Test Owner",
                 "email": "logintest@company.com",
