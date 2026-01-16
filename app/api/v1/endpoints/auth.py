@@ -5,43 +5,36 @@ Implements JWT-based authentication with secure password handling.
 from datetime import datetime, timezone
 import logging
 import os
-
 from typing import Optional
 import json
 from urllib.parse import parse_qs
-
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    status,
-    Request,
-    Response,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
+
 from app.models.user import User as UserModel
-from app.schemas.user import (
-    UserCreate, User, Token,
-    ResetPasswordRequest
-)
-from app.core.security import (
-    verify_password, get_password_hash,
-    create_access_token, create_refresh_token, decode_token,
-    generate_verification_token, generate_password_reset_token
-)
+from app.schemas.user import UserCreate, User, Token
+from app.schemas.user import ResetPasswordRequest
+
+from app.core.security import verify_password, get_password_hash
+from app.core.security import create_access_token, create_refresh_token
+from app.core.security import decode_token, generate_verification_token
+from app.core.security import generate_password_reset_token
+
 from app.core.rate_limit import limiter
 from app.core.config import settings
 from app.core.login_throttle import get_login_throttle
+
 from app.services.audit_logger import log_auth_event
 from app.models.audit_log import AuditAction
-from app.tasks.email_tasks import (
-    send_verification_email_task,
-    send_password_reset_email_task,
-)
+
+from app.tasks.email_tasks import send_verification_email_task
+from app.tasks.email_tasks import send_password_reset_email_task
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -362,7 +355,7 @@ def refresh_token(
 @limiter.limit("10/minute")
 def verify_email(
     request: Request,
-    token: str,
+    token: str = Query(..., description="Attach token as query parameter"),
     db: Session = Depends(get_db)
 ):
     """

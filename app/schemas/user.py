@@ -1,7 +1,20 @@
 from datetime import datetime
+import re
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 from app.models.user import UserRole
+
+
+def validate_password_strength(v: str) -> str:
+    if not re.search(r'[A-Z]', v):
+        raise ValueError('Password must contain an uppercase letter')
+    if not re.search(r'[a-z]', v):
+        raise ValueError('Password must contain a lowercase letter')
+    if not re.search(r'\d', v):
+        raise ValueError('Password must contain a digit')
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=]', v):
+        raise ValueError('Password must contain a special character')
+    return v
 
 
 class UserBase(BaseModel):
@@ -31,6 +44,13 @@ class UserCreate(UserBase):
     is_superadmin: Optional[bool] = Field(
         False, description="Platform-level super admin flag"
     )
+
+    @field_validator('password')
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain an uppercase letter')
+        return validate_password_strength(v)
 
 
 class UserUpdate(BaseModel):
@@ -96,3 +116,8 @@ class ResetPasswordRequest(BaseModel):
         max_length=100,
         description="New password (min 8 characters)"
     )
+
+    @field_validator('new_password')
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return validate_password_strength(v)

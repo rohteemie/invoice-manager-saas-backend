@@ -174,6 +174,19 @@ class OwnerCreate(BaseModel):
     password: str = Field(..., min_length=8, max_length=100,
                           description="Owner password (min 8 characters)")
 
+    @field_validator('password')
+    @classmethod
+    def password_strength(cls, v):
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain an uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain a lowercase letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain a digit')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=]', v):
+            raise ValueError('Password must contain a special character')
+        return v
+
 
 # Schema for combined tenant + owner registration request
 class TenantRegister(TenantBase):
