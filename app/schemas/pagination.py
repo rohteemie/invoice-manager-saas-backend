@@ -25,7 +25,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
         has_next: Whether there is a next page
         has_previous: Whether there is a previous page
     """
-    items: List[T] = Field(..., description="List of items in the current page")
+    items: List[T] = Field(..., description="List of item in the current page")
     total: int = Field(..., ge=0, description="Total count of items")
     page: int = Field(..., ge=1, description="Current page number (1-indexed)")
     size: int = Field(..., ge=1, description="Number of items per page")
