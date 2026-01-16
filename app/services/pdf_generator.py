@@ -127,8 +127,8 @@ class PDFGenerator:
 
         # Determine if we should show draft watermark
         is_draft = invoice.status == InvoiceStatus.DRAFT
-        draft_watermark_enabled = getattr(tenant, 'draft_watermark_enabled', True)
-        show_draft_watermark = is_draft and draft_watermark_enabled is not False
+        watermarked_draft = getattr(tenant, 'draft_watermark_enabled', True)
+        show_draft_watermark = is_draft and watermarked_draft is not False
 
         # Prepare invoice data
         data = {
