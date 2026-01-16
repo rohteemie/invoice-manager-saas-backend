@@ -26,9 +26,9 @@ class Tenant(Gen_Model, Base):
         invoice_number_sequence: Atomic counter for invoice numbering
             (default: 0)
         primary_color: Primary brand color for PDF (hex, default: '#2563eb')
-        secondary_color: Secondary brand color for PDF (hex, default: '#1e40af')
+        secondary_color: Second brand color for PDF (hex, default: '#1e40af')
         custom_footer: Custom footer text for invoices (optional)
-        draft_watermark_enabled: Whether to show DRAFT watermark (default: True)
+        draft_watermark_enabled: Whether to show watermark (default: True)
     """
     __tablename__ = "tenants"
 

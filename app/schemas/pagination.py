@@ -31,7 +31,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     size: int = Field(..., ge=1, description="Number of items per page")
     pages: int = Field(..., ge=0, description="Total number of pages")
     has_next: bool = Field(..., description="Whether there is a next page")
-    has_previous: bool = Field(..., description="Whether there is a previous page")
+    has_previous: bool = Field(..., description="Whether there is a prev page")
 
     model_config = ConfigDict(
         json_schema_extra={
