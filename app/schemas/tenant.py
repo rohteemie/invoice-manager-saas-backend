@@ -32,7 +32,10 @@ class TenantBase(BaseModel):
     description: Optional[str] = Field(None, max_length=500,
                                        description="Tenant description"
                                        )
-    plan_type: str = Field("Standard", description="Tenant plan type (only super admin can modify)")
+    plan_type: str = Field(
+        "Standard",
+        description="Tenant plan type (only super admin can modify)"
+    )
     default_currency: Optional[str] = Field(
         "USD", description="Default currency (NGN, USD, GBP, EUR)"
     )

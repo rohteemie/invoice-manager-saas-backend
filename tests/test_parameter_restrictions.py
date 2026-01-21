@@ -1,7 +1,7 @@
 """
 Tests for parameter restriction enforcement:
 - Business registration number uniqueness
-- Domain uniqueness 
+- Domain uniqueness
 - Plan type restriction to super admins
 - Invoice currency enforcement from tenant settings
 - Invoice tax enforcement from tenant settings
@@ -52,7 +52,7 @@ def superadmin_token_headers(client, superadmin_user):
 def test_invoice(db_session, test_tenant, test_user):
     """Create a test invoice."""
     from app.models.invoice import Invoice, InvoiceItem, InvoiceStatus, Currency
-    
+
     invoice = Invoice(
         invoice_number="INV-001",
         tenant_id=test_tenant.id,
@@ -83,7 +83,7 @@ def test_tenant_creation_requires_domain_or_business_number(
         "description": "Test description",
         "default_currency": "USD"
     }
-    
+
     response = client.post("/api/v1/tenants/", json=tenant_data)
     assert response.status_code == 400
     response_data = response.json()
@@ -102,7 +102,7 @@ def test_tenant_creation_with_domain_only(
         "description": "Test description",
         "default_currency": "USD"
     }
-    
+
     response = client.post("/api/v1/tenants/", json=tenant_data)
     assert response.status_code == 201
     assert response.json()["domain"] == "testcompany.com"
@@ -120,7 +120,7 @@ def test_tenant_creation_with_business_number_only(
         "description": "Test description",
         "default_currency": "USD"
     }
-    
+
     response = client.post("/api/v1/tenants/", json=tenant_data)
     assert response.status_code == 201
     assert response.json()["business_registration_number"] == "BRN123456"
@@ -140,7 +140,7 @@ def test_tenant_domain_uniqueness(
     }
     response1 = client.post("/api/v1/tenants/", json=tenant_data1)
     assert response1.status_code == 201
-    
+
     # Try to create second tenant with same domain
     tenant_data2 = {
         "name": "Company 2",
@@ -166,7 +166,7 @@ def test_tenant_business_number_uniqueness(
     }
     response1 = client.post("/api/v1/tenants/", json=tenant_data1)
     assert response1.status_code == 201
-    
+
     # Try to create second tenant with same business registration number
     tenant_data2 = {
         "name": "Company 2",
@@ -194,7 +194,7 @@ def test_tenant_register_requires_domain_or_business_number(
             "password": "SecurePass123"
         }
     }
-    
+
     response = client.post("/api/v1/tenants/register", json=registration_data)
     assert response.status_code == 400
     response_data = response.json()
@@ -211,7 +211,7 @@ def test_default_plan_type_is_standard(
         "domain": "testplan.com",
         "default_currency": "USD"
     }
-    
+
     response = client.post("/api/v1/tenants/", json=tenant_data)
     assert response.status_code == 201
     assert response.json()["plan_type"] == "Standard"
@@ -228,18 +228,17 @@ def test_regular_user_cannot_update_plan_type(
     update_data = {
         "plan_type": "Premium"
     }
-    
+
     response = client.put(
         f"/api/v1/tenants/{test_tenant.id}",
         json=update_data,
         headers=auth_headers
     )
-    
-    # The update should succeed but plan_type should not be changed
-    # because plan_type is not in TenantUpdate schema
-    assert response.status_code == 200
-    # Plan type should remain unchanged
-    assert response.json()["plan_type"] == test_tenant.plan_type
+
+    # The update should fail with 403 Forbidden
+    # because regular users (owners) are not allowed to update plan_type
+    assert response.status_code == 403
+    assert "only super admins can change the plan type" in response.text.lower()
 
 
 def test_superadmin_can_update_plan_type(
@@ -252,13 +251,13 @@ def test_superadmin_can_update_plan_type(
     update_data = {
         "plan_type": "Premium"
     }
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{test_tenant.id}",
         json=update_data,
         headers=superadmin_token_headers
     )
-    
+
     assert response.status_code == 200
     assert response.json()["plan_type"] == "Premium"
 
@@ -273,7 +272,7 @@ def test_invoice_currency_always_from_tenant(
     # Set tenant default currency to EUR
     test_tenant.default_currency = "EUR"
     db_session.commit()
-    
+
     # Try to create invoice - currency should not be in the request
     invoice_data = {
         "customer_name": "Test Customer",
@@ -286,13 +285,13 @@ def test_invoice_currency_always_from_tenant(
             }
         ]
     }
-    
+
     response = client.post(
         "/api/v1/invoices/",
         json=invoice_data,
         headers=auth_headers
     )
-    
+
     assert response.status_code == 201
     # Currency should be EUR from tenant
     assert response.json()["currency"] == "EUR"
@@ -308,7 +307,7 @@ def test_invoice_tax_always_from_tenant(
     # Set tenant tax rate to 10%
     test_tenant.tax_rate = 10.0
     db_session.commit()
-    
+
     # Create invoice with subtotal of 100
     invoice_data = {
         "customer_name": "Test Customer",
@@ -321,13 +320,13 @@ def test_invoice_tax_always_from_tenant(
             }
         ]
     }
-    
+
     response = client.post(
         "/api/v1/invoices/",
         json=invoice_data,
         headers=auth_headers
     )
-    
+
     assert response.status_code == 201
     # Tax amount should be 10.00 (10% of 100)
     assert float(response.json()["subtotal"]) == 100.00
@@ -345,18 +344,18 @@ def test_invoice_update_preserves_tenant_currency(
     """Test that updating invoice preserves tenant currency."""
     # Ensure invoice uses tenant currency
     assert test_invoice.currency.value == test_tenant.default_currency
-    
+
     # Update invoice
     update_data = {
         "customer_name": "Updated Customer"
     }
-    
+
     response = client.put(
         f"/api/v1/invoices/{test_invoice.id}",
         json=update_data,
         headers=manager_auth_headers
     )
-    
+
     assert response.status_code == 200
     # Currency should remain the same
     assert response.json()["currency"] == test_tenant.default_currency
@@ -373,7 +372,7 @@ def test_invoice_update_recalculates_tax_from_tenant(
     # Set tenant tax rate to 15%
     test_tenant.tax_rate = 15.0
     db_session.commit()
-    
+
     # Update invoice with new items
     update_data = {
         "items": [
@@ -384,13 +383,13 @@ def test_invoice_update_recalculates_tax_from_tenant(
             }
         ]
     }
-    
+
     response = client.put(
         f"/api/v1/invoices/{test_invoice.id}",
         json=update_data,
         headers=manager_auth_headers
     )
-    
+
     assert response.status_code == 200
     # Subtotal should be 100 (2 * 50)
     # Tax should be 15 (15% of 100)
@@ -417,23 +416,26 @@ def test_superadmin_can_update_tenant_domain_uniqueness(
         "domain": "company2.com",
         "default_currency": "USD"
     }
-    
+
+    # Actually create tenant1 first!
     response1 = client.post("/api/v1/tenants/", json=tenant1_data)
+    assert response1.status_code == 201
+
     response2 = client.post("/api/v1/tenants/", json=tenant2_data)
-    
+
     tenant2_id = response2.json()["id"]
-    
+
     # Try to update tenant2 with tenant1's domain
     update_data = {
         "domain": "company1.com"
     }
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{tenant2_id}",
         json=update_data,
         headers=superadmin_token_headers
     )
-    
+
     assert response.status_code == 400
     response_data = response.json()
     assert "domain already exists" in response_data.get("message", "").lower()
@@ -456,23 +458,26 @@ def test_superadmin_can_update_tenant_business_number_uniqueness(
         "business_registration_number": "BRN222",
         "default_currency": "USD"
     }
-    
+
+    # Actually create tenant1 first!
     response1 = client.post("/api/v1/tenants/", json=tenant1_data)
+    assert response1.status_code == 201
+
     response2 = client.post("/api/v1/tenants/", json=tenant2_data)
-    
+
     tenant2_id = response2.json()["id"]
-    
+
     # Try to update tenant2 with tenant1's business registration number
     update_data = {
         "business_registration_number": "BRN111"
     }
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{tenant2_id}",
         json=update_data,
         headers=superadmin_token_headers
     )
-    
+
     assert response.status_code == 400
     response_data = response.json()
     assert "business registration number already exists" in response_data.get("message", "").lower()
@@ -489,13 +494,13 @@ def test_tenant_update_cannot_remove_all_unique_identifiers(
     update_data = {
         "domain": None
     }
-    
+
     response = client.put(
         f"/api/v1/tenants/{test_tenant.id}",
         json=update_data,
         headers=auth_headers
     )
-    
+
     assert response.status_code == 400
     response_data = response.json()
     assert "at least one unique identifier" in response_data.get("message", "").lower()
@@ -513,21 +518,21 @@ def test_superadmin_update_cannot_remove_all_unique_identifiers(
         "domain": "onlydomain.com",
         "default_currency": "USD"
     }
-    
+
     response = client.post("/api/v1/tenants/", json=tenant_data)
     tenant_id = response.json()["id"]
-    
+
     # Try to set domain to null without providing business_registration_number
     update_data = {
         "domain": None
     }
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{tenant_id}",
         json=update_data,
         headers=superadmin_token_headers
     )
-    
+
     assert response.status_code == 400
     response_data = response.json()
     assert "at least one unique identifier" in response_data.get("message", "").lower()
@@ -545,22 +550,22 @@ def test_tenant_can_swap_unique_identifiers(
         "domain": "swaptest.com",
         "default_currency": "USD"
     }
-    
+
     response = client.post("/api/v1/tenants/", json=tenant_data)
     tenant_id = response.json()["id"]
-    
+
     # Swap: add business_registration_number and remove domain
     update_data = {
         "domain": None,
         "business_registration_number": "BRN-SWAP-123"
     }
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{tenant_id}",
         json=update_data,
         headers=superadmin_token_headers
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["domain"] is None

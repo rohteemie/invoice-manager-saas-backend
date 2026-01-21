@@ -9,7 +9,8 @@ class Tenant(Gen_Model, Base):
     Attributes:
         name: Tenant name
         domain: Unique tenant domain (optional)
-        business_registration_number: Unique business registration number (optional)
+        business_registration_number: Unique business registration number
+            (optional)
         plan_type: Subscription plan type (only super admin can modify)
         description: Tenant description (optional)
         is_active: Whether tenant is active
@@ -27,15 +28,19 @@ class Tenant(Gen_Model, Base):
         invoice_number_sequence: Atomic counter for invoice numbering
             (default: 0)
         primary_color: Primary brand color for PDF (hex, default: '#2563eb')
-        secondary_color: Secondary brand color for PDF (hex, default: '#1e40af')
+        secondary_color: Secondary brand color for PDF
+            (hex, default: '#1e40af')
         custom_footer: Custom footer text for invoices (optional)
-        draft_watermark_enabled: Whether to show DRAFT watermark (default: True)
+        draft_watermark_enabled: Whether to show DRAFT watermark
+            (default: True)
     """
     __tablename__ = "tenants"
 
     name = Column(String(100), nullable=False)
     domain = Column(String(100), nullable=True, unique=True)
-    business_registration_number = Column(String(100), nullable=True, unique=True)
+    business_registration_number = Column(
+        String(100), nullable=True, unique=True
+    )
     plan_type = Column(String(20), default="Standard")
     description = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)

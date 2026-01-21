@@ -273,9 +273,13 @@ Update tenant information.
 ```json
 {
   "name": "Acme Corp (Updated)",
-  "plan_type": "pro",
-  "description": "Updated description"
+  "description": "Updated description",
+  "plan_type": "pro"
 }
+
+**Note on plan_type:**
+- Regular users (Owners) CANNOT update `plan_type`
+- Super Admins CAN update `plan_type`
 ```
 
 **Response (200 OK):**
@@ -295,6 +299,7 @@ Update tenant information.
 **Error Responses:**
 - `404 Not Found` - Tenant doesn't exist
 - `400 Bad Request` - Domain already exists
+- `403 Forbidden` - Not authorized to update plan_type (Regular users)
 
 ---
 

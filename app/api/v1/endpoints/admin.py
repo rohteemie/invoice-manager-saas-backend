@@ -230,7 +230,6 @@ def superadmin_update_tenant(
     Requires Super Admin access.
     Only super admins can change the plan_type.
 
-    All fields present in the SuperAdminTenantUpdate request body and allowed by
     that schema are candidates for update (for example: plan_type, domain,
     name, activation/status flags, business_registration_number, and other
     tenant-level configuration fields). Uniqueness constraints apply to some
@@ -244,15 +243,15 @@ def superadmin_update_tenant(
         Updated tenant.
     """
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
-    
+
     if not tenant:
         raise HTTPException(
             status_code=404,
             detail=f"Tenant with ID {tenant_id} not found"
         )
-    
+
     update_data = tenant_update.model_dump(exclude_unset=True)
-    
+
     # Track changes for audit
     changes = {}
     for field, value in update_data.items():
@@ -260,7 +259,7 @@ def superadmin_update_tenant(
             old_value = getattr(tenant, field)
             if old_value != value:
                 changes[field] = {"before": old_value, "after": value}
-    
+
     # Check for domain uniqueness if domain is being updated
     if "domain" in update_data and update_data["domain"] is not None:
         new_domain = update_data["domain"]
@@ -274,9 +273,12 @@ def superadmin_update_tenant(
                     status_code=400,
                     detail="A tenant with this domain already exists"
                 )
-    
+
     # Check for business_registration_number uniqueness if being updated
-    if "business_registration_number" in update_data and update_data["business_registration_number"] is not None:
+    if (
+        "business_registration_number" in update_data
+        and update_data["business_registration_number"] is not None
+    ):
         new_brn = update_data["business_registration_number"]
         if new_brn != tenant.business_registration_number:
             existing_tenant = db.query(TenantModel).filter(
@@ -286,9 +288,12 @@ def superadmin_update_tenant(
             if existing_tenant:
                 raise HTTPException(
                     status_code=400,
-                    detail="A tenant with this business registration number already exists"
+                    detail=(
+                        "A tenant with this business registration number "
+                        "already exists"
+                    )
                 )
-    
+
     # Ensure at least one unique identifier remains after the update
     final_domain = update_data.get("domain", tenant.domain)
     final_business_registration_number = update_data.get(
@@ -303,14 +308,14 @@ def superadmin_update_tenant(
                 "domain or business_registration_number"
             ),
         )
-    
+
     # Apply updates
     for field, value in update_data.items():
         setattr(tenant, field, value)
-    
+
     db.commit()
     db.refresh(tenant)
-    
+
     # Log the update
     if changes:
         log_tenant_event(
@@ -326,7 +331,7 @@ def superadmin_update_tenant(
             ),
             changes=changes
         )
-    
+
     return tenant
 
 

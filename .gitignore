@@ -223,3 +223,7 @@ app/uploads/logos/*
 server_connect.sh
 deploy.env
 run.sh
+
+# extras
+todo.txt
+api_e2e_test.py
