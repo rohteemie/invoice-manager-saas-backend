@@ -284,7 +284,6 @@ Main invoice schema with all fields:
 - `id`: String - Invoice UUID
 - `invoice_number`: String - Unique invoice number
 - `tenant_id`: String - Tenant UUID
-- `branch_id`: Optional[String] - Branch location identifier
 - `customer_name`: String - Customer name
 - `customer_email`: Optional[String] - Customer email
 - `customer_phone`: Optional[String] - Customer phone
@@ -623,7 +622,6 @@ Schemas are tested indirectly through API endpoint tests:
 Planned schemas for upcoming features:
 
 - **Invoice Schemas**: InvoiceCreate, InvoiceUpdate, Invoice
-- **Branch Schemas**: BranchCreate, BranchUpdate, Branch
 - **Customer Schemas**: CustomerCreate, CustomerUpdate, Customer
 - **Analytics Schemas**: RevenueReport, InvoiceMetrics
 - **Pagination Schemas**: PaginatedResponse, PageParams

@@ -31,7 +31,8 @@ from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.deps import (
     get_current_user,
     require_role,
-    require_verified_email
+    require_verified_email,
+    check_invoice_access
 )
 from app.core.cache import invalidate_tenant_cache
 from app.services.pdf_generator import get_pdf_generator, PDFGenerationError
@@ -226,7 +227,6 @@ def create_invoice(
         customer_email=invoice_in.customer_email,
         customer_phone=invoice_in.customer_phone,
         customer_address=invoice_in.customer_address,
-        branch_id=invoice_in.branch_id,
         currency=currency,
         issue_date=invoice_in.issue_date,
         due_date=invoice_in.due_date,
@@ -331,6 +331,11 @@ def list_invoices(
     query = db.query(InvoiceModel).filter(
         InvoiceModel.tenant_id == current_user.tenant_id
     )
+
+    # ATTENDANT users can only see their own invoices
+    # MANAGER+ can see all tenant invoices
+    if current_user.role == UserRole.ATTENDANT:
+        query = query.filter(InvoiceModel.creator_id == current_user.id)
 
     # Helper to escape SQL LIKE wildcards in search terms
     def _escape_like(term: str) -> str:
@@ -450,7 +455,9 @@ def get_invoice(
     """
     Get a specific invoice by ID.
 
-    Permissions: All authenticated users can view invoices in their tenant.
+    Permissions:
+    - ATTENDANT: Can only view invoices they created
+    - MANAGER+: Can view all tenant invoices
     """
     invoice = db.query(InvoiceModel).filter(
         InvoiceModel.id == invoice_id,
@@ -459,6 +466,9 @@ def get_invoice(
 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Check access permissions
+    check_invoice_access(invoice, current_user)
 
     return invoice
 
@@ -473,7 +483,9 @@ def update_invoice(
     """
     Update an invoice.
 
-    Permissions: Manager and above can update invoices.
+    Permissions:
+    - Creator can update their own invoices
+    - ADMIN+ can update any invoice
     Only DRAFT invoices can be updated.
     """
     invoice = db.query(InvoiceModel).filter(
@@ -483,6 +495,15 @@ def update_invoice(
 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Check ownership: Creator OR ADMIN+ can modify
+    if (invoice.creator_id != current_user.id
+            and current_user.role not in [UserRole.ADMIN, UserRole.OWNER]
+            and not current_user.is_superadmin):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only modify invoices you created"
+        )
 
     # Only draft invoices can be updated
     if invoice.status != InvoiceStatus.DRAFT:
@@ -556,7 +577,9 @@ def update_invoice_status(
     """
     Update invoice status (lifecycle management).
 
-    Permissions: Manager and above can update invoice status.
+    Permissions:
+    - Creator can update status of their own invoices
+    - ADMIN+ can update status of any invoice
 
     Valid transitions:
     - DRAFT → SENT
@@ -571,6 +594,15 @@ def update_invoice_status(
 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Check ownership: Creator OR ADMIN+ can change status
+    if (invoice.creator_id != current_user.id
+            and current_user.role not in [UserRole.ADMIN, UserRole.OWNER]
+            and not current_user.is_superadmin):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only change status of invoices you created"
+        )
 
     # Validate status transitions
     valid_transitions = {
@@ -638,7 +670,9 @@ def delete_invoice(
     """
     Delete an invoice (hard delete).
 
-    Permissions: Admin and above can delete invoices.
+    Permissions:
+    - Creator can delete their own invoices
+    - OWNER can delete any invoice
     Only DRAFT invoices can be deleted.
     """
     invoice = db.query(InvoiceModel).filter(
@@ -648,6 +682,15 @@ def delete_invoice(
 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Check ownership: Creator OR OWNER can delete
+    if (invoice.creator_id != current_user.id
+            and current_user.role != UserRole.OWNER
+            and not current_user.is_superadmin):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete invoices you created"
+        )
 
     # Only draft invoices can be deleted
     if invoice.status != InvoiceStatus.DRAFT:
@@ -675,7 +718,9 @@ def download_invoice_pdf(
     """
     Generate and download invoice as PDF.
 
-    Permissions: All authenticated users can download invoices in their tenant.
+    Permissions:
+    - ATTENDANT: Can only download PDFs of invoices they created
+    - MANAGER+: Can download PDFs of all tenant invoices
 
     This endpoint generates a professional PDF document on-demand from the
     database without storing the file. The PDF is always generated fresh,
@@ -692,6 +737,9 @@ def download_invoice_pdf(
 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Check access permissions
+    check_invoice_access(invoice, current_user)
 
     # Fetch tenant for branding
     tenant = db.query(TenantModel).filter(
@@ -750,7 +798,9 @@ def send_invoice(
     """
     Send invoice PDF to customer via email.
 
-    Permissions: Manager and above can send invoices.
+    Permissions:
+    - Creator can send their own invoices
+    - ADMIN+ can send any invoice
 
     This endpoint:
     1. Validates that the invoice exists and belongs to the tenant
@@ -765,6 +815,7 @@ def send_invoice(
         Updated invoice with status SENT
 
     Raises:
+        403: Insufficient permissions (not creator or ADMIN+)
         404: Invoice not found
         400: Invoice not in DRAFT status
         400: Customer email missing
@@ -778,6 +829,15 @@ def send_invoice(
 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Check ownership: Creator OR ADMIN+ can send invoices
+    if (invoice.creator_id != current_user.id
+            and current_user.role not in [UserRole.ADMIN, UserRole.OWNER]
+            and not current_user.is_superadmin):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only send invoices you created"
+        )
 
     # Only draft invoices can be sent
     if invoice.status != InvoiceStatus.DRAFT:
@@ -888,8 +948,11 @@ def export_invoices(
     """
     Export invoices in CSV or JSON format.
 
-    Permissions: All authenticated users can export their tenant's invoices.
-    Results are automatically filtered by tenant_id.
+    Permissions:
+    - ATTENDANT: Can only export invoices they created
+    - MANAGER+: Can export all tenant invoices
+    Results are automatically filtered by tenant_id and creator_id \n
+    (for ATTENDANT).
 
     Optional filters:
     - status: Filter by invoice status
@@ -903,6 +966,11 @@ def export_invoices(
     query = db.query(InvoiceModel).filter(
         InvoiceModel.tenant_id == current_user.tenant_id
     )
+
+    # ATTENDANT users can only export their own invoices
+    # MANAGER+ can export all tenant invoices
+    if current_user.role == UserRole.ATTENDANT:
+        query = query.filter(InvoiceModel.creator_id == current_user.id)
 
     # Apply status filter
     if status:

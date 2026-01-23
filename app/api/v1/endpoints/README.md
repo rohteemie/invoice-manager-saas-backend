@@ -536,7 +536,6 @@ Create a new invoice.
   "customer_email": "john@example.com",
   "customer_phone": "+1234567890",
   "customer_address": "123 Main St, City, Country",
-  "branch_id": "branch-uuid",
   "issue_date": "2024-01-15",
   "due_date": "2024-02-15",
   "notes": "Payment terms: Net 30",
@@ -623,12 +622,20 @@ Get a specific invoice.
 
 **Tenant Isolation:** Returns 404 if invoice belongs to different tenant
 
+**Access Control (Option B: Role-Based Flexibility):**
+- **ATTENDANT**: Can only view invoices they created
+- **MANAGER+**: Can view all invoices in their tenant
+- **Superadmin**: Can view all invoices across all tenants
+
 #### PUT `/api/v1/invoices/{invoice_id}`
 Update an invoice.
 
 **Authentication:** Required (Manager role or higher)
 
-**Permissions:** `MANAGER`, `ADMIN`, `OWNER`
+**Permissions:**
+- Creator can update their own invoices
+- ADMIN+ can update any invoice in the tenant
+- MANAGER can only update invoices they created
 
 **Constraints:** Only DRAFT invoices can be updated
 
@@ -654,7 +661,10 @@ Update invoice status (lifecycle management).
 
 **Authentication:** Required (Manager role or higher)
 
-**Permissions:** `MANAGER`, `ADMIN`, `OWNER`
+**Permissions:**
+- Creator can change status of their own invoices
+- ADMIN+ can change status of any invoice in the tenant
+- MANAGER can only change status of invoices they created
 
 **Request Body:**
 ```json
@@ -689,7 +699,10 @@ Delete an invoice.
 
 **Authentication:** Required (Admin role or higher)
 
-**Permissions:** `ADMIN`, `OWNER`
+**Permissions:**
+- Creator can delete their own DRAFT invoices
+- OWNER can delete any DRAFT invoice in the tenant
+- ADMIN cannot delete other users' invoices (requires OWNER or creator)
 
 **Constraints:** Only DRAFT invoices can be deleted
 
@@ -708,7 +721,11 @@ Delete an invoice.
 #### GET `/api/v1/invoices/export/invoices`
 Export invoices in CSV or JSON format.
 
-**Authentication:** Required (any authenticated user)
+**Authentication:** Required
+
+**Access Control:**
+- **ATTENDANT**: Can only export invoices they created
+- **MANAGER+**: Can export all invoices in their tenant
 
 **Query Parameters:**
 - `format` (string): Export format - `csv` or `json` (default: `csv`)
@@ -877,9 +894,9 @@ Owner > Admin > Manager > Attendant
 | POST /invoices | ✅ | ✅ | ✅ | ✅ |
 | GET /invoices | ✅ | ✅ | ✅ | ✅ |
 | GET /invoices/{id} | ✅ | ✅ | ✅ | ✅ |
-| PUT /invoices/{id} | ❌ | ✅ | ✅ | ✅ |
-| PATCH /invoices/{id}/status | ❌ | ✅ | ✅ | ✅ |
-| DELETE /invoices/{id} | ❌ | ❌ | ✅ | ✅ |
+| PUT /invoices/{id} | ❌ (own only) | ❌ (own only) | ✅ | ✅ |
+| PATCH /invoices/{id}/status | ❌ (own only) | ❌ (own only) | ✅ | ✅ |
+| DELETE /invoices/{id} | ❌ | ❌ | ❌ (own only) | ✅ |
 
 ### Implementation
 
@@ -932,12 +949,12 @@ def test_list_users_as_admin(client, admin_auth_headers):
 
 Planned endpoints for upcoming features:
 
-### Branch Management
-- POST `/api/v1/branches`
-- GET `/api/v1/branches`
-- GET `/api/v1/branches/{id}`
-- PUT `/api/v1/branches/{id}`
-- DELETE `/api/v1/branches/{id}`
+### Customer Management
+- POST `/api/v1/customers`
+- GET `/api/v1/customers`
+- GET `/api/v1/customers/{id}`
+- PUT `/api/v1/customers/{id}`
+- DELETE `/api/v1/customers/{id}`
 
 ### Analytics
 - GET `/api/v1/analytics/revenue`
