@@ -1,3 +1,4 @@
+
 """
 Test configuration and fixtures.
 Provides database setup, test client, and common fixtures for all tests.
@@ -33,6 +34,44 @@ TestingSessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
+
+# --- Superadmin fixtures (must be after imports) ---
+@pytest.fixture
+def test_superadmin(db_session):
+    """
+    Create a test superadmin user.
+    """
+    from app.models.user import UserRole
+    user = User(
+        email="superadmin@testcompany.com",
+        full_name="Test Superadmin",
+        hashed_password=get_password_hash("TestPassword123"),
+        role=UserRole.ATTENDANT,
+        tenant_id=None,
+        is_active=True,
+        is_verified=True,
+        is_superadmin=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+@pytest.fixture
+def superadmin_auth_headers(client, test_superadmin):
+    """
+    Get authentication headers for superadmin user.
+    """
+    response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "superadmin@testcompany.com",
+            "password": "TestPassword123"
+        }
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
 
 
 @pytest.fixture(scope="function", autouse=True)
