@@ -1,22 +1,19 @@
 import logging
-
-from fastapi import (
-    APIRouter, Depends, HTTPException, UploadFile, File, Request, Query
-)
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import Request, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-
 from app.db.session import get_db
 from app.models.tenant import Tenant as TenantModel
 from app.models.user import User as UserModel, UserRole
-from app.schemas.tenant import (
-    Tenant, TenantCreate, TenantUpdate, TenantRegister, TenantWithOwner
-)
+from app.schemas.tenant import Tenant, TenantCreate
+from app.schemas.tenant import TenantRegister, TenantWithOwner
+from app.schemas.tenant import SuperAdminTenantUpdate
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.security import get_password_hash, generate_verification_token
 from app.core.config import settings
-from app.core.deps import require_role
+from app.core.deps import require_role, get_current_active_user
 from app.services.file_upload import get_file_upload_service, FileUploadError
 from app.services.audit_logger import log_tenant_event
 from app.models.audit_log import AuditAction
@@ -33,7 +30,20 @@ def create_tenant(
 ):
     """
     Create a new tenant.
+
+    Requires at least one unique identifier:
+    domain or business_registration_number.
     """
+    # Validate that at least one unique identifier is provided
+    if not tenant_in.domain and not tenant_in.business_registration_number:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Either domain or business_registration_number "
+                "must be provided"
+            )
+        )
+
     # Check if domain already exists, but only if domain is not None
     if tenant_in.domain is not None:
         existing_tenant = db.query(TenantModel).filter(
@@ -43,6 +53,21 @@ def create_tenant(
             raise HTTPException(
                 status_code=400,
                 detail="A tenant with this domain already exists"
+            )
+
+    # Check if business_registration_number already exists
+    if tenant_in.business_registration_number is not None:
+        existing_tenant = db.query(TenantModel).filter(
+            TenantModel.business_registration_number
+            == tenant_in.business_registration_number
+        ).first()
+        if existing_tenant:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "A tenant with this business registration number "
+                    "already exists"
+                )
             )
 
     # Create new tenant
@@ -56,7 +81,10 @@ def create_tenant(
         db.rollback()
         raise HTTPException(
             status_code=400,
-            detail="Failed to create tenant. Domain may already exist."
+            detail=(
+                "Failed to create tenant. Domain or business registration "
+                "number may already exist."
+            )
         )
 
 
@@ -73,7 +101,23 @@ def register_tenant_with_owner(
     - No tenant exists without an owner
     - No dangling users without a tenant
     - Consistent data state
+
+    Requires at least one unique identifier:
+    domain or business_registration_number.
     """
+    # Validate that at least one unique identifier is provided
+    if (
+        not tenant_register.domain
+        and not tenant_register.business_registration_number
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Either domain or business_registration_number "
+                "must be provided"
+            )
+        )
+
     # Check if tenant domain already exists, but only if domain is not None
     if tenant_register.domain is not None:
         existing_tenant = db.query(TenantModel).filter(
@@ -83,6 +127,21 @@ def register_tenant_with_owner(
             raise HTTPException(
                 status_code=400,
                 detail="A tenant with this domain already exists"
+            )
+
+    # Check if business_registration_number already exists
+    if tenant_register.business_registration_number is not None:
+        existing_tenant = db.query(TenantModel).filter(
+            TenantModel.business_registration_number
+            == tenant_register.business_registration_number
+        ).first()
+        if existing_tenant:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "A tenant with this business registration number "
+                    "already exists"
+                )
             )
 
     # Check if owner email already exists
@@ -221,13 +280,37 @@ def get_tenant(
 @router.put("/{tenant_id}", response_model=Tenant)
 def update_tenant(
     tenant_id: str,
-    tenant_update: TenantUpdate,
+    tenant_update: SuperAdminTenantUpdate,
     request: Request,
+    current_user: UserModel = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
     Update a tenant.
+
+    Permissions:
+    - Super Admins: Can update all fields including plan_type
+    - Tenant Owners: Can update their own tenant details (except plan_type)
     """
+    # Verify authentication and permissions
+    if not current_user.is_superadmin:
+        # Check ownership
+        if (
+            current_user.tenant_id != tenant_id
+            or current_user.role != UserRole.OWNER
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have permission to update this tenant"
+            )
+
+        # Check for restricted fields (plan_type)
+        if tenant_update.plan_type is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="Only super admins can change the plan type"
+            )
+
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -255,6 +338,42 @@ def update_tenant(
                     status_code=400,
                     detail="A tenant with this domain already exists"
                 )
+
+    # Check for business_registration_number uniqueness if being updated
+    if (
+        "business_registration_number" in update_data
+        and update_data["business_registration_number"] is not None
+    ):
+        new_brn = update_data["business_registration_number"]
+        if new_brn != tenant.business_registration_number:
+            existing_tenant = db.query(TenantModel).filter(
+                TenantModel.business_registration_number == new_brn,
+                TenantModel.id != tenant_id
+            ).first()
+            if existing_tenant:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "A tenant with this business registration number "
+                        "already exists"
+                    )
+                )
+
+    # Ensure at least one unique identifier remains after the update
+    final_domain = update_data.get("domain", tenant.domain)
+    final_business_registration_number = update_data.get(
+        "business_registration_number",
+        tenant.business_registration_number,
+    )
+    if final_domain is None and final_business_registration_number is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Tenant must have at least one unique identifier: "
+                "domain or business_registration_number"
+            ),
+        )
+
     for field, value in update_data.items():
         setattr(tenant, field, value)
 

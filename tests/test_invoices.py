@@ -1,7 +1,10 @@
+
 """
 Test suite for Invoice CRUD operations and lifecycle management.
 Tests invoice creation, retrieval, updates, status transitions, and deletion.
 """
+
+import app.tasks.email_tasks
 
 
 def test_create_invoice(client, auth_headers):

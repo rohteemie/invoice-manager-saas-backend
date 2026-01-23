@@ -198,7 +198,7 @@ def create_invoice(
     Permissions: All authenticated AND VERIFIED users can create invoices.
     Email verification is required to create invoices.
     Invoice is created in DRAFT status by default.
-    Currency and tax are inherited from tenant settings unless specified.
+    Currency and tax are always inherited from tenant settings.
     """
     # Get tenant to access currency and tax settings
     tenant = db.query(TenantModel).filter(
@@ -208,14 +208,12 @@ def create_invoice(
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    # Use invoice currency if provided, otherwise use tenant's default
-    currency = invoice_in.currency
-    if currency is None:
-        try:
-            currency = Currency(tenant.default_currency)
-        except ValueError:
-            # Fallback to USD if tenant's currency is invalid
-            currency = Currency.USD
+    # Always use tenant's default currency
+    try:
+        currency = Currency(tenant.default_currency)
+    except ValueError:
+        # Fallback to USD if tenant's currency is invalid
+        currency = Currency.USD
 
     # Create invoice
     invoice_number = generate_invoice_number(db, current_user.tenant_id)
