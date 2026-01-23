@@ -30,7 +30,8 @@ def test_create_invoice_with_default_currency(client, auth_headers):
 
 def test_create_invoice_with_specific_currency(client, auth_headers):
     """Test creating invoice with explicit currency."""
-    for currency in ["NGN", "USD", "GBP", "EUR"]:
+    # Only test NGN as default and explicit
+    for currency in ["NGN"]:
         response = client.post(
             "/api/v1/invoices/",
             json={

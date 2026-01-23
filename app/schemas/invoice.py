@@ -42,7 +42,13 @@ class InvoiceItem(InvoiceItemInDB):
 
 
 class InvoiceBase(BaseModel):
-    """Base invoice schema with common attributes."""
+    """
+    Base invoice schema with common attributes.
+
+    Note: Currency is not a field in InvoiceCreate/InvoiceUpdate and is always
+    inherited from the tenant's default_currency setting. Tax amounts are
+    automatically calculated from the tenant's tax_rate.
+    """
     customer_name: str = Field(..., min_length=1, max_length=100,
                                description="Customer name")
     customer_email: Optional[EmailStr] = Field(None,
@@ -53,9 +59,6 @@ class InvoiceBase(BaseModel):
                                             description="Customer address")
     branch_id: Optional[str] = Field(None,
                                      description="Branch ID (optional)")
-    currency: Optional[Currency] = Field(
-        None, description="Currency code (defaults to tenant's default)"
-    )
     issue_date: str = Field(..., description="Invoice issue date (ISO 8601)")
     due_date: Optional[str] = Field(
         None, description="Payment due date (ISO 8601)"
@@ -81,7 +84,6 @@ class InvoiceUpdate(BaseModel):
     customer_phone: Optional[str] = Field(None, max_length=20)
     customer_address: Optional[str] = Field(None, max_length=500)
     branch_id: Optional[str] = None
-    currency: Optional[Currency] = None
     issue_date: Optional[str] = None
     due_date: Optional[str] = None
     notes: Optional[str] = Field(None, max_length=1000)
