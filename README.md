@@ -16,7 +16,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - Demonstrate backend engineering skills in designing and implementing a SaaS application.
 - Provide **multi-tenancy support** so organizations (e.g., Coca-Cola, Facebook, McDonalds) can securely manage their own invoices.
 - Support **role-based access control (RBAC)** with roles (Owner, Admin, Manager, Attendant).
-- Allow organizations to create and manage invoices across **branches/locations**, with embedded **customer details**.
+- Allow organizations to create and manage invoices with embedded **customer details** and creator tracking.
 - Showcase **documentation, diagrams, testing, and CI/CD practices** for professional presentation.
 
 ---
@@ -44,7 +44,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] **Super Admin role for platform management** ✅ **NEW**
 - [x] Invoice CRUD (tenant-aware) ✅ **Sprint 2**
 - [x] Invoice lifecycle (Draft → Sent → Paid → Overdue) ✅ **Sprint 2**
-- [x] Invoice metadata: branch, creator, customer info ✅ **Sprint 2**
+- [x] Invoice metadata: creator, customer info ✅ **Sprint 2**
 - [x] Invoice PDF generation (on-demand) ✅ **NEW**
 - [x] Invoice email sending ✅ **NEW**
 - [x] Multi-currency support (USD, EUR, GBP, NGN) ✅ **NEW**
@@ -77,7 +77,7 @@ This project follows a **phased + sprint-based roadmap**:
    - Tenant model, JWT auth, RBAC
 
 3. **Phase 2**: Core Business Module (Invoices) ✅ **COMPLETED**
-   - Invoice schema (branch, customer, creator)
+   - Invoice schema (customer, creator)
    - Invoice CRUD & lifecycle
    - Export endpoints (CSV/JSON)
    - **Integration tests** ✅
@@ -155,7 +155,7 @@ This project follows a **phased + sprint-based roadmap**:
 ┌──────────────────────────────────────────────────────────┐
 │                     Tenant B                             │
 │  ┌────────────┐  ┌────────────┐  ┌────────────┐          │
-│  │   Users    │  │  Invoices  │  │  Branches  │          │
+│  │   Users    │  │  Invoices  │  │  Analytics │          │
 │  │ (filtered) │  │ (filtered) │  │ (filtered) │          │
 │  └────────────┘  └────────────┘  └────────────┘          │
 └──────────────────────────────────────────────────────────┘
@@ -541,7 +541,7 @@ See [Testing Documentation](tests/README.md) for details.
 **Completed:**
 
 - [x] Implement invoice CRUD and lifecycle ✅
-- [x] Add invoice metadata (branch, customer, creator) ✅
+- [x] Add invoice metadata (customer, creator) ✅
 - [x] Multi-currency support (USD, EUR, GBP, NGN) ✅
 - [x] Configurable tax rates per tenant ✅
 - [x] Invoice PDF generation ✅
