@@ -214,7 +214,7 @@ def test_user_currency_preference_on_creation(
     user = User(
         email="usd_user@testcompany.com",
         full_name="USD User",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         tenant_id=test_tenant.id,
         currency_preference="USD",
         is_active=True,
@@ -367,7 +367,7 @@ def test_currency_preference_affects_analytics(
     usd_user = User(
         email="usd_user2@testcompany.com",
         full_name="USD User 2",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         tenant_id=test_tenant.id,
         currency_preference="USD",
         is_active=True,
@@ -395,7 +395,7 @@ def test_currency_preference_affects_analytics(
         "/api/v1/auth/login",
         data={
             "username": "usd_user2@testcompany.com",
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     assert login_response.status_code == 200

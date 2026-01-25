@@ -159,7 +159,8 @@ def test_invoice_summary_tenant_isolation(
         full_name="Other User",
         hashed_password=get_password_hash("password123"),
         role=UserRole.OWNER,
-        tenant_id=other_tenant.id
+        tenant_id=other_tenant.id,
+        is_verified=True
     )
     db_session.add(other_user)
     db_session.commit()
@@ -385,7 +386,8 @@ def test_revenue_by_status_tenant_isolation(
         full_name="Other User",
         hashed_password=get_password_hash("password123"),
         role=UserRole.OWNER,
-        tenant_id=other_tenant.id
+        tenant_id=other_tenant.id,
+        is_verified=True
     )
     db_session.add(other_user)
     db_session.commit()
@@ -551,7 +553,7 @@ def test_revenue_by_status_multi_currency(
         issue_date="2024-01-02",
         total_amount=Decimal("200.00")
     )
-    
+
     # Create sent invoices in different currencies
     sent_usd = Invoice(
         invoice_number="INV-003",

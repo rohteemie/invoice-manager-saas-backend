@@ -37,7 +37,7 @@ class TestInvoiceLifecycleIntegration:
             json={
                 "email": "workflow.manager@testcompany.com",
                 "full_name": "Workflow Manager",
-                "password": "TestPassword123",
+                "password": "TestPass123!",
                 "role": "manager",
                 "tenant_id": test_tenant.id
             }
@@ -59,7 +59,7 @@ class TestInvoiceLifecycleIntegration:
             "/api/v1/auth/login",
             data={
                 "username": "workflow.manager@testcompany.com",
-                "password": "TestPassword123"
+                "password": "TestPass123!"
             }
         )
         assert login_response.status_code == 200
@@ -357,7 +357,7 @@ class TestRoleBasedWorkflows:
         attendant = User(
             email="attendant.workflow@testcompany.com",
             full_name="Workflow Attendant",
-            hashed_password=get_password_hash("TestPassword123"),
+            hashed_password=get_password_hash("TestPass123!"),
             role=UserRole.ATTENDANT,
             tenant_id=test_tenant.id,
             is_active=True,
@@ -366,7 +366,7 @@ class TestRoleBasedWorkflows:
         manager = User(
             email="manager.workflow@testcompany.com",
             full_name="Workflow Manager",
-            hashed_password=get_password_hash("TestPassword123"),
+            hashed_password=get_password_hash("TestPass123!"),
             role=UserRole.MANAGER,
             tenant_id=test_tenant.id,
             is_active=True,
@@ -375,7 +375,7 @@ class TestRoleBasedWorkflows:
         owner = User(
             email="owner.workflow@testcompany.com",
             full_name="Workflow Owner",
-            hashed_password=get_password_hash("TestPassword123"),
+            hashed_password=get_password_hash("TestPass123!"),
             role=UserRole.OWNER,
             tenant_id=test_tenant.id,
             is_active=True,
@@ -387,19 +387,19 @@ class TestRoleBasedWorkflows:
         # Get auth tokens
         attendant_token = client.post(
             "/api/v1/auth/login",
-            data={"username": attendant.email, "password": "TestPassword123"}
+            data={"username": attendant.email, "password": "TestPass123!"}
         ).json()["access_token"]
         attendant_headers = {"Authorization": f"Bearer {attendant_token}"}
 
         manager_token = client.post(
             "/api/v1/auth/login",
-            data={"username": manager.email, "password": "TestPassword123"}
+            data={"username": manager.email, "password": "TestPass123!"}
         ).json()["access_token"]
         manager_headers = {"Authorization": f"Bearer {manager_token}"}
 
         owner_token = client.post(
             "/api/v1/auth/login",
-            data={"username": owner.email, "password": "TestPassword123"}
+            data={"username": owner.email, "password": "TestPass123!"}
         ).json()["access_token"]
         owner_headers = {"Authorization": f"Bearer {owner_token}"}
 
@@ -426,11 +426,11 @@ class TestRoleBasedWorkflows:
         )
         assert send_attempt.status_code == 403
 
-        # Step 3: Manager sends invoice (should succeed)
+        # Step 3: Owner sends invoice (should succeed)
         send_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
             json={"status": "sent"},
-            headers=manager_headers
+            headers=owner_headers
         )
         assert send_response.status_code == 200
 

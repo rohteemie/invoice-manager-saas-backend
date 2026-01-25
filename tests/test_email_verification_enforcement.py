@@ -27,7 +27,7 @@ def test_unverified_user_cannot_create_invoice(client, db_session):
         json={
             "email": "unverified@test.com",
             "full_name": "Unverified User",
-            "password": "SecurePass123",
+            "password": "SecurePass123@",
             "tenant_id": tenant.id,
             "role": "owner"
         }
@@ -39,7 +39,7 @@ def test_unverified_user_cannot_create_invoice(client, db_session):
         "/api/v1/auth/login",
         data={
             "username": "unverified@test.com",
-            "password": "SecurePass123"
+            "password": "SecurePass123@"
         }
     )
     assert login_response.status_code == 200
@@ -91,7 +91,7 @@ def test_verified_user_can_create_invoice(client, db_session):
         json={
             "email": "verified@test.com",
             "full_name": "Verified User",
-            "password": "SecurePass123",
+            "password": "SecurePass123@",
             "tenant_id": tenant.id,
             "role": "owner"
         }
@@ -110,7 +110,7 @@ def test_verified_user_can_create_invoice(client, db_session):
         "/api/v1/auth/login",
         data={
             "username": "verified@test.com",
-            "password": "SecurePass123"
+            "password": "SecurePass123@"
         }
     )
     assert login_response.status_code == 200
@@ -162,7 +162,7 @@ def test_superadmin_bypasses_verification_requirement(client, db_session):
         json={
             "email": "superadmin@test.com",
             "full_name": "Super Admin",
-            "password": "SecurePass123",
+            "password": "SecurePass123@",
             "tenant_id": tenant.id,
             "role": "owner",
             "is_superadmin": True
@@ -182,7 +182,7 @@ def test_superadmin_bypasses_verification_requirement(client, db_session):
         "/api/v1/auth/login",
         data={
             "username": "superadmin@test.com",
-            "password": "SecurePass123"
+            "password": "SecurePass123@"
         }
     )
     assert login_response.status_code == 200
@@ -228,7 +228,7 @@ def test_async_verification_email_task_called(client):
             "owner": {
                 "full_name": "Async Test Owner",
                 "email": "asynctest@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -267,7 +267,7 @@ def test_async_password_reset_email_task_called(client, db_session):
     user = UserModel(
         email="resettest@test.com",
         full_name="Reset Test User",
-        hashed_password=get_password_hash("SecurePass123"),
+        hashed_password=get_password_hash("SecurePass123@"),
         role="owner",
         tenant_id=tenant.id,
         is_verified=True
@@ -304,7 +304,7 @@ def test_user_response_includes_verification_status(client):
             "owner": {
                 "full_name": "Status Test Owner",
                 "email": "statustest@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -322,7 +322,7 @@ def test_user_response_includes_verification_status(client):
         "/api/v1/auth/login",
         data={
             "username": "statustest@test.com",
-            "password": "SecurePass123"
+            "password": "SecurePass123@"
         }
     )
     token = login_response.json()["access_token"]

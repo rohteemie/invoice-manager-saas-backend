@@ -256,7 +256,7 @@ def test_register_tenant_with_owner_duplicate_domain(client):
             "owner": {
                 "full_name": "First Owner",
                 "email": "first@duplicate.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -271,7 +271,7 @@ def test_register_tenant_with_owner_duplicate_domain(client):
             "owner": {
                 "full_name": "Second Owner",
                 "email": "second@duplicate.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -291,7 +291,7 @@ def test_register_tenant_with_owner_duplicate_email(client):
             "owner": {
                 "full_name": "Owner",
                 "email": "duplicate@email.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -306,7 +306,7 @@ def test_register_tenant_with_owner_duplicate_email(client):
             "owner": {
                 "full_name": "Owner",
                 "email": "duplicate@email.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -325,7 +325,7 @@ def test_register_tenant_with_owner_without_domain(client):
             "owner": {
                 "full_name": "Owner Name",
                 "email": "owner@nodomain.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -364,7 +364,7 @@ def test_register_tenant_with_owner_invalid_email(client):
             "owner": {
                 "full_name": "Owner Name",
                 "email": "not-an-email",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -383,7 +383,7 @@ def test_register_tenant_with_owner_can_login(client):
             "owner": {
                 "full_name": "Login Test Owner",
                 "email": "logintest@company.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -394,7 +394,7 @@ def test_register_tenant_with_owner_can_login(client):
         "/api/v1/auth/login",
         data={
             "username": "logintest@company.com",
-            "password": "SecurePass123"
+            "password": "SecurePass123@"
         }
     )
     assert login_response.status_code == 200
@@ -419,7 +419,7 @@ def test_register_tenant_with_owner_atomicity(client, db_session):
             "owner": {
                 "full_name": "Test",
                 "email": "atomicity@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )

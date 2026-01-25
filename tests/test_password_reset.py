@@ -102,7 +102,7 @@ def test_reset_password_with_valid_token(client, test_user, db_session):
     test_user.reset_password_token_expires_at = token_expires_at
     db_session.commit()
 
-    new_password = "NewSecurePassword123"
+    new_password = "NewSecurePassword123@"
 
     response = client.post(
         "/api/v1/auth/reset-password",
@@ -133,7 +133,7 @@ def test_reset_password_with_invalid_token(client):
         "/api/v1/auth/reset-password",
         json={
             "token": "invalid_token_12345",
-            "new_password": "NewSecurePassword123"
+            "new_password": "NewSecurePassword123@"
         }
     )
     assert response.status_code == 400
@@ -153,7 +153,7 @@ def test_reset_password_with_expired_token(client, test_user, db_session):
         "/api/v1/auth/reset-password",
         json={
             "token": reset_token,
-            "new_password": "NewSecurePassword123"
+            "new_password": "NewSecurePassword123@"
         }
     )
     assert response.status_code == 400
@@ -198,7 +198,7 @@ def test_reset_password_inactive_user(client, test_user, db_session):
         "/api/v1/auth/reset-password",
         json={
             "token": reset_token,
-            "new_password": "NewSecurePassword123"
+            "new_password": "NewSecurePassword123@"
         }
     )
     assert response.status_code == 403
@@ -217,7 +217,7 @@ def test_reset_password_can_login_with_new_password(client, test_user, db_sessio
     test_user.reset_password_token_expires_at = token_expires_at
     db_session.commit()
 
-    new_password = "NewSecurePassword456"
+    new_password = "NewSecurePassword456@"
 
     # Reset password
     response = client.post(
@@ -245,7 +245,7 @@ def test_reset_password_can_login_with_new_password(client, test_user, db_sessio
 
 def test_reset_password_cannot_login_with_old_password(client, test_user, db_session):
     """Test that user cannot login with old password after reset."""
-    old_password = "TestPassword123"
+    old_password = "TestPass123!"
 
     # Generate reset token
     reset_token, token_expires_at = generate_password_reset_token()
@@ -253,7 +253,7 @@ def test_reset_password_cannot_login_with_old_password(client, test_user, db_ses
     test_user.reset_password_token_expires_at = token_expires_at
     db_session.commit()
 
-    new_password = "NewSecurePassword789"
+    new_password = "NewSecurePassword789@"
 
     # Reset password
     response = client.post(
@@ -284,7 +284,7 @@ def test_reset_password_token_cannot_be_reused(client, test_user, db_session):
     test_user.reset_password_token_expires_at = token_expires_at
     db_session.commit()
 
-    new_password = "NewSecurePassword999"
+    new_password = "NewSecurePassword999@"
 
     # First reset (should succeed)
     response = client.post(
@@ -301,7 +301,7 @@ def test_reset_password_token_cannot_be_reused(client, test_user, db_session):
         "/api/v1/auth/reset-password",
         json={
             "token": reset_token,
-            "new_password": "AnotherPassword123"
+            "new_password": "AnotherPassword123@"
         }
     )
     assert response2.status_code == 400
@@ -325,7 +325,7 @@ def test_password_reset_full_flow(client, test_user, db_session):
     token = reset_link.split("token=")[1]
 
     # Step 2: Reset password with token
-    new_password = "CompleteFlowPassword123"
+    new_password = "CompleteFlowPassword123@"
     reset_response = client.post(
         "/api/v1/auth/reset-password",
         json={

@@ -18,7 +18,7 @@ def test_register_tenant_generates_verification_token(client, db_session):
             "owner": {
                 "full_name": "Test Owner",
                 "email": "owner@testverify.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -53,7 +53,7 @@ def test_verify_email_with_valid_token(client, db_session):
             "owner": {
                 "full_name": "Verify Test Owner",
                 "email": "verify@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -107,7 +107,7 @@ def test_verify_email_already_verified(client, db_session):
             "owner": {
                 "full_name": "Already Verified Owner",
                 "email": "alreadyverified@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -148,7 +148,7 @@ def test_verification_token_is_unique(client, db_session):
             "owner": {
                 "full_name": "Owner 1",
                 "email": "owner1@company1.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -163,7 +163,7 @@ def test_verification_token_is_unique(client, db_session):
             "owner": {
                 "full_name": "Owner 2",
                 "email": "owner2@company2.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -192,7 +192,7 @@ def test_owner_can_login_before_verification(client):
             "owner": {
                 "full_name": "Login Test Owner",
                 "email": "loginbeforeverify@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -203,7 +203,7 @@ def test_owner_can_login_before_verification(client):
         "/api/v1/auth/login",
         data={
             "username": "loginbeforeverify@test.com",
-            "password": "SecurePass123"
+            "password": "SecurePass123@"
         }
     )
 
@@ -228,7 +228,7 @@ def test_token_has_expiration(client, db_session):
             "owner": {
                 "full_name": "Token Expiry Owner",
                 "email": "tokenexpiry@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -258,7 +258,7 @@ def test_verify_email_with_expired_token(client, db_session):
             "owner": {
                 "full_name": "Expired Token Owner",
                 "email": "expiredtoken@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -298,7 +298,7 @@ def test_resend_verification_email(client, db_session):
             "owner": {
                 "full_name": "Resend Test Owner",
                 "email": "resend@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )
@@ -340,7 +340,7 @@ def test_resend_for_verified_user_fails(client, db_session):
             "owner": {
                 "full_name": "Already Verified Owner",
                 "email": "alreadyverifiedresend@test.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )

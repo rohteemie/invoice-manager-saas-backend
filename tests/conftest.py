@@ -8,7 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from app.main import app
 from app.db.session import get_db
 from app.models.general_model import Base
@@ -45,7 +44,7 @@ def test_superadmin(db_session):
     user = User(
         email="superadmin@testcompany.com",
         full_name="Test Superadmin",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.ATTENDANT,
         tenant_id=None,
         is_active=True,
@@ -66,12 +65,24 @@ def superadmin_auth_headers(client, test_superadmin):
         "/api/v1/auth/login",
         data={
             "username": "superadmin@testcompany.com",
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_test_db():
+    """Remove test database file before test session starts."""
+    test_db_path = "./test.db"
+    if os.path.exists(test_db_path):
+        os.remove(test_db_path)
+    yield
+    # Cleanup after all tests complete
+    if os.path.exists(test_db_path):
+        os.remove(test_db_path)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -89,13 +100,24 @@ def db_session():
     Create a fresh database session for each test.
     Rolls back after each test to maintain isolation.
     """
+    # Ensure any existing connections are closed and transactions rolled back
+    engine.dispose()
+
+    # Drop all tables first to ensure clean state (checkfirst to avoid errors)
+    Base.metadata.drop_all(bind=engine, checkfirst=True)
+    # Create all tables
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
+        # Explicitly rollback any pending transactions
+        db.rollback()
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        # Dispose of connection pool to ensure all connections are closed
+        engine.dispose()
+        # Drop all tables to ensure clean state for next test
+        Base.metadata.drop_all(bind=engine, checkfirst=True)
 
 
 @pytest.fixture(scope="function")
@@ -157,7 +179,7 @@ def test_user(db_session, test_tenant):
     user = User(
         email="owner@testcompany.com",
         full_name="Test Owner",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.OWNER,
         tenant_id=test_tenant.id,
         is_active=True,
@@ -170,6 +192,22 @@ def test_user(db_session, test_tenant):
 
 
 @pytest.fixture
+def auth_headers(client, test_user):
+    """
+    Get authentication headers for test user.
+    """
+    response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "owner@testcompany.com",
+            "password": "TestPass123!"
+        }
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
 def test_admin(db_session, test_tenant):
     """
     Create a test admin user.
@@ -177,7 +215,7 @@ def test_admin(db_session, test_tenant):
     user = User(
         email="admin@testcompany.com",
         full_name="Test Admin",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.ADMIN,
         tenant_id=test_tenant.id,
         is_active=True,
@@ -197,7 +235,7 @@ def test_manager(db_session, test_tenant):
     user = User(
         email="manager@testcompany.com",
         full_name="Test Manager",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.MANAGER,
         tenant_id=test_tenant.id,
         is_active=True,
@@ -217,7 +255,7 @@ def test_attendant(db_session, test_tenant):
     user = User(
         email="attendant@testcompany.com",
         full_name="Test Attendant",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.ATTENDANT,
         tenant_id=test_tenant.id,
         is_active=True,
@@ -237,7 +275,7 @@ def second_tenant_user(db_session, second_tenant):
     user = User(
         email="owner@secondcompany.com",
         full_name="Second Owner",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.OWNER,
         tenant_id=second_tenant.id,
         is_active=True,
@@ -257,7 +295,7 @@ def inactive_user(db_session, test_tenant):
     user = User(
         email="inactive@testcompany.com",
         full_name="Inactive User",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.ATTENDANT,
         tenant_id=test_tenant.id,
         is_active=False,
@@ -270,22 +308,6 @@ def inactive_user(db_session, test_tenant):
 
 
 @pytest.fixture
-def auth_headers(client, test_user):
-    """
-    Get authentication headers for test user.
-    """
-    response = client.post(
-        "/api/v1/auth/login",
-        data={
-            "username": "owner@testcompany.com",
-            "password": "TestPassword123"
-        }
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-@pytest.fixture
 def admin_auth_headers(client, test_admin):
     """
     Get authentication headers for admin user.
@@ -294,7 +316,7 @@ def admin_auth_headers(client, test_admin):
         "/api/v1/auth/login",
         data={
             "username": "admin@testcompany.com",
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token = response.json()["access_token"]
@@ -310,7 +332,7 @@ def manager_auth_headers(client, test_manager):
         "/api/v1/auth/login",
         data={
             "username": "manager@testcompany.com",
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token = response.json()["access_token"]
@@ -326,7 +348,7 @@ def attendant_auth_headers(client, test_attendant):
         "/api/v1/auth/login",
         data={
             "username": "attendant@testcompany.com",
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token = response.json()["access_token"]
@@ -342,7 +364,7 @@ def second_tenant_auth_headers(client, second_tenant_user):
         "/api/v1/auth/login",
         data={
             "username": "owner@secondcompany.com",
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token = response.json()["access_token"]

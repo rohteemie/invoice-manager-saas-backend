@@ -438,7 +438,7 @@ def test_update_invoice_draft(client, auth_headers, manager_auth_headers):
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -468,7 +468,7 @@ def test_update_invoice_items(client, auth_headers, manager_auth_headers):
             "items": [{"description": "Original Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -504,7 +504,7 @@ def test_update_non_draft_invoice_fails(
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -562,7 +562,7 @@ def test_status_transition_draft_to_sent(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -589,7 +589,7 @@ def test_status_transition_sent_to_paid(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -624,7 +624,7 @@ def test_status_transition_sent_to_overdue(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -657,7 +657,7 @@ def test_status_transition_overdue_to_paid(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -694,7 +694,7 @@ def test_invalid_status_transition(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -720,7 +720,7 @@ def test_paid_status_requires_payment_method(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -775,7 +775,7 @@ def test_delete_draft_invoice(client, auth_headers, admin_auth_headers):
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=admin_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -807,7 +807,7 @@ def test_delete_non_draft_invoice_fails(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=admin_auth_headers
     )
     invoice_id = create_response.json()["id"]
 
@@ -815,7 +815,7 @@ def test_delete_non_draft_invoice_fails(client, auth_headers,
     client.patch(
         f"/api/v1/invoices/{invoice_id}/status",
         json={"status": "sent"},
-        headers=manager_auth_headers
+        headers=admin_auth_headers
     )
 
     # Try to delete (should fail)
@@ -963,7 +963,7 @@ def test_export_invoices_with_status_filter(client, auth_headers,
             "items": [{"description": "Item", "quantity": 1,
                        "unit_price": 100}]
         },
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     sent_id = sent_response.json()["id"]
 
@@ -977,7 +977,7 @@ def test_export_invoices_with_status_filter(client, auth_headers,
     # Export only SENT invoices
     response = client.get(
         "/api/v1/invoices/export/invoices?format=json&status=sent",
-        headers=auth_headers
+        headers=manager_auth_headers
     )
     assert response.status_code == 200
     json_data = response.json()

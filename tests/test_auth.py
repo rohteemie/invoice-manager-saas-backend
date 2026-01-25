@@ -13,7 +13,7 @@ def test_register_new_user(client, test_tenant):
         json={
             "email": "newuser@testcompany.com",
             "full_name": "New User",
-            "password": "SecurePassword123",
+            "password": "SecurePassword123@",
             "role": "manager",
             "tenant_id": test_tenant.id
         }
@@ -35,7 +35,7 @@ def test_register_duplicate_email(client, test_user, test_tenant):
         json={
             "email": test_user.email,
             "full_name": "Duplicate User",
-            "password": "SecurePassword123",
+            "password": "SecurePassword123@",
             "role": "attendant",
             "tenant_id": test_tenant.id
         }
@@ -51,7 +51,7 @@ def test_register_invalid_email(client, test_tenant):
         json={
             "email": "not-an-email",
             "full_name": "Invalid Email",
-            "password": "SecurePassword123",
+            "password": "SecurePassword123@",
             "role": "attendant",
             "tenant_id": test_tenant.id
         }
@@ -80,7 +80,7 @@ def test_login_success(client, test_user):
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     assert response.status_code == 200
@@ -106,7 +106,7 @@ def test_login_incorrect_password(client, test_user):
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "WrongPassword123"
+            "password": "WrongPassword123!"
         }
     )
     assert response.status_code == 401
@@ -119,7 +119,7 @@ def test_login_nonexistent_user(client):
         "/api/v1/auth/login",
         data={
             "username": "nonexistent@testcompany.com",
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     assert response.status_code == 401
@@ -132,7 +132,7 @@ def test_login_inactive_user(client, inactive_user):
         "/api/v1/auth/login",
         data={
             "username": inactive_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     # Should return 401 (not 403) to avoid account enumeration
@@ -147,7 +147,7 @@ def test_refresh_token_success(client, test_user):
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     refresh_token = login_response.json()["refresh_token"]
@@ -188,7 +188,7 @@ def test_refresh_token_inactive_user(client, test_user, db_session):
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     refresh_token = login_response.json()["refresh_token"]
@@ -209,7 +209,7 @@ def test_password_is_hashed(client, test_tenant, db_session):
     """Test that passwords are properly hashed in database."""
     from app.models.user import User as UserModel
 
-    password = "TestPassword123"
+    password = "TestPass123!"
     response = client.post(
         "/api/v1/auth/register",
         json={
@@ -236,7 +236,7 @@ def test_access_token_expiration(client, test_user):
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token = response.json()["access_token"]
@@ -256,7 +256,7 @@ def test_different_users_different_tokens(client, test_user, test_admin):
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token1 = response1.json()["access_token"]
@@ -265,7 +265,7 @@ def test_different_users_different_tokens(client, test_user, test_admin):
         "/api/v1/auth/login",
         data={
             "username": test_admin.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token2 = response2.json()["access_token"]
