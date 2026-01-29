@@ -1,7 +1,6 @@
 from typing import List, Optional
 import base64
 import logging
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
@@ -11,7 +10,6 @@ from datetime import datetime, date, timezone
 import csv
 import io
 import json
-
 from app.db.session import get_db
 from app.models.invoice import (
     Invoice as InvoiceModel,

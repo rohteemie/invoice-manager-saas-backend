@@ -197,36 +197,6 @@ def test_payment_method_enum_all_valid_values(
         assert data["payment_method"] == method
 
 
-def test_user_currency_preference_default(
-    client, db_session, test_user
-):
-    """Test that new users have NGN as default currency preference."""
-    assert test_user.currency_preference == "NGN"
-
-
-def test_user_currency_preference_on_creation(
-    client, db_session, test_tenant
-):
-    """Test setting currency preference on user creation."""
-    from app.core.security import get_password_hash
-
-    # Create user with USD preference
-    user = User(
-        email="usd_user@testcompany.com",
-        full_name="USD User",
-        hashed_password=get_password_hash("TestPass123!"),
-        tenant_id=test_tenant.id,
-        currency_preference="USD",
-        is_active=True,
-        is_verified=True
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-
-    assert user.currency_preference == "USD"
-
-
 def test_invoice_summary_unified_currency_ngn(
     client, auth_headers, db_session, test_tenant, test_user
 ):
@@ -356,20 +326,18 @@ def test_revenue_by_status_unified_currency(
     assert total_amount == Decimal("255000.00")
 
 
-def test_currency_preference_affects_analytics(
+def test_tenant_currency_affects_analytics(
     client, db_session, test_tenant
 ):
-    """Test that different users with different currency preferences
-    see different values."""
+    """Test that analytics uses tenant's default currency."""
     from app.core.security import get_password_hash
 
-    # Create user with USD preference
+    # Create user
     usd_user = User(
         email="usd_user2@testcompany.com",
         full_name="USD User 2",
         hashed_password=get_password_hash("TestPass123!"),
         tenant_id=test_tenant.id,
-        currency_preference="USD",
         is_active=True,
         is_verified=True
     )
@@ -385,12 +353,12 @@ def test_currency_preference_affects_analytics(
         status=InvoiceStatus.PAID,
         currency=Currency.NGN,
         issue_date="2024-01-01",
-        total_amount=Decimal("1650.00")  # Exactly 1 USD worth
+        total_amount=Decimal("1650.00")
     )
     db_session.add(invoice)
     db_session.commit()
 
-    # Login as USD user
+    # Login as user
     login_response = client.post(
         "/api/v1/auth/login",
         data={
@@ -400,20 +368,19 @@ def test_currency_preference_affects_analytics(
     )
     assert login_response.status_code == 200
     token = login_response.json()["access_token"]
-    usd_headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"}
 
     # Get summary
     response = client.get(
         "/api/v1/analytics/invoice-summary",
-        headers=usd_headers
+        headers=headers
     )
     assert response.status_code == 200
     data = response.json()
 
-    assert data["currency"] == "USD"
+    assert data["currency"] == "NGN"
     total_revenue = Decimal(str(data["total_revenue"]))
-    # 1650 NGN / 1650 = 1 USD
-    assert total_revenue == Decimal("1.00")
+    assert total_revenue == Decimal("1650.00")
 
 
 def test_payment_method_required_for_paid_status(

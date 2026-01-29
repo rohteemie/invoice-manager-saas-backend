@@ -25,6 +25,13 @@ class UserBase(BaseModel):
     role: UserRole = Field(default=UserRole.ATTENDANT,
                            description="User role for RBAC")
 
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v):
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class UserCreate(UserBase):
     """Schema for creating a new user."""
@@ -35,11 +42,6 @@ class UserCreate(UserBase):
     tenant_id: Optional[str] = Field(
         None,
         description="Tenant ID for data isolation (null for superadmins)"
-    )
-    currency_preference: Optional[str] = Field(
-        "NGN",
-        description="User's preferred currency (NGN, USD, GBP, EUR). "
-                    "Defaults to NGN and cannot be changed once set."
     )
     is_superadmin: Optional[bool] = Field(
         False, description="Platform-level super admin flag"
@@ -60,6 +62,15 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
 
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class UserInDB(UserBase):
     """Schema for user in database."""
@@ -68,7 +79,6 @@ class UserInDB(UserBase):
     is_active: bool
     is_verified: bool
     is_superadmin: bool
-    currency_preference: str
     created_at: datetime
     updated_at: datetime
 
@@ -91,6 +101,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    expires_in: int
 
 
 class TokenPayload(BaseModel):

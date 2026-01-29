@@ -143,7 +143,7 @@ async def login(
 
     - Validates email and password
     - Implements progressive delay based on failed attempts (OWASP ASVS)
-    - Returns JWT access and refresh tokens
+    - Returns JWT access, refresh tokens and expires_in
     - Access token expires in configured time (default: 30 min)
     - Refresh token expires in configured time (default: 7 days)
 
@@ -278,7 +278,8 @@ async def login(
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60
     }
 
 
@@ -342,11 +343,12 @@ def refresh_token(
     return {
         "access_token": new_access_token,
         "refresh_token": new_refresh_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60
     }
 
 
-@router.post("/verify-email")
+@router.post("/verify-email", response_model=Token)
 @limiter.limit("10/minute")
 def verify_email(
     request: Request,
@@ -404,10 +406,31 @@ def verify_email(
     db.commit()
     db.refresh(user)
 
+    # Generate tokens (same as login)
+    token_data = {
+        "sub": user.id,
+        "tenant_id": user.tenant_id,
+        "role": user.role.value,
+        "is_superadmin": user.is_superadmin
+    }
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+
+    # Optionally, log the verification event
+    # log_auth_event(
+    #     db=db,
+    #     request=request,
+    #     action=AuditAction.EMAIL_VERIFIED,
+    #     user_id=user.id,
+    #     tenant_id=user.tenant_id,
+    #     description=f"Email verified for {user.email} via verification endpoint"
+    # )
+
     return {
-        "message": "Email verified successfully",
-        "email": user.email,
-        "is_verified": user.is_verified
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60
     }
 
 
@@ -471,7 +494,9 @@ def resend_verification_email(
             email=user.email,
             token=verification_token,
             full_name=user.full_name,
-            base_url=settings.EMAIL_VERIFICATION_BASE_URL,
+            base_url=(
+                settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+            ),
         )
     except Exception as e:
         logger.warning(
@@ -595,7 +620,9 @@ async def forgot_password(
             email=user.email,
             token=reset_token,
             full_name=user.full_name,
-            base_url=settings.EMAIL_VERIFICATION_BASE_URL
+            base_url=(
+                settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+            )
         )
         logger.info(
             "Password reset email task queued for %s", user.email

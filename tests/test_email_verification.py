@@ -72,9 +72,11 @@ def test_verify_email_with_valid_token(client, db_session):
 
     assert verify_response.status_code == 200
     data = verify_response.json()
-    assert data["message"] == "Email verified successfully"
-    assert data["email"] == "verify@test.com"
-    assert data["is_verified"] is True
+    # After verification, tokens are returned
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
+    assert "expires_in" in data
 
     # Check database to ensure user is verified
     db_session.refresh(user)
