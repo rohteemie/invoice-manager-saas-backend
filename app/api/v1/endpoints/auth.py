@@ -423,8 +423,7 @@ def verify_email(
     #     action=AuditAction.EMAIL_VERIFIED,
     #     user_id=user.id,
     #     tenant_id=user.tenant_id,
-    #     description=f"Email verified for {user.email} via verification endpoint"
-    # )
+    #     description=
 
     return {
         "access_token": access_token,
