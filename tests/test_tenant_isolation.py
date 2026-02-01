@@ -100,7 +100,7 @@ def test_tokens_contain_correct_tenant_id(
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token1 = response1.json()["access_token"]
@@ -111,7 +111,7 @@ def test_tokens_contain_correct_tenant_id(
         "/api/v1/auth/login",
         data={
             "username": second_tenant_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     token2 = response2.json()["access_token"]
@@ -200,7 +200,7 @@ def test_multiple_users_same_email_different_tenants(
         json={
             "email": "sameuser@example.com",
             "full_name": "User in Tenant 1",
-            "password": "TestPassword123",
+            "password": "TestPass123!",
             "role": "attendant",
             "tenant_id": test_tenant.id
         }
@@ -214,7 +214,7 @@ def test_multiple_users_same_email_different_tenants(
         json={
             "email": "sameuser@example.com",
             "full_name": "User in Tenant 2",
-            "password": "TestPassword123",
+            "password": "TestPass123!",
             "role": "attendant",
             "tenant_id": second_tenant.id
         }
@@ -241,7 +241,7 @@ def test_tenant_isolation_with_deactivated_user(
     inactive_second_tenant_user = UserModel(
         email="inactive@secondcompany.com",
         full_name="Inactive Second User",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role="attendant",
         tenant_id=second_tenant.id,
         is_active=False
@@ -274,7 +274,7 @@ def test_registration_enforces_tenant_id(client, test_tenant):
         json={
             "email": "notenant@example.com",
             "full_name": "No Tenant User",
-            "password": "TestPassword123",
+            "password": "TestPass123!",
             "role": "attendant"
             # Missing tenant_id
         }
@@ -301,7 +301,7 @@ def test_user_from_tenant_a_manages_only_tenant_a_users(
     second_admin = UserModel(
         email="admin@secondcompany.com",
         full_name="Second Admin",
-        hashed_password=get_password_hash("TestPassword123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role="admin",
         tenant_id=second_tenant.id,
         is_active=True

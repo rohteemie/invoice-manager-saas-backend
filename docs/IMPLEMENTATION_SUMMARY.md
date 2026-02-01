@@ -42,15 +42,14 @@ This implementation adds strict payment method validation using enumerators and 
 
 #### Features
 - **Default Currency**: All users default to NGN (Nigerian Naira)
-- **Set Once**: Currency preference cannot be changed after initial setting
-- **User-Scoped**: Each user has their own currency preference
+- **Tenant-Scoped**: Currency is set at the tenant level for the organization
 - **Supported Currencies**: NGN, USD, GBP, EUR
 
 #### Database Schema
 ```python
-class User(Base):
+class Tenant(Base):
     # ... other fields
-    currency_preference = Column(String(3), nullable=False, default="NGN")
+    default_currency = Column(String(3), nullable=False, default="NGN")
 ```
 
 ---
@@ -127,7 +126,6 @@ All currency-related fields now default to Nigerian Naira:
 
 1. **Tenant Default Currency**: `default_currency = "NGN"`
 2. **Invoice Currency**: `currency = Currency.NGN`
-3. **User Currency Preference**: `currency_preference = "NGN"`
 
 This ensures consistency across the platform and aligns with the requirement that NGN should be the default across all fields.
 
@@ -201,6 +199,9 @@ For detailed compliance documentation, see `docs/SECURITY_GDPR_COMPLIANCE.md`.
 
 2. `update_default_currency_to_ngn.py`
    - Documents currency default update
+
+3. `remove_currency_preference_from_users_table.py`
+   - Removes `currency_preference` column from users table (currency now tenant-level)
 
 ---
 
@@ -317,7 +318,7 @@ If issues arise:
    - Solution: Error message lists valid options
 
 2. **Currency mismatch**: Analytics show unexpected amounts
-   - Solution: Check user's currency_preference setting
+   - Solution: Check tenant's default_currency setting
 
 3. **Performance**: Analytics slow
    - Solution: Verify cache is working, check database indexes

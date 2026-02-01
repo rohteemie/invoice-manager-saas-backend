@@ -303,3 +303,106 @@ def test_invoice_pdf_with_logo(client: TestClient, auth_headers, test_tenant, db
     assert pdf_response.status_code == 200
     assert pdf_response.headers["content-type"] == "application/pdf"
     assert len(pdf_response.content) > 0
+
+
+@pytest.mark.skip(reason="Advanced file content validation not yet implemented.")
+def test_upload_tenant_logo_content_validation_failure(client: TestClient, auth_headers, test_tenant):
+    """Test logo upload with spoofed content type (security test)."""
+    # Create a file with PNG extension but containing text content
+    fake_file = io.BytesIO(b"This is not an image file content")
+    fake_file.name = 'logo.png'
+
+    response = client.post(
+        f"/api/v1/tenants/{test_tenant.id}/logo",
+        headers=auth_headers,
+        files={"file": ("logo.png", fake_file, "image/png")}
+    )
+
+    assert response.status_code == 400
+    assert "File content does not match expected type" in response.json()["message"]
+
+
+@pytest.mark.skip(reason="File signature validation not yet implemented.")
+def test_upload_tenant_logo_malicious_file(client: TestClient, auth_headers, test_tenant):
+    """Test logo upload with malicious file disguised as image."""
+    # Create a PHP file with PNG header spoofing
+    malicious_content = (
+        b'\x89PNG\r\n\x1a\n'  # PNG signature
+        b'<?php echo "malicious code"; ?>'  # PHP code
+    )
+    fake_file = io.BytesIO(malicious_content)
+    fake_file.name = 'logo.png'
+
+    response = client.post(
+        f"/api/v1/tenants/{test_tenant.id}/logo",
+        headers=auth_headers,
+        files={"file": ("logo.png", fake_file, "image/png")}
+    )
+
+    # Should fail content validation
+    assert response.status_code == 400
+    assert "File signature validation failed" in response.json()["message"]
+
+
+@pytest.mark.skip(reason="Image dimension validation not yet implemented.")
+def test_upload_tenant_logo_large_dimensions(client: TestClient, auth_headers, test_tenant):
+    """Test logo upload with image exceeding maximum dimensions."""
+    from unittest.mock import patch
+
+    # Create a mock image that exceeds dimensions
+    fake_file = io.BytesIO(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x07\x80\x00\x00\x04\x38')
+    fake_file.name = 'logo.png'
+
+    # Mock PIL to simulate large dimensions
+    with patch('PIL.Image.open') as mock_img_open:
+        mock_img = mock_img_open.return_value
+        mock_img.size = (2500, 1500)  # Exceeds 2000x2000 limit
+        mock_img.mode = 'RGB'
+        mock_img.format = 'PNG'
+        mock_img.verify.return_value = None
+
+        response = client.post(
+            f"/api/v1/tenants/{test_tenant.id}/logo",
+            headers=auth_headers,
+            files={"file": ("logo.png", fake_file, "image/png")}
+        )
+
+        assert response.status_code == 400
+        assert "Image dimensions too large" in response.json()["message"]
+
+
+@pytest.mark.skip(reason="Image corruption validation not yet implemented.")
+def test_upload_tenant_logo_corrupted_image(client: TestClient, auth_headers, test_tenant):
+    """Test logo upload with corrupted image file."""
+    # Create a file with PNG signature but corrupted content
+    corrupted_content = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00CORRUPTED'
+    fake_file = io.BytesIO(corrupted_content)
+    fake_file.name = 'logo.png'
+
+    response = client.post(
+        f"/api/v1/tenants/{test_tenant.id}/logo",
+        headers=auth_headers,
+        files={"file": ("logo.png", fake_file, "image/png")}
+    )
+
+    assert response.status_code == 400
+    assert "Image validation failed" in response.json()["message"]
+
+
+def test_upload_tenant_logo_svg_success(client: TestClient, auth_headers, test_tenant):
+    """Test successful SVG logo upload."""
+    # Create a simple SVG file
+    svg_content = b'<?xml version="1.0"?><svg width="100" height="100"><circle cx="50" cy="50" r="40"/></svg>'
+    fake_file = io.BytesIO(svg_content)
+    fake_file.name = 'logo.svg'
+
+    response = client.post(
+        f"/api/v1/tenants/{test_tenant.id}/logo",
+        headers=auth_headers,
+        files={"file": ("logo.svg", fake_file, "image/svg+xml")}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["logo_url"] is not None
+    assert data["logo_url"].endswith('.svg')

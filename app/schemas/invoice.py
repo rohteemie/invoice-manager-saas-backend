@@ -57,8 +57,6 @@ class InvoiceBase(BaseModel):
                                           description="Customer phone")
     customer_address: Optional[str] = Field(None, max_length=500,
                                             description="Customer address")
-    branch_id: Optional[str] = Field(None,
-                                     description="Branch ID (optional)")
     issue_date: str = Field(..., description="Invoice issue date (ISO 8601)")
     due_date: Optional[str] = Field(
         None, description="Payment due date (ISO 8601)"
@@ -83,7 +81,6 @@ class InvoiceUpdate(BaseModel):
     customer_email: Optional[EmailStr] = None
     customer_phone: Optional[str] = Field(None, max_length=20)
     customer_address: Optional[str] = Field(None, max_length=500)
-    branch_id: Optional[str] = None
     issue_date: Optional[str] = None
     due_date: Optional[str] = None
     notes: Optional[str] = Field(None, max_length=1000)

@@ -168,7 +168,6 @@ Represents invoices for billing and payment tracking with lifecycle management.
 - `id`: String (UUID) - Primary key (inherited from Gen_Model)
 - `invoice_number`: String(50) - Unique invoice identifier (indexed)
 - `tenant_id`: String(60) - Foreign key to tenants table (indexed)
-- `branch_id`: String(60) - Branch/location identifier (optional, indexed)
 - `customer_name`: String(100) - Customer name (required)
 - `customer_email`: String(255) - Customer email (optional)
 - `customer_phone`: String(20) - Customer phone (optional)
@@ -214,7 +213,7 @@ DRAFT → SENT → PAID
 
 - NOT NULL on invoice_number, tenant_id, customer_name, creator_id, status
 - Foreign key constraints to tenants and users tables
-- Indexed on invoice_number, tenant_id, branch_id, creator_id, status
+- Indexed on invoice_number, tenant_id, creator_id, status
 
 **Example:**
 
@@ -537,7 +536,6 @@ See [/tests/README.md](../../tests/README.md) for testing documentation.
 
 Planned models for upcoming features:
 
-- **Branch**: Physical locations within a tenant (referenced in invoices)
 - **Customer**: Detailed customer information management
 - **Subscription**: Detailed subscription and billing management
 - **Payment**: Payment transaction records

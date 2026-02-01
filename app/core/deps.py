@@ -173,3 +173,37 @@ def require_verified_email(
                    "Check inbox for verification link or request a new one."
         )
     return current_user
+
+
+def check_invoice_access(invoice, current_user: User) -> None:
+    """
+    Check if the current user has access to the given invoice.
+
+    Access Policy (Option B: Role-Based Flexibility):
+    - ATTENDANT: Can only access invoices they created
+    - MANAGER+: Can access all invoices in their tenant
+    - Superadmin: Bypasses all checks
+
+    Args:
+        invoice: Invoice object to check access for
+        current_user: The current authenticated user
+
+    Raises:
+        HTTPException: If user doesn't have access to the invoice
+    """
+    # Superadmins bypass all checks
+    if current_user.is_superadmin:
+        return
+
+    # Attendants can only access their own invoices
+    if (
+        current_user.role == UserRole.ATTENDANT
+        and invoice.creator_id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only access invoices you created"
+        )
+
+    # MANAGER and above can access all tenant invoices
+    # (no additional check needed)

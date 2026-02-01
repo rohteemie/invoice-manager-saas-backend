@@ -14,7 +14,7 @@ def test_validation_error_format(client):
         json={
             "email": "not-an-email",  # Invalid email
             "full_name": "Test User",
-            "password": "TestPassword123",
+            "password": "TestPass123!",
             "role": "manager",
             "tenant_id": "some-tenant-id"
         }
@@ -108,7 +108,7 @@ def test_duplicate_entry_error_format(client, test_tenant):
         json={
             "email": "duplicate@testcompany.com",
             "full_name": "First User",
-            "password": "TestPassword123",
+            "password": "TestPass123!",
             "role": "manager",
             "tenant_id": test_tenant.id
         }
@@ -121,7 +121,7 @@ def test_duplicate_entry_error_format(client, test_tenant):
         json={
             "email": "duplicate@testcompany.com",
             "full_name": "Second User",
-            "password": "TestPassword123",
+            "password": "TestPass123!",
             "role": "manager",
             "tenant_id": test_tenant.id
         }
@@ -148,7 +148,7 @@ def test_error_response_no_password_leak(client, test_tenant):
         json={
             "email": "test@example.com",
             "full_name": "Test User",
-            "password": "TestPassword123",
+            "password": "TestPass123!",
             "role": "manager",
             "tenant_id": test_tenant.id
         }

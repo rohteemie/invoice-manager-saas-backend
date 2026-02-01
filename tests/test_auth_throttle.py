@@ -20,7 +20,7 @@ def test_login_success_clears_throttle(client, test_user):
             "/api/v1/auth/login",
             data={
                 "username": test_user.email,
-                "password": "TestPassword123"
+                "password": "TestPass123!"
             }
         )
 
@@ -92,7 +92,7 @@ def test_login_inactive_user_records_attempt(client, inactive_user):
             "/api/v1/auth/login",
             data={
                 "username": inactive_user.email,
-                "password": "TestPassword123"
+                "password": "TestPass123!"
             }
         )
 
@@ -117,7 +117,7 @@ def test_login_nonexistent_user_applies_delay(client):
             "/api/v1/auth/login",
             data={
                 "username": "nonexistent@example.com",
-                "password": "TestPassword123"
+                "password": "TestPass123!"
             }
         )
 
@@ -245,7 +245,7 @@ def test_login_throttle_graceful_degradation_no_redis(client, test_user):
             "/api/v1/auth/login",
             data={
                 "username": test_user.email,
-                "password": "TestPassword123"
+                "password": "TestPass123!"
             }
         )
 

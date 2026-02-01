@@ -292,6 +292,10 @@ def update_tenant(
     - Super Admins: Can update all fields including plan_type
     - Tenant Owners: Can update their own tenant details (except plan_type)
     """
+    tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
     # Verify authentication and permissions
     if not current_user.is_superadmin:
         # Check ownership
@@ -305,15 +309,14 @@ def update_tenant(
             )
 
         # Check for restricted fields (plan_type)
-        if tenant_update.plan_type is not None:
+        if (
+            tenant_update.plan_type is not None
+            and tenant_update.plan_type != tenant.plan_type
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="Only super admins can change the plan type"
             )
-
-    tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
 
     update_data = tenant_update.model_dump(exclude_unset=True)
 

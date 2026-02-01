@@ -74,6 +74,9 @@ def send_verification_email_task(
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
 
+        if not base_url:
+            base_url = "http://localhost:5173"
+
         # Build verification link
         verification_link = (
             f"{base_url.rstrip('/')}/verify-email?token={token}"
@@ -163,6 +166,9 @@ def send_password_reset_email_task(
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
 
+        if not base_url:
+            base_url = "http://localhost:5173"
+
         # Build reset link
         reset_link = f"{base_url.rstrip('/')}/reset-password?token={token}"
 
@@ -247,6 +253,9 @@ def send_verification_reminder_task(
                 "message": "Email provider not configured",
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
+
+        if not base_url:
+            base_url = "http://localhost:5173"
 
         # Build verification link
         verification_link = (
@@ -444,7 +453,9 @@ def send_verification_reminders():
         sent_count = 0
         failed_count = 0
 
-        base_url = settings.EMAIL_VERIFICATION_BASE_URL
+        base_url = (
+            settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+        )
 
         for user in unverified_users:
             try:

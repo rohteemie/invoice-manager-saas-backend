@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from decimal import Decimal
@@ -7,6 +7,7 @@ from decimal import Decimal
 from app.db.session import get_db
 from app.models.invoice import Invoice as InvoiceModel, InvoiceStatus
 from app.models.user import User
+from app.models.tenant import Tenant
 from app.schemas.analytics import (
     InvoiceSummary,
     RevenueByStatus
@@ -36,12 +37,12 @@ def get_invoice_summary(
     - sent_count: Number of sent invoices
     - paid_count: Number of paid invoices
     - overdue_count: Number of overdue invoices
-    - total_revenue: Total revenue from paid invoices (in user's currency)
-    - pending_amount: Total amount from sent invoices (in user's currency)
-    - overdue_amount: Total amount from overdue invoices (in user's currency)
-    - currency: User's preferred currency
+    - total_revenue: Total revenue from paid invoices (in tenant's currency)
+    - pending_amount: Total amount from sent invoices (in tenant's currency)
+    - overdue_amount: Total amount from overdue invoices (in tenant's currency)
+    - currency: Tenant's default currency
 
-    All monetary amounts are converted to user's preferred currency.
+    All monetary amounts are converted to tenant's default currency.
 
     Permissions: All authenticated users can view analytics
     for their tenant.
@@ -50,11 +51,14 @@ def get_invoice_summary(
     GDPR: No personal data is exposed in this endpoint.
     """
     tenant_id = current_user.tenant_id
-    user_currency = current_user.currency_preference
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant_currency = tenant.default_currency
 
     # Check cache first
     cache_key_name = cache_key(
-        tenant_id, f"invoice_summary_{user_currency}"
+        tenant_id, f"invoice_summary_{tenant_currency}"
     )
     cached_result = get_cache(cache_key_name)
     if cached_result:
@@ -104,7 +108,7 @@ def get_invoice_summary(
         for currency, total in total_revenue_results
     }
     total_revenue = converter.convert_multi_currency_amounts(
-        total_revenue_multi, user_currency
+        total_revenue_multi, tenant_currency
     )
 
     # Get pending amount from sent invoices, grouped by currency
@@ -122,7 +126,7 @@ def get_invoice_summary(
         for currency, total in pending_amount_results
     }
     pending_amount = converter.convert_multi_currency_amounts(
-        pending_amount_multi, user_currency
+        pending_amount_multi, tenant_currency
     )
 
     # Get overdue amount, grouped by currency
@@ -140,7 +144,7 @@ def get_invoice_summary(
         for currency, total in overdue_amount_results
     }
     overdue_amount = converter.convert_multi_currency_amounts(
-        overdue_amount_multi, user_currency
+        overdue_amount_multi, tenant_currency
     )
 
     result = InvoiceSummary(
@@ -152,7 +156,7 @@ def get_invoice_summary(
         total_revenue=total_revenue,
         pending_amount=pending_amount,
         overdue_amount=overdue_amount,
-        currency=user_currency
+        currency=tenant_currency
     )
 
     # Cache the result for 5 minutes (300 seconds)
@@ -172,10 +176,10 @@ def get_revenue_by_status(
     db: Session = Depends(get_db)
 ):
     """
-    Get revenue breakdown by invoice status in user's preferred currency.
+    Get revenue breakdown by invoice status in tenant's default currency.
 
     Returns a list of revenue totals grouped by status.
-    All amounts are converted to user's preferred currency.
+    All amounts are converted to tenant's default currency.
 
     Permissions: All authenticated users can view analytics
     for their tenant.
@@ -184,11 +188,14 @@ def get_revenue_by_status(
     GDPR: No personal data is exposed in this endpoint.
     """
     tenant_id = current_user.tenant_id
-    user_currency = current_user.currency_preference
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant_currency = tenant.default_currency
 
     # Check cache first
     cache_key_name = cache_key(
-        tenant_id, f"revenue_by_status_{user_currency}"
+        tenant_id, f"revenue_by_status_{tenant_currency}"
     )
     cached_result = get_cache(cache_key_name)
     if cached_result:
@@ -225,19 +232,19 @@ def get_revenue_by_status(
             str(currency.value)
         ] = Decimal(str(total_amount or 0))
 
-    # Convert all amounts to user's preferred currency
+    # Convert all amounts to tenant's default currency
     revenue_by_status = []
     for item in status_map.values():
-        total_in_user_currency = converter.convert_multi_currency_amounts(
+        total_in_tenant_currency = converter.convert_multi_currency_amounts(
             item['amounts_by_currency'],
-            user_currency
+            tenant_currency
         )
         revenue_by_status.append(
             RevenueByStatus(
                 status=item['status'],
                 count=item['count'],
-                total_amount=total_in_user_currency,
-                currency=user_currency
+                total_amount=total_in_tenant_currency,
+                currency=tenant_currency
             )
         )
 

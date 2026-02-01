@@ -33,9 +33,6 @@ class User(Gen_Model, Base):
                                        token
         reset_password_token: Token for password reset
         reset_password_token_expires_at: Expiration time for reset token
-        currency_preference: User's preferred currency for analytics
-                            (NGN, USD, GBP, EUR) Defaults to NGN and
-                            cannot be changed once set
     """
     __tablename__ = "users"
 
@@ -52,7 +49,6 @@ class User(Gen_Model, Base):
     verification_token_expires_at = Column(UTCDateTime(), nullable=True)
     reset_password_token = Column(String(255), nullable=True, index=True)
     reset_password_token_expires_at = Column(UTCDateTime(), nullable=True)
-    currency_preference = Column(String(3), nullable=False, default="NGN")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

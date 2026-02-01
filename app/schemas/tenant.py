@@ -37,7 +37,7 @@ class TenantBase(BaseModel):
         description="Tenant plan type (only super admin can modify)"
     )
     default_currency: Optional[str] = Field(
-        "USD", description="Default currency (NGN, USD, GBP, EUR)"
+        "NGN", description="Default currency (NGN, USD, GBP, EUR)"
     )
     tax_rate: Optional[Decimal] = Field(
         None, ge=0, le=100,

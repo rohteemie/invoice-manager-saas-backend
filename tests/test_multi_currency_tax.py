@@ -187,7 +187,7 @@ def test_tenant_registration_with_currency_and_tax(client):
             "owner": {
                 "full_name": "Currency Test Owner",
                 "email": "currency-test@example.com",
-                "password": "SecurePass123"
+                "password": "SecurePass123@"
             }
         }
     )

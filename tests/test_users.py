@@ -51,7 +51,7 @@ def test_list_users_as_owner(client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     assert "total" in data
@@ -90,13 +90,13 @@ def test_list_users_pagination(client, auth_headers, test_admin, test_manager):
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination metadata
     assert "items" in data
     assert "total" in data
     assert "page" in data
     assert "size" in data
-    
+
     assert len(data["items"]) == 1
     assert data["size"] == 1
     assert data["page"] == 1
@@ -265,7 +265,7 @@ def test_inactive_user_cannot_access_endpoints(client, inactive_user):
         "/api/v1/auth/login",
         data={
             "username": inactive_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     # Returns 401 (not 403) to avoid account enumeration

@@ -45,7 +45,6 @@ class Invoice(Gen_Model, Base):
     Attributes:
         invoice_number: Unique invoice identifier
         tenant_id: Associated tenant for data isolation
-        branch_id: Branch/location where invoice was created (optional)
         customer_name: Customer name
         customer_email: Customer email (optional)
         customer_phone: Customer phone (optional)
@@ -68,7 +67,6 @@ class Invoice(Gen_Model, Base):
     invoice_number = Column(String(50), nullable=False, index=True)
     tenant_id = Column(String(60), ForeignKey("tenants.id"), nullable=False,
                        index=True)
-    branch_id = Column(String(60), nullable=True, index=True)
     customer_name = Column(String(100), nullable=False)
     customer_email = Column(String(255), nullable=True)
     customer_phone = Column(String(20), nullable=True)

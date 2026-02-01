@@ -17,11 +17,11 @@ def superadmin_user(db_session):
     """Create a super admin user for testing."""
     from app.models.user import User
     from app.core.security import get_password_hash
-    
+
     superadmin = User(
         email="superadmin@platform.com",
         full_name="Super Admin",
-        hashed_password=get_password_hash("superadmin123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.ATTENDANT,  # Role doesn't matter for superadmin
         tenant_id=None,  # Superadmins don't belong to any tenant
         is_superadmin=True,
@@ -40,7 +40,7 @@ def superadmin_auth_headers(client, superadmin_user):
         "/api/v1/auth/login",
         data={
             "username": "superadmin@platform.com",
-            "password": "superadmin123"
+            "password": "TestPass123!"
         }
     )
     assert response.status_code == 200
@@ -58,7 +58,7 @@ def test_superadmin_can_access_admin_endpoints(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     assert "total" in data
@@ -99,13 +99,13 @@ def test_superadmin_can_list_all_tenants(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     assert "total" in data
     assert "page" in data
     assert "size" in data
-    
+
     assert len(data["items"]) >= 2
     tenant_ids = [t["id"] for t in data["items"]]
     assert test_tenant.id in tenant_ids
@@ -132,14 +132,14 @@ def test_superadmin_can_suspend_tenant(
     """Test that super admin can suspend a tenant."""
     # Ensure tenant is active
     assert test_tenant.is_active is True
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{test_tenant.id}/suspend",
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
     assert "suspended" in response.json()["message"].lower()
-    
+
     # Verify tenant is suspended in database
     db_session.refresh(test_tenant)
     assert test_tenant.is_active is False
@@ -152,14 +152,14 @@ def test_superadmin_can_reactivate_tenant(
     # First suspend the tenant
     test_tenant.is_active = False
     db_session.commit()
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{test_tenant.id}/reactivate",
         headers=superadmin_auth_headers
     )
     assert response.status_code == 200
     assert "reactivated" in response.json()["message"].lower()
-    
+
     # Verify tenant is active in database
     db_session.refresh(test_tenant)
     assert test_tenant.is_active is True
@@ -172,7 +172,7 @@ def test_cannot_suspend_already_suspended_tenant(
     # First suspend the tenant
     test_tenant.is_active = False
     db_session.commit()
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{test_tenant.id}/suspend",
         headers=superadmin_auth_headers
@@ -186,7 +186,7 @@ def test_cannot_reactivate_already_active_tenant(
 ):
     """Test that reactivating an already active tenant returns error."""
     assert test_tenant.is_active is True
-    
+
     response = client.put(
         f"/api/v1/admin/tenants/{test_tenant.id}/reactivate",
         headers=superadmin_auth_headers
@@ -216,11 +216,11 @@ def test_superadmin_can_list_all_users(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     assert "total" in data
-    
+
     assert len(data["items"]) >= 2
     user_ids = [u["id"] for u in data["items"]]
     assert test_user.id in user_ids
@@ -237,10 +237,10 @@ def test_superadmin_can_filter_users_by_tenant(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
-    
+
     # All users should belong to the specified tenant
     for user in data["items"]:
         if user["tenant_id"]:  # Skip superadmins
@@ -254,18 +254,19 @@ def test_superadmin_can_filter_users_by_active_status(
     # Create an inactive user
     from app.models.user import User
     from app.core.security import get_password_hash
-    
+
     inactive_user = User(
         email="inactive@test.com",
         full_name="Inactive User",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("TestPass123!"),
         role=UserRole.ATTENDANT,
         tenant_id=test_user.tenant_id,
-        is_active=False
+        is_active=False,
+        is_verified=True
     )
     db_session.add(inactive_user)
     db_session.commit()
-    
+
     # Filter for active users
     response = client.get(
         "/api/v1/admin/users?is_active=true",
@@ -273,12 +274,12 @@ def test_superadmin_can_filter_users_by_active_status(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     for user in data["items"]:
         assert user["is_active"] is True
-    
+
     # Filter for inactive users
     response = client.get(
         "/api/v1/admin/users?is_active=false",
@@ -300,7 +301,7 @@ def test_superadmin_can_filter_users_by_superadmin_status(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     assert len(data["items"]) >= 1
@@ -317,7 +318,7 @@ def test_superadmin_can_view_platform_audit_logs(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     assert "total" in data
@@ -334,10 +335,10 @@ def test_superadmin_can_filter_audit_logs_by_tenant(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
-    
+
     # All logs should belong to the specified tenant
     for log in data["items"]:
         if log["tenant_id"]:
@@ -354,10 +355,10 @@ def test_superadmin_can_filter_audit_logs_by_user(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
-    
+
     # All logs should belong to the specified user
     for log in data["items"]:
         if log["user_id"]:
@@ -374,7 +375,7 @@ def test_superadmin_can_view_platform_stats(
     )
     assert response.status_code == 200
     stats = response.json()
-    
+
     # Verify expected stats fields exist
     assert "total_tenants" in stats
     assert "active_tenants" in stats
@@ -383,7 +384,7 @@ def test_superadmin_can_view_platform_stats(
     assert "active_users" in stats
     assert "inactive_users" in stats
     assert "superadmins_count" in stats
-    
+
     # Verify counts are reasonable
     assert stats["total_tenants"] >= 1
     assert stats["total_users"] >= 2  # At least test_user and superadmin_user
@@ -397,7 +398,7 @@ def test_superadmin_bypasses_tenant_role_checks(
     # Even though superadmin has ATTENDANT role, they should have
     # access to owner-level endpoints within tenants
     # This tests the role_checker update in deps.py
-    
+
     # Try to access a user management endpoint (typically requires OWNER role)
     response = client.get(
         f"/api/v1/users/{test_user.id}",
@@ -418,13 +419,13 @@ def test_pagination_on_tenant_list(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination metadata
     assert "items" in data
     assert "total" in data
     assert "page" in data
     assert "size" in data
-    
+
     assert len(data["items"]) == 1
     assert data["size"] == 1
     assert data["page"] == 1
@@ -440,11 +441,11 @@ def test_pagination_on_user_list(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination metadata
     assert "items" in data
     assert "total" in data
-    
+
     assert len(data["items"]) == 1
 
 
@@ -458,7 +459,7 @@ def test_pagination_on_audit_log_list(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check pagination structure
     assert "items" in data
     assert "total" in data
@@ -474,16 +475,16 @@ def test_superadmin_token_includes_is_superadmin_flag(
         "/api/v1/auth/login",
         data={
             "username": "superadmin@platform.com",
-            "password": "superadmin123"
+            "password": "TestPass123!"
         }
     )
     assert response.status_code == 200
-    
+
     # Decode token to verify is_superadmin is included
     from app.core.security import decode_token
     token = response.json()["access_token"]
     payload = decode_token(token)
-    
+
     assert payload is not None
     assert "is_superadmin" in payload
     assert payload["is_superadmin"] is True
@@ -497,16 +498,16 @@ def test_normal_user_token_has_is_superadmin_false(
         "/api/v1/auth/login",
         data={
             "username": test_user.email,
-            "password": "TestPassword123"
+            "password": "TestPass123!"
         }
     )
     assert response.status_code == 200
-    
+
     # Decode token to verify is_superadmin is false
     from app.core.security import decode_token
     token = response.json()["access_token"]
     payload = decode_token(token)
-    
+
     assert payload is not None
     assert "is_superadmin" in payload
     assert payload["is_superadmin"] is False
@@ -519,7 +520,7 @@ def test_can_register_superadmin(client):
         json={
             "email": "newsuperadmin@platform.com",
             "full_name": "New Super Admin",
-            "password": "superadmin123",
+            "password": "TestPass123!",
             "role": "attendant",
             "tenant_id": None,
             "is_superadmin": True
@@ -538,7 +539,7 @@ def test_cannot_register_user_without_tenant_if_not_superadmin(client, test_tena
         json={
             "email": "notenantuser@test.com",
             "full_name": "No Tenant User",
-            "password": "password123",
+            "password": "TestPass123!",
             "role": "attendant",
             "tenant_id": None,
             "is_superadmin": False
