@@ -894,9 +894,9 @@ Owner > Admin > Manager > Attendant
 | POST /invoices | ✅ | ✅ | ✅ | ✅ |
 | GET /invoices | ✅ | ✅ | ✅ | ✅ |
 | GET /invoices/{id} | ✅ | ✅ | ✅ | ✅ |
-| PUT /invoices/{id} | ❌ (own only) | ❌ (own only) | ✅ | ✅ |
-| PATCH /invoices/{id}/status | ❌ (own only) | ❌ (own only) | ✅ | ✅ |
-| DELETE /invoices/{id} | ❌ | ❌ | ❌ (own only) | ✅ |
+| PUT /invoices/{id} | ❌ | ✅ (own only) | ✅ | ✅ |
+| PATCH /invoices/{id}/status | ❌ | ✅ (own only) | ✅ | ✅ |
+| DELETE /invoices/{id} | ❌ | ❌ | ✅ (own only) | ✅ (draft only) |
 
 ### Implementation
 

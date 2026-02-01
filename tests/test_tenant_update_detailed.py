@@ -1,7 +1,4 @@
 
-import pytest
-from app.models.user import UserRole
-
 def test_owner_update_all_fields(client, test_tenant, auth_headers):
     """Test that a tenant owner can update all allowed fields."""
     update_json = {
