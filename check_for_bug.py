@@ -1,6 +1,4 @@
 import requests
-import random
-import string
 # import json
 import os
 from dotenv import load_dotenv
@@ -38,15 +36,11 @@ checklist = [
     "Delete invoices created by another users",
     "Update organization details",
     "Owners can read all invoices created within an organization",
-    "Owner can modify invoices created by any users in organization "
-    "(draft/sent)",
+    "Owner can modify invoices created by any users in organization (draft/sent)",
     "Other users can only read all invoices that are created by them alone",
-    "Other users can modify invoices created by them, only if status is "
-    "still draft/unpaid",
-    "Created users from inside the organization cannot signin until "
-    "password had been changed",
-    "Created users within an organisation cannot read all other users or "
-    "view all other users",
+    "Other users can modify invoices created by them, only if status is still draft/unpaid",
+    "Created users from inside the organization cannot signin until password had been changed",
+    "Created users within an organisation cannot read all other users or view all other users",
 ]
 
 

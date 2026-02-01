@@ -346,9 +346,9 @@ class TestRoleBasedWorkflows:
         Workflow:
         1. Attendant creates draft invoice
         2. Attendant cannot send invoice (insufficient permissions)
-        3. Manager sends invoice
-        4. Admin cannot delete non-draft invoice
-        5. Owner can delete any invoice
+        3. Owner sends invoice
+        4. Manager cannot delete non-draft invoice
+        5. Only draft invoices can be deleted
         """
         from app.models.user import User, UserRole
         from app.core.security import get_password_hash
