@@ -152,9 +152,10 @@ def test_refresh_token_success(client, test_user):
     )
     refresh_token = login_response.json()["refresh_token"]
 
-    # Now refresh the token
+    # Now refresh the token (using request body for security)
     response = client.post(
-        f"/api/v1/auth/refresh?refresh_token={refresh_token}"
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
     )
     assert response.status_code == 200
     data = response.json()
@@ -175,7 +176,8 @@ def test_refresh_token_success(client, test_user):
 def test_refresh_token_invalid(client):
     """Test refresh with invalid token."""
     response = client.post(
-        "/api/v1/auth/refresh?refresh_token=invalid-token"
+        "/api/v1/auth/refresh",
+        json={"refresh_token": "invalid-token"}
     )
     assert response.status_code == 401
     assert "invalid" in response.json()["message"].lower()
@@ -197,9 +199,10 @@ def test_refresh_token_inactive_user(client, test_user, db_session):
     test_user.is_active = False
     db_session.commit()
 
-    # Try to refresh - should fail
+    # Try to refresh - should fail (using request body for security)
     response = client.post(
-        f"/api/v1/auth/refresh?refresh_token={refresh_token}"
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
     )
     assert response.status_code == 401
     assert "inactive" in response.json()["message"].lower()

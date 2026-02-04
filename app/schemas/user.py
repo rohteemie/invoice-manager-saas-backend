@@ -132,3 +132,8 @@ class ResetPasswordRequest(BaseModel):
     @classmethod
     def password_strength(cls, v: str) -> str:
         return validate_password_strength(v)
+
+
+class RefreshTokenRequest(BaseModel):
+    """Schema for refresh token request - sent in request body for security."""
+    refresh_token: str = Field(..., description="JWT refresh token")

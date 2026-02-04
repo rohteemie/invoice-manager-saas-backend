@@ -17,7 +17,7 @@ from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import UserCreate, User, Token
-from app.schemas.user import ResetPasswordRequest
+from app.schemas.user import ResetPasswordRequest, RefreshTokenRequest
 from app.core.security import verify_password, get_password_hash
 from app.core.security import create_access_token, create_refresh_token
 from app.core.security import decode_token, generate_verification_token
@@ -287,17 +287,21 @@ async def login(
 @limiter.limit("20/minute")
 def refresh_token(
     request: Request,
-    refresh_token: str,
+    token_request: RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
     """
     Refresh access token using refresh token.
 
-    - Validates refresh token
+    - Validates refresh token (sent in request body for security)
     - Issues new access and refresh tokens
     - Maintains user session security
+
+    Security Note: Refresh token is accepted in the request body instead of
+    query parameters to prevent token exposure in server logs, browser history,
+    and proxy logs.
     """
-    payload = decode_token(refresh_token)
+    payload = decode_token(token_request.refresh_token)
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

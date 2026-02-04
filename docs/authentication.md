@@ -150,11 +150,21 @@ password=SecurePassword123
 
 ### Refresh Token
 
-**POST** `/api/v1/auth/refresh?refresh_token={token}`
+**POST** `/api/v1/auth/refresh`
 
 Get new access and refresh tokens using a valid refresh token.
 
+**Request Body:**
+
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
 **Response:** New token pair
+
+> **Security Note:** The refresh token is sent in the request body (not as a query parameter) to prevent token exposure in server logs, browser history, and proxy logs.
 
 ### Email Verification ✨ **NEW**
 
