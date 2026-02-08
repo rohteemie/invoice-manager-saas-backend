@@ -14,7 +14,9 @@ class Tenant(Gen_Model, Base):
         plan_type: Subscription plan type (only super admin can modify)
         description: Tenant description (optional)
         is_active: Whether tenant is active
-        default_currency: Default currency for invoices (NGN, USD, GBP, EUR)
+        default_currency: Default currency for invoices (NGN, USD, GBP, EUR).
+            Required field, defaults to 'NGN'. All invoices created for this
+            tenant will use this currency.
         tax_rate: Default tax/VAT rate as percentage (0-100, tax-free nullable)
         tax_label: Label for tax (e.g., 'VAT', 'GST', 'Sales Tax', or None)
         logo_url: URL/path to tenant logo for branded invoices (optional)

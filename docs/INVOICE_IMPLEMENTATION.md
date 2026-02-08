@@ -97,7 +97,7 @@ DRAFT ──────→ SENT ──────→ PAID
 
 - **Permission**: All authenticated users
 - **Function**: Generate and download invoice as PDF
-- **Features**: 
+- **Features**:
   - Includes tenant logo and branding
   - Multi-currency formatting
   - Tax calculations
@@ -121,7 +121,7 @@ DRAFT ──────→ SENT ──────→ PAID
 
 - **Permission**: Manager role and above
 - **Function**: Export invoices in CSV or JSON format
-- **Query Parameters**: 
+- **Query Parameters**:
   - `format`: csv or json (default: csv)
   - `status`: Filter by invoice status
   - `start_date`, `end_date`: Date range filters
@@ -325,7 +325,7 @@ CREATE TABLE invoice_items (
 
 ### Overview
 
-**Implementation Date**: 2025-11-10  
+**Implementation Date**: 2025-11-10
 **Migration**: `add_multi_currency_and_tax_support.py`
 
 The system now supports multi-currency invoicing and configurable tax rates per tenant, enabling global operations and compliance with regional tax regulations.
@@ -343,10 +343,12 @@ The system now supports multi-currency invoicing and configurable tax rates per 
 
 #### Tenant Table Changes
 
-**default_currency** (String(3), NOT NULL, default='USD')
+**default_currency** (String(3), NOT NULL, default='NGN')
 - Tenant's default currency for new invoices
+- Required field with default value 'NGN' (Nigerian Naira)
 - ISO 4217 compliant (3-letter currency code)
-- Automatically applied to invoices if not specified
+- Supported: NGN, USD, GBP, EUR
+- All invoices inherit this currency
 - **Security**: Validated at schema level
 
 **tax_rate** (Numeric(5,2), nullable)
@@ -381,7 +383,7 @@ class Currency(str, enum.Enum):
 #### Tenant Model (`app/models/tenant.py`)
 
 ```python
-default_currency = Column(String(3), default="USD", nullable=False)
+default_currency = Column(String(3), default="NGN", nullable=False)
 tax_rate = Column(Numeric(5, 2), nullable=True)
 tax_label = Column(String(50), nullable=True)
 ```
@@ -399,14 +401,34 @@ currency: Optional[Currency] = Field(
 
 #### Tenant Schemas (`app/schemas/tenant.py`)
 
-**TenantBase/Create/Update**:
+**TenantBase/Create**:
+```python
+default_currency: str = Field(
+    "NGN",
+    description="Default currency for invoices (NGN, USD, GBP, EUR). "
+                "Required field, defaults to NGN if not specified."
+)
+```
+
+**TenantUpdate**:
 ```python
 default_currency: Optional[str] = Field(
-    "USD", description="Default currency (NGN, USD, GBP, EUR)"
+    None,
+    description="Default currency for invoices (NGN, USD, GBP, EUR). "
+                "Cannot be null once set."
 )
+```
+
+**Currency Validation**:
+- Supported currencies: NGN, USD, GBP, EUR
+- Case-insensitive input (automatically normalized to uppercase)
+- Invalid currencies return helpful error message
+
+```python
 tax_rate: Optional[Decimal] = Field(
     None, ge=0, le=100,
     description="Tax/VAT rate as percentage (0-100, null for tax-free)"
+)
 )
 tax_label: Optional[str] = Field(
     None, max_length=50,
@@ -516,7 +538,7 @@ PUT /api/v1/tenants/{tenant_id}
 **Upgrade Actions**:
 1. Add `currency` column to invoices table (default 'USD')
 2. Create index on invoices.currency
-3. Add `default_currency` to tenants table (default 'USD')
+3. Add `default_currency` to tenants table (default 'NGN')
 4. Add `tax_rate` to tenants table (nullable)
 5. Add `tax_label` to tenants table (nullable)
 

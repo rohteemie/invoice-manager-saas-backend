@@ -225,5 +225,5 @@ deploy.env
 run.sh
 
 # extras
-todo.txt
+*.txt
 api_e2e_test.py

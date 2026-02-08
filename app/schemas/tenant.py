@@ -18,6 +18,20 @@ def validate_hex_color(v: Optional[str]) -> Optional[str]:
     return v
 
 
+# Valid currency codes (ISO 4217)
+VALID_CURRENCIES = {'NGN', 'USD', 'GBP', 'EUR'}
+
+
+def validate_currency(v: str) -> str:
+    """Validate currency code is supported."""
+    if v.upper() not in VALID_CURRENCIES:
+        raise ValueError(
+            f"Invalid currency '{v}'. "
+            f"Supported currencies: {', '.join(sorted(VALID_CURRENCIES))}"
+        )
+    return v.upper()
+
+
 class TenantBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100,
                       description="Tenant name"
@@ -36,8 +50,11 @@ class TenantBase(BaseModel):
         "Standard",
         description="Tenant plan type (only super admin can modify)"
     )
-    default_currency: Optional[str] = Field(
-        "NGN", description="Default currency (NGN, USD, GBP, EUR)"
+    default_currency: str = Field(
+        "NGN",
+        max_length=3,
+        description="Default currency for invoices (NGN, USD, GBP, EUR). "
+                    "Required field, defaults to NGN if not specified."
     )
     tax_rate: Optional[Decimal] = Field(
         None, ge=0, le=100,
@@ -91,8 +108,17 @@ class TenantBase(BaseModel):
     def validate_colors(cls, v):
         return validate_hex_color(v)
 
+    @field_validator('default_currency', mode='before')
+    @classmethod
+    def validate_currency_code(cls, v):
+        """Validate and normalize currency code."""
+        if v is None:
+            return 'NGN'  # Default if somehow None is passed
+        return validate_currency(v)
+
 
 class TenantCreate(TenantBase):
+    """Schema for creating a new tenant. Currency defaults to NGN."""
     pass
 
 
@@ -106,12 +132,23 @@ class TenantUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     is_active: Optional[bool] = None
     default_currency: Optional[str] = Field(
-        None, description="Default currency (NGN, USD, GBP, EUR)"
+        None,
+        max_length=3,
+        description="Default currency for invoices (NGN, USD, GBP, EUR). "
+                    "Cannot be null once set."
     )
     tax_rate: Optional[Decimal] = Field(
         None, ge=0, le=100,
         description="Tax/VAT rate as percentage (0-100, null for tax-free)"
     )
+
+    @field_validator('default_currency', mode='before')
+    @classmethod
+    def validate_currency_update(cls, v):
+        """Validate currency code on update."""
+        if v is None:
+            return v  # Allow None for partial updates (no change)
+        return validate_currency(v)
     tax_label: Optional[str] = Field(
         None, max_length=50,
         description="Tax label (e.g., 'VAT', 'GST', 'Sales Tax')"

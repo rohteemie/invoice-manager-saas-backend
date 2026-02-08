@@ -33,6 +33,11 @@ def create_tenant(
 
     Requires at least one unique identifier:
     domain or business_registration_number.
+
+    Currency Configuration:
+    - default_currency: Required field, defaults to 'NGN' if not specified
+    - Supported currencies: NGN, USD, GBP, EUR
+    - All invoices created for this tenant will use this currency
     """
     # Validate that at least one unique identifier is provided
     if not tenant_in.domain and not tenant_in.business_registration_number:
@@ -104,6 +109,11 @@ def register_tenant_with_owner(
 
     Requires at least one unique identifier:
     domain or business_registration_number.
+
+    Currency Configuration:
+    - default_currency: Required field, defaults to 'NGN' if not specified
+    - Supported currencies: NGN, USD, GBP, EUR
+    - All invoices created will use this currency
     """
     # Validate that at least one unique identifier is provided
     if (

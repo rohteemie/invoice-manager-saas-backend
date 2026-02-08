@@ -50,10 +50,12 @@ defaults set to Nigerian Naira (NGN).
 
 #### Features
 
-- **Default Currency**: All tenants default to NGN (Nigerian Naira)
+- **Required Field**: `default_currency` is mandatory for all tenants
+- **Default Value**: NGN (Nigerian Naira) if not explicitly specified
 - **Tenant-Scoped**: Currency is set at the tenant level for the organization
-- **Supported Currencies**: NGN, USD, GBP, EUR
+- **Supported Currencies**: NGN, USD, GBP, EUR (validated at schema level)
 - **Invoice Currency**: All invoices use the tenant's default currency
+- **Validation**: Case-insensitive input, automatically normalized to uppercase
 
 #### Database Schema
 
@@ -61,6 +63,17 @@ defaults set to Nigerian Naira (NGN).
 class Tenant(Base):
     # ... other fields
     default_currency = Column(String(3), nullable=False, default="NGN")
+```
+
+#### Schema Definition
+
+```python
+# TenantCreate - mandatory field with default
+default_currency: str = Field(
+    "NGN",
+    description="Default currency for invoices (NGN, USD, GBP, EUR). "
+                "Required field, defaults to NGN if not specified."
+)
 ```
 
 #### How It Works
@@ -120,10 +133,11 @@ class Tenant(Base):
 
 ## Default Currency: NGN
 
-All currency-related fields now default to Nigerian Naira:
+All currency-related fields default to Nigerian Naira:
 
-1. **Tenant Default Currency**: `default_currency = "NGN"`
+1. **Tenant Default Currency**: `default_currency = "NGN"` (required, non-nullable)
 2. **Invoice Currency**: Inherited from tenant's `default_currency`
+3. **Validation**: Only NGN, USD, GBP, EUR are accepted
 
 This ensures consistency across the platform and aligns with the requirement
 that NGN should be the default across all fields.
