@@ -45,8 +45,8 @@ class InvoiceBase(BaseModel):
     """
     Base invoice schema with common attributes.
 
-    Note: Currency is not a field in InvoiceCreate/InvoiceUpdate and is always
-    inherited from the tenant's default_currency setting. Tax amounts are
+    Note: Currency is always inherited from the tenant's default_currency
+    setting and cannot be specified per invoice. Tax amounts are
     automatically calculated from the tenant's tax_rate.
     """
     customer_name: str = Field(..., min_length=1, max_length=100,

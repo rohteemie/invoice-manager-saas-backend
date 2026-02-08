@@ -1,65 +1,27 @@
-import pytest
 """
 Test suite for currency consistency across invoice system.
+
 Validates that currency is correctly handled in all workflows:
-- Invoice creation with different currencies
+- Invoice creation uses tenant's default currency
 - PDF generation with correct currency symbols
 - CSV/JSON export with currency information
 - Invoice updates maintaining correct tax calculations
 """
-import pytest
-from decimal import Decimal
-import json
 import csv
 import io
+from decimal import Decimal
 
 
-# def test_pdf_generation_uses_correct_currency_symbol_usd(client, auth_headers):
-#     """Test that PDF generated for USD invoice uses $ symbol."""
-#     # Create USD invoice
-#     response = client.post(
-#         "/api/v1/invoices/",
-#         json={
-#             "customer_name": "USD Customer",
-#             "currency": "USD",
-#             "issue_date": "2024-01-15",
-#             "items": [
-#                 {
-#                     "description": "Product A",
-#                     "quantity": 1,
-#                     "unit_price": 100.00
-#                 }
-#             ]
-#         },
-#         headers=auth_headers
-#     )
-#     assert response.status_code == 201
-#     invoice_id = response.json()["id"]
-
-#     # Generate PDF
-#     pdf_response = client.get(
-#         f"/api/v1/invoices/{invoice_id}/pdf",
-#         headers=auth_headers
-#     )
-#     assert pdf_response.status_code == 200
-#     assert pdf_response.headers["content-type"] == "application/pdf"
-
-#     # PDF content should exist (we can't easily parse it, but check it's not empty)
-#     assert len(pdf_response.content) > 0
-
-
-def test_pdf_generation_uses_correct_currency_symbol_gbp(client, auth_headers):
-    """Test that PDF generated for GBP invoice uses £ symbol."""
-    # Create GBP invoice
+def test_pdf_generation_uses_tenant_currency(client, auth_headers):
+    """Test that PDF uses tenant's default currency symbol."""
     response = client.post(
         "/api/v1/invoices/",
         json={
-            "customer_name": "GBP Customer",
-            "currency": "GBP",
+            "customer_name": "PDF Test Customer",
             "issue_date": "2024-01-15",
             "items": [
                 {
-                    "description": "Product B",
+                    "description": "Product A",
                     "quantity": 2,
                     "unit_price": 50.00
                 }
@@ -69,68 +31,8 @@ def test_pdf_generation_uses_correct_currency_symbol_gbp(client, auth_headers):
     )
     assert response.status_code == 201
     invoice_id = response.json()["id"]
-
-    # Generate PDF
-    pdf_response = client.get(
-        f"/api/v1/invoices/{invoice_id}/pdf",
-        headers=auth_headers
-    )
-    assert pdf_response.status_code == 200
-    assert len(pdf_response.content) > 0
-
-
-def test_pdf_generation_uses_correct_currency_symbol_eur(client, auth_headers):
-    """Test that PDF generated for EUR invoice uses € symbol."""
-    # Create EUR invoice
-    response = client.post(
-        "/api/v1/invoices/",
-        json={
-            "customer_name": "EUR Customer",
-            "currency": "EUR",
-            "issue_date": "2024-01-15",
-            "items": [
-                {
-                    "description": "Product C",
-                    "quantity": 1,
-                    "unit_price": 200.00
-                }
-            ]
-        },
-        headers=auth_headers
-    )
-    assert response.status_code == 201
-    invoice_id = response.json()["id"]
-
-    # Generate PDF
-    pdf_response = client.get(
-        f"/api/v1/invoices/{invoice_id}/pdf",
-        headers=auth_headers
-    )
-    assert pdf_response.status_code == 200
-    assert len(pdf_response.content) > 0
-
-
-def test_pdf_generation_uses_correct_currency_symbol_ngn(client, auth_headers):
-    """Test that PDF generated for NGN invoice uses ₦ symbol."""
-    # Create NGN invoice
-    response = client.post(
-        "/api/v1/invoices/",
-        json={
-            "customer_name": "NGN Customer",
-            "currency": "NGN",
-            "issue_date": "2024-01-15",
-            "items": [
-                {
-                    "description": "Product D",
-                    "quantity": 5,
-                    "unit_price": 10000.00
-                }
-            ]
-        },
-        headers=auth_headers
-    )
-    assert response.status_code == 201
-    invoice_id = response.json()["id"]
+    # Invoice should use tenant's default currency (NGN)
+    assert response.json()["currency"] == "NGN"
 
     # Generate PDF
     pdf_response = client.get(
@@ -142,17 +44,17 @@ def test_pdf_generation_uses_correct_currency_symbol_ngn(client, auth_headers):
 
 
 def test_csv_export_includes_currency_field(client, auth_headers):
-    """Test that CSV export includes currency column."""
-    # Create invoices with default currency (NGN)
-    for _ in range(4):
+    """Test that CSV export includes currency column with tenant currency."""
+    # Create invoices (all use tenant's default currency)
+    for _ in range(3):
         client.post(
             "/api/v1/invoices/",
             json={
-                "customer_name": "NGN Customer",
+                "customer_name": "CSV Export Customer",
                 "issue_date": "2024-01-15",
                 "items": [
                     {
-                        "description": "Product in NGN",
+                        "description": "Product",
                         "quantity": 1,
                         "unit_price": 100.00
                     }
@@ -173,25 +75,23 @@ def test_csv_export_includes_currency_field(client, auth_headers):
     rows = list(reader)
     # Check that Currency column exists
     assert "Currency" in reader.fieldnames
-    # Verify only NGN is present
+    # All invoices should have tenant's default currency (NGN)
     currencies_in_export = {row["Currency"] for row in rows}
     assert currencies_in_export == {"NGN"}
 
 
 def test_json_export_includes_currency_field(client, auth_headers):
-    """Test that JSON export includes currency field."""
-    # Create invoices with different currencies
-    created_invoices = []
-    for currency in ["USD", "EUR"]:
-        response = client.post(
+    """Test that JSON export includes currency field with tenant currency."""
+    # Create invoices
+    for i in range(2):
+        client.post(
             "/api/v1/invoices/",
             json={
-                "customer_name": f"{currency} Customer JSON",
-                "currency": currency,
+                "customer_name": f"JSON Export Customer {i}",
                 "issue_date": "2024-01-15",
                 "items": [
                     {
-                        "description": f"Product in {currency}",
+                        "description": "Product",
                         "quantity": 1,
                         "unit_price": 150.00
                     }
@@ -199,7 +99,6 @@ def test_json_export_includes_currency_field(client, auth_headers):
             },
             headers=auth_headers
         )
-        created_invoices.append(response.json())
 
     # Export as JSON
     export_response = client.get(
@@ -214,18 +113,22 @@ def test_json_export_includes_currency_field(client, auth_headers):
     assert isinstance(exported_data, list)
     assert len(exported_data) > 0
 
-    # Check that each invoice has currency field
+    # All invoices should have tenant's default currency
     for invoice in exported_data:
         assert "currency" in invoice
-        assert invoice["currency"] in ["USD", "GBP", "EUR", "NGN"]
+        assert invoice["currency"] == "NGN"
 
 
-def test_invoice_update_maintains_tax_calculation(client, auth_headers, db_session, test_tenant):
+def test_invoice_update_maintains_tax_calculation(
+    client, auth_headers, db_session, test_tenant
+):
     """Test that updating invoice items recalculates tax correctly."""
     from app.models.tenant import Tenant
 
     # Set tenant to have 10% tax
-    tenant = db_session.query(Tenant).filter(Tenant.id == test_tenant.id).first()
+    tenant = db_session.query(Tenant).filter(
+        Tenant.id == test_tenant.id
+    ).first()
     tenant.tax_rate = Decimal("10.00")
     tenant.tax_label = "VAT"
     db_session.commit()
@@ -235,7 +138,6 @@ def test_invoice_update_maintains_tax_calculation(client, auth_headers, db_sessi
         "/api/v1/invoices/",
         json={
             "customer_name": "Tax Update Test",
-            "currency": "USD",
             "issue_date": "2024-01-15",
             "items": [
                 {
@@ -279,12 +181,16 @@ def test_invoice_update_maintains_tax_calculation(client, auth_headers, db_sessi
     assert float(updated_invoice["total_amount"]) == 165.00  # 150 + 15
 
 
-def test_invoice_update_with_multiple_items_maintains_tax(client, auth_headers, db_session, test_tenant):
-    """Test that updating to multiple items maintains correct tax calculation."""
+def test_invoice_update_with_multiple_items_maintains_tax(
+    client, auth_headers, db_session, test_tenant
+):
+    """Test that updating to multiple items maintains correct tax."""
     from app.models.tenant import Tenant
 
     # Set tenant to have 20% tax
-    tenant = db_session.query(Tenant).filter(Tenant.id == test_tenant.id).first()
+    tenant = db_session.query(Tenant).filter(
+        Tenant.id == test_tenant.id
+    ).first()
     tenant.tax_rate = Decimal("20.00")
     tenant.tax_label = "VAT"
     db_session.commit()
@@ -294,7 +200,6 @@ def test_invoice_update_with_multiple_items_maintains_tax(client, auth_headers, 
         "/api/v1/invoices/",
         json={
             "customer_name": "Multi-item Tax Test",
-            "currency": "GBP",
             "issue_date": "2024-01-15",
             "items": [
                 {
@@ -340,99 +245,12 @@ def test_invoice_update_with_multiple_items_maintains_tax(client, auth_headers, 
     assert float(updated_invoice["total_amount"]) == 120.00
 
 
-@pytest.mark.skip(reason="Disabled due to currency update logic not matching test expectations.")
-def test_invoice_currency_consistency_through_lifecycle(client, auth_headers, db_session, test_tenant):
-    """Test that currency remains consistent throughout invoice lifecycle."""
-    from app.models.tenant import Tenant
-
-    # Set tenant tax rate
-    tenant = db_session.query(Tenant).filter(Tenant.id == test_tenant.id).first()
-    tenant.tax_rate = Decimal("15.00")
-    db_session.commit()
-
-    # Create EUR invoice
-    create_response = client.post(
-        "/api/v1/invoices/",
-        json={
-            "customer_name": "Lifecycle Test Customer",
-            "customer_email": "test@example.com",
-            "currency": "EUR",
-            "issue_date": "2024-01-15",
-            "items": [
-                {
-                    "description": "Test Product",
-                    "quantity": 1,
-                    "unit_price": 100.00
-                }
-            ]
-        },
-        headers=auth_headers
-    )
-    assert create_response.status_code == 201
-    invoice = create_response.json()
-    invoice_id = invoice["id"]
-
-    # Verify currency in create response
-    # assert invoice["currency"] == "EUR"
-
-    # Get invoice
-    get_response = client.get(
-        f"/api/v1/invoices/{invoice_id}",
-        headers=auth_headers
-    )
-    assert get_response.status_code == 200
-    # assert get_response.json()["currency"] == "EUR"
-
-    # List invoices
-    list_response = client.get(
-        "/api/v1/invoices/",
-        headers=auth_headers
-    )
-    assert list_response.status_code == 200
-    data = list_response.json()
-    assert "items" in data
-    eur_invoice = next((inv for inv in data["items"] if inv["id"] == invoice_id), None)
-    assert eur_invoice is not None
-    assert eur_invoice["currency"] == "EUR"
-    # Update invoice (currency should remain EUR)
-    update_response = client.put(
-        f"/api/v1/invoices/{invoice_id}",
-        json={
-            "customer_name": "Updated Customer",
-            "currency": "EUR",
-            "items": [
-                {
-                    "description": "Updated Product",
-                    "quantity": 2,
-                    "unit_price": 60.00
-                }
-            ]
-        },
-        headers=auth_headers
-    )
-    assert update_response.status_code == 200
-    # The API always uses the tenant's default currency (NGN) on update
-    assert update_response.json()["currency"] == "NGN"
-    # Generate PDF (should use EUR symbol €)
-    pdf_response = client.get(
-        f"/api/v1/invoices/{invoice_id}/pdf",
-        headers=auth_headers
-    )
-    assert pdf_response.status_code == 200
-    # PDF content should be generated
-    assert len(pdf_response.content) > 0
-
-
-def test_different_tenants_can_use_different_currencies(client, auth_headers, db_session):
-    """Test that different tenants can have different default currencies."""
-    # This test verifies tenant isolation and currency independence
-    # The current tenant uses NGN (default)
-
-    # Create invoice without specifying currency (should use tenant default)
+def test_invoice_uses_tenant_default_currency(client, auth_headers):
+    """Test that invoice always uses tenant's default currency."""
     response = client.post(
         "/api/v1/invoices/",
         json={
-            "customer_name": "Default Currency Customer",
+            "customer_name": "Currency Test Customer",
             "issue_date": "2024-01-15",
             "items": [
                 {
@@ -446,24 +264,47 @@ def test_different_tenants_can_use_different_currencies(client, auth_headers, db
     )
     assert response.status_code == 201
     invoice = response.json()
-    assert invoice["currency"] == "NGN"  # Default tenant currency
-    # Create another invoice for a different tenant (simulate isolation)
-    # For this test suite, we only check that invoices default to NGN
-    response2 = client.post(
+    # Invoice should use tenant's default currency (NGN)
+    assert invoice["currency"] == "NGN"
+
+
+def test_invoice_currency_consistent_after_update(client, auth_headers):
+    """Test that currency remains tenant default after invoice update."""
+    # Create invoice
+    create_response = client.post(
         "/api/v1/invoices/",
         json={
-            "customer_name": "Second Tenant Customer",
+            "customer_name": "Update Currency Test",
             "issue_date": "2024-01-15",
             "items": [
                 {
                     "description": "Product",
                     "quantity": 1,
-                    "unit_price": 50000.00
+                    "unit_price": 100.00
                 }
             ]
         },
         headers=auth_headers
     )
-    assert response2.status_code == 201
-    invoice2 = response2.json()
-    assert invoice2["currency"] == "NGN"
+    assert create_response.status_code == 201
+    invoice_id = create_response.json()["id"]
+    assert create_response.json()["currency"] == "NGN"
+
+    # Update invoice
+    update_response = client.put(
+        f"/api/v1/invoices/{invoice_id}",
+        json={
+            "customer_name": "Updated Customer Name",
+            "items": [
+                {
+                    "description": "Updated Product",
+                    "quantity": 2,
+                    "unit_price": 75.00
+                }
+            ]
+        },
+        headers=auth_headers
+    )
+    assert update_response.status_code == 200
+    # Currency should still be tenant's default
+    assert update_response.json()["currency"] == "NGN"

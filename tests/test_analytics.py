@@ -1,3 +1,9 @@
+"""
+Test suite for analytics endpoints.
+
+Tests invoice summary and revenue breakdown functionality.
+All amounts use the tenant's default currency.
+"""
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from decimal import Decimal
@@ -27,11 +33,10 @@ def test_invoice_summary_empty(
     assert data["sent_count"] == 0
     assert data["paid_count"] == 0
     assert data["overdue_count"] == 0
-    # New format: single currency amount instead of dict
     assert data["total_revenue"] == "0.00"
     assert data["pending_amount"] == "0.00"
     assert data["overdue_amount"] == "0.00"
-    assert data["currency"] == "NGN"  # Default user preference
+    assert data["currency"] == "NGN"
 
 
 def test_invoice_summary_with_data(
@@ -42,6 +47,9 @@ def test_invoice_summary_with_data(
     db_session: Session
 ):
     """Test invoice summary with various invoice statuses."""
+    # Get tenant's default currency
+    tenant_currency = Currency(test_tenant.default_currency)
+
     # Create invoices with different statuses
     # 2 Draft invoices
     draft1 = Invoice(
@@ -50,7 +58,7 @@ def test_invoice_summary_with_data(
         creator_id=test_user.id,
         customer_name="Customer 1",
         status=InvoiceStatus.DRAFT,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-01",
         total_amount=Decimal("100.00")
     )
@@ -60,7 +68,7 @@ def test_invoice_summary_with_data(
         creator_id=test_user.id,
         customer_name="Customer 2",
         status=InvoiceStatus.DRAFT,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-02",
         total_amount=Decimal("200.00")
     )
@@ -72,7 +80,7 @@ def test_invoice_summary_with_data(
         creator_id=test_user.id,
         customer_name="Customer 3",
         status=InvoiceStatus.SENT,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-03",
         total_amount=Decimal("300.00")
     )
@@ -84,7 +92,7 @@ def test_invoice_summary_with_data(
         creator_id=test_user.id,
         customer_name="Customer 4",
         status=InvoiceStatus.PAID,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-04",
         total_amount=Decimal("400.00")
     )
@@ -94,7 +102,7 @@ def test_invoice_summary_with_data(
         creator_id=test_user.id,
         customer_name="Customer 5",
         status=InvoiceStatus.PAID,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-05",
         total_amount=Decimal("500.00")
     )
@@ -106,7 +114,7 @@ def test_invoice_summary_with_data(
         creator_id=test_user.id,
         customer_name="Customer 6",
         status=InvoiceStatus.OVERDUE,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-06",
         total_amount=Decimal("600.00")
     )
@@ -127,14 +135,13 @@ def test_invoice_summary_with_data(
     assert data["sent_count"] == 1
     assert data["paid_count"] == 2
     assert data["overdue_count"] == 1
-    assert data["currency"] == "NGN"  # Default user preference
-    # All amounts converted to NGN (1 USD = 1650 NGN)
-    # Total revenue = (400 + 500) USD * 1650 = 1485000 NGN
-    assert Decimal(data["total_revenue"]) == Decimal("1485000.00")
-    # Pending amount = 300 USD * 1650 = 495000 NGN
-    assert Decimal(data["pending_amount"]) == Decimal("495000.00")
-    # Overdue amount = 600 USD * 1650 = 990000 NGN
-    assert Decimal(data["overdue_amount"]) == Decimal("990000.00")
+    assert data["currency"] == "NGN"
+    # Total revenue = 400 + 500 = 900
+    assert Decimal(data["total_revenue"]) == Decimal("900.00")
+    # Pending amount = 300
+    assert Decimal(data["pending_amount"]) == Decimal("300.00")
+    # Overdue amount = 600
+    assert Decimal(data["overdue_amount"]) == Decimal("600.00")
 
 
 def test_invoice_summary_tenant_isolation(
@@ -145,6 +152,9 @@ def test_invoice_summary_tenant_isolation(
     db_session: Session
 ):
     """Test that invoice summary respects tenant isolation."""
+    # Get tenant's default currency
+    tenant_currency = Currency(test_tenant.default_currency)
+
     # Create another tenant and user
     other_tenant = Tenant(
         name="Other Tenant",
@@ -165,26 +175,26 @@ def test_invoice_summary_tenant_isolation(
     db_session.add(other_user)
     db_session.commit()
 
-    # Create invoices for test_tenant
+    # Create invoice for test_tenant
     invoice1 = Invoice(
         invoice_number="INV-001",
         tenant_id=test_tenant.id,
         creator_id=test_user.id,
         customer_name="Customer 1",
         status=InvoiceStatus.PAID,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-01",
         total_amount=Decimal("100.00")
     )
 
-    # Create invoices for other_tenant
+    # Create invoice for other_tenant
     invoice2 = Invoice(
         invoice_number="INV-002",
         tenant_id=other_tenant.id,
         creator_id=other_user.id,
         customer_name="Customer 2",
         status=InvoiceStatus.PAID,
-        currency=Currency.USD,
+        currency=Currency.NGN,
         issue_date="2024-01-02",
         total_amount=Decimal("200.00")
     )
@@ -204,8 +214,7 @@ def test_invoice_summary_tenant_isolation(
     assert data["total_invoices"] == 1
     assert data["paid_count"] == 1
     assert data["currency"] == "NGN"
-    # 100 USD * 1650 = 165000 NGN
-    assert Decimal(data["total_revenue"]) == Decimal("165000.00")
+    assert Decimal(data["total_revenue"]) == Decimal("100.00")
 
 
 def test_revenue_by_status(
@@ -216,6 +225,9 @@ def test_revenue_by_status(
     db_session: Session
 ):
     """Test revenue breakdown by status."""
+    # Get tenant's default currency
+    tenant_currency = Currency(test_tenant.default_currency)
+
     # Create invoices with different statuses
     draft = Invoice(
         invoice_number="INV-001",
@@ -223,7 +235,7 @@ def test_revenue_by_status(
         creator_id=test_user.id,
         customer_name="Customer 1",
         status=InvoiceStatus.DRAFT,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-01",
         total_amount=Decimal("100.00")
     )
@@ -233,7 +245,7 @@ def test_revenue_by_status(
         creator_id=test_user.id,
         customer_name="Customer 2",
         status=InvoiceStatus.SENT,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-02",
         total_amount=Decimal("200.00")
     )
@@ -243,7 +255,7 @@ def test_revenue_by_status(
         creator_id=test_user.id,
         customer_name="Customer 3",
         status=InvoiceStatus.PAID,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-03",
         total_amount=Decimal("300.00")
     )
@@ -264,18 +276,17 @@ def test_revenue_by_status(
     # Convert to dict for easier testing
     status_dict = {item["status"]: item for item in data}
 
-    # All amounts in NGN (1 USD = 1650 NGN)
     assert status_dict["draft"]["count"] == 1
     assert status_dict["draft"]["currency"] == "NGN"
-    assert Decimal(status_dict["draft"]["total_amount"]) == Decimal("165000.00")
+    assert Decimal(status_dict["draft"]["total_amount"]) == Decimal("100.00")
 
     assert status_dict["sent"]["count"] == 1
     assert status_dict["sent"]["currency"] == "NGN"
-    assert Decimal(status_dict["sent"]["total_amount"]) == Decimal("330000.00")
+    assert Decimal(status_dict["sent"]["total_amount"]) == Decimal("200.00")
 
     assert status_dict["paid"]["count"] == 1
     assert status_dict["paid"]["currency"] == "NGN"
-    assert Decimal(status_dict["paid"]["total_amount"]) == Decimal("495000.00")
+    assert Decimal(status_dict["paid"]["total_amount"]) == Decimal("300.00")
 
 
 def test_revenue_by_status_empty(
@@ -314,6 +325,9 @@ def test_analytics_with_multiple_statuses(
     db_session: Session
 ):
     """Test analytics with invoices in all statuses."""
+    # Get tenant's default currency
+    tenant_currency = Currency(test_tenant.default_currency)
+
     # Create 3 invoices in each status
     invoices = []
     statuses = [
@@ -332,7 +346,7 @@ def test_analytics_with_multiple_statuses(
                 creator_id=test_user.id,
                 customer_name=f"Customer {idx}-{i}",
                 status=status,
-                currency=Currency.USD,
+                currency=tenant_currency,
                 issue_date=f"2024-01-{idx + 1:02d}",
                 total_amount=Decimal(str(amounts[idx]))
             )
@@ -355,13 +369,12 @@ def test_analytics_with_multiple_statuses(
     assert data["paid_count"] == 3
     assert data["overdue_count"] == 3
     assert data["currency"] == "NGN"
-    # All amounts in NGN (1 USD = 1650 NGN)
-    # Total revenue = 3 * 300 USD * 1650 = 1485000 NGN
-    assert Decimal(data["total_revenue"]) == Decimal("1485000.00")
-    # Pending amount = 3 * 200 USD * 1650 = 990000 NGN
-    assert Decimal(data["pending_amount"]) == Decimal("990000.00")
-    # Overdue amount = 3 * 400 USD * 1650 = 1980000 NGN
-    assert Decimal(data["overdue_amount"]) == Decimal("1980000.00")
+    # Total revenue = 3 * 300 = 900
+    assert Decimal(data["total_revenue"]) == Decimal("900.00")
+    # Pending amount = 3 * 200 = 600
+    assert Decimal(data["pending_amount"]) == Decimal("600.00")
+    # Overdue amount = 3 * 400 = 1200
+    assert Decimal(data["overdue_amount"]) == Decimal("1200.00")
 
 
 def test_revenue_by_status_tenant_isolation(
@@ -372,6 +385,9 @@ def test_revenue_by_status_tenant_isolation(
     db_session: Session
 ):
     """Test revenue by status respects tenant isolation."""
+    # Get tenant's default currency
+    tenant_currency = Currency(test_tenant.default_currency)
+
     # Create another tenant
     other_tenant = Tenant(
         name="Other Tenant",
@@ -399,7 +415,7 @@ def test_revenue_by_status_tenant_isolation(
         creator_id=test_user.id,
         customer_name="Customer 1",
         status=InvoiceStatus.PAID,
-        currency=Currency.USD,
+        currency=tenant_currency,
         issue_date="2024-01-01",
         total_amount=Decimal("100.00")
     )
@@ -411,7 +427,7 @@ def test_revenue_by_status_tenant_isolation(
         creator_id=other_user.id,
         customer_name="Customer 2",
         status=InvoiceStatus.PAID,
-        currency=Currency.USD,
+        currency=Currency.NGN,
         issue_date="2024-01-02",
         total_amount=Decimal("500.00")
     )
@@ -431,175 +447,5 @@ def test_revenue_by_status_tenant_isolation(
     assert data[0]["status"] == "paid"
     assert data[0]["count"] == 1
     assert data[0]["currency"] == "NGN"
-    # Should only see test_tenant's revenue in NGN
-    # 100 USD * 1650 = 165000 NGN
-    assert Decimal(data[0]["total_amount"]) == Decimal("165000.00")
-
-
-def test_invoice_summary_multi_currency(
-    client: TestClient,
-    test_tenant: Tenant,
-    test_user: User,
-    auth_headers: dict,
-    db_session: Session
-):
-    """Test invoice summary with multiple currencies."""
-    # Create paid invoices in different currencies
-    paid_usd = Invoice(
-        invoice_number="INV-001",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 1",
-        status=InvoiceStatus.PAID,
-        currency=Currency.USD,
-        issue_date="2024-01-01",
-        total_amount=Decimal("100.00")
-    )
-    paid_eur = Invoice(
-        invoice_number="INV-002",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 2",
-        status=InvoiceStatus.PAID,
-        currency=Currency.EUR,
-        issue_date="2024-01-02",
-        total_amount=Decimal("200.00")
-    )
-    paid_gbp = Invoice(
-        invoice_number="INV-003",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 3",
-        status=InvoiceStatus.PAID,
-        currency=Currency.GBP,
-        issue_date="2024-01-03",
-        total_amount=Decimal("150.00")
-    )
-
-    # Create sent invoices in different currencies
-    sent_usd = Invoice(
-        invoice_number="INV-004",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 4",
-        status=InvoiceStatus.SENT,
-        currency=Currency.USD,
-        issue_date="2024-01-04",
-        total_amount=Decimal("300.00")
-    )
-    sent_eur = Invoice(
-        invoice_number="INV-005",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 5",
-        status=InvoiceStatus.SENT,
-        currency=Currency.EUR,
-        issue_date="2024-01-05",
-        total_amount=Decimal("400.00")
-    )
-
-    db_session.add_all([paid_usd, paid_eur, paid_gbp, sent_usd, sent_eur])
-    db_session.commit()
-
-    # Get invoice summary
-    response = client.get(
-        "/api/v1/analytics/invoice-summary",
-        headers=auth_headers
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total_invoices"] == 5
-    assert data["paid_count"] == 3
-    assert data["sent_count"] == 2
-    assert data["currency"] == "NGN"
-
-    # All amounts converted to NGN
-    # Total revenue = (100 USD * 1650) + (200 EUR * 1800) + (150 GBP * 2100)
-    # = 165000 + 360000 + 315000 = 840000 NGN
-    assert Decimal(data["total_revenue"]) == Decimal("840000.00")
-
-    # Pending amount = (300 USD * 1650) + (400 EUR * 1800)
-    # = 495000 + 720000 = 1215000 NGN
-    assert Decimal(data["pending_amount"]) == Decimal("1215000.00")
-
-
-def test_revenue_by_status_multi_currency(
-    client: TestClient,
-    test_tenant: Tenant,
-    test_user: User,
-    auth_headers: dict,
-    db_session: Session
-):
-    """Test revenue by status with multiple currencies."""
-    # Create paid invoices in different currencies
-    paid_usd = Invoice(
-        invoice_number="INV-001",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 1",
-        status=InvoiceStatus.PAID,
-        currency=Currency.USD,
-        issue_date="2024-01-01",
-        total_amount=Decimal("100.00")
-    )
-    paid_eur = Invoice(
-        invoice_number="INV-002",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 2",
-        status=InvoiceStatus.PAID,
-        currency=Currency.EUR,
-        issue_date="2024-01-02",
-        total_amount=Decimal("200.00")
-    )
-
-    # Create sent invoices in different currencies
-    sent_usd = Invoice(
-        invoice_number="INV-003",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 3",
-        status=InvoiceStatus.SENT,
-        currency=Currency.USD,
-        issue_date="2024-01-03",
-        total_amount=Decimal("300.00")
-    )
-    sent_gbp = Invoice(
-        invoice_number="INV-004",
-        tenant_id=test_tenant.id,
-        creator_id=test_user.id,
-        customer_name="Customer 4",
-        status=InvoiceStatus.SENT,
-        currency=Currency.GBP,
-        issue_date="2024-01-04",
-        total_amount=Decimal("150.00")
-    )
-
-    db_session.add_all([paid_usd, paid_eur, sent_usd, sent_gbp])
-    db_session.commit()
-
-    # Get revenue by status
-    response = client.get(
-        "/api/v1/analytics/revenue-by-status",
-        headers=auth_headers
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 2  # 2 statuses: paid and sent
-
-    # Convert to dict for easier testing
-    status_dict = {item["status"]: item for item in data}
-
-    # All amounts in NGN
-    assert status_dict["paid"]["count"] == 2
-    assert status_dict["paid"]["currency"] == "NGN"
-    # Paid = (100 USD * 1650) + (200 EUR * 1800) = 165000 + 360000 = 525000
-    assert Decimal(status_dict["paid"]["total_amount"]) == Decimal("525000.00")
-
-    # Verify sent invoices in NGN
-    assert status_dict["sent"]["count"] == 2
-    assert status_dict["sent"]["currency"] == "NGN"
-    # Sent = (300 USD * 1650) + (150 GBP * 2100) = 495000 + 315000 = 810000
-    assert Decimal(status_dict["sent"]["total_amount"]) == Decimal("810000.00")
+    # Should only see test_tenant's revenue
+    assert Decimal(data[0]["total_amount"]) == Decimal("100.00")

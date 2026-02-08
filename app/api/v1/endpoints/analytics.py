@@ -3,22 +3,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from decimal import Decimal
-
 from app.db.session import get_db
 from app.models.invoice import Invoice as InvoiceModel, InvoiceStatus
 from app.models.user import User
 from app.models.tenant import Tenant
-from app.schemas.analytics import (
-    InvoiceSummary,
-    RevenueByStatus
-)
+from app.schemas.analytics import InvoiceSummary, RevenueByStatus
 from app.core.deps import get_current_user
-from app.core.cache import (
-    get_cache,
-    set_cache,
-    cache_key,
-)
-from app.services.currency_converter import get_currency_converter
+from app.core.cache import get_cache, set_cache, cache_key
 
 router = APIRouter()
 
@@ -29,7 +20,7 @@ def get_invoice_summary(
     db: Session = Depends(get_db)
 ):
     """
-    Get tenant-level invoice summary in user's preferred currency.
+    Get tenant-level invoice summary.
 
     Returns:
     - total_invoices: Total number of invoices
@@ -37,12 +28,12 @@ def get_invoice_summary(
     - sent_count: Number of sent invoices
     - paid_count: Number of paid invoices
     - overdue_count: Number of overdue invoices
-    - total_revenue: Total revenue from paid invoices (in tenant's currency)
-    - pending_amount: Total amount from sent invoices (in tenant's currency)
-    - overdue_amount: Total amount from overdue invoices (in tenant's currency)
+    - total_revenue: Total revenue from paid invoices
+    - pending_amount: Total amount from sent invoices
+    - overdue_amount: Total amount from overdue invoices
     - currency: Tenant's default currency
 
-    All monetary amounts are converted to tenant's default currency.
+    All invoices use the tenant's default currency.
 
     Permissions: All authenticated users can view analytics
     for their tenant.
@@ -90,61 +81,37 @@ def get_invoice_summary(
         InvoiceModel.status == InvoiceStatus.OVERDUE
     ).count()
 
-    # Get currency converter
-    converter = get_currency_converter()
-
-    # Get total revenue from paid invoices, grouped by currency
-    total_revenue_results = db.query(
-        InvoiceModel.currency,
-        func.sum(InvoiceModel.total_amount).label('total')
+    # Get total revenue from paid invoices
+    total_revenue_result = db.query(
+        func.sum(InvoiceModel.total_amount)
     ).filter(
         InvoiceModel.tenant_id == tenant_id,
         InvoiceModel.status == InvoiceStatus.PAID
-    ).group_by(
-        InvoiceModel.currency
-    ).all()
-    total_revenue_multi = {
-        str(currency.value): Decimal(str(total or 0))
-        for currency, total in total_revenue_results
-    }
-    total_revenue = converter.convert_multi_currency_amounts(
-        total_revenue_multi, tenant_currency
+    ).scalar()
+    total_revenue = Decimal(str(total_revenue_result or 0)).quantize(
+        Decimal("0.01")
     )
 
-    # Get pending amount from sent invoices, grouped by currency
-    pending_amount_results = db.query(
-        InvoiceModel.currency,
-        func.sum(InvoiceModel.total_amount).label('total')
+    # Get pending amount from sent invoices
+    pending_amount_result = db.query(
+        func.sum(InvoiceModel.total_amount)
     ).filter(
         InvoiceModel.tenant_id == tenant_id,
         InvoiceModel.status == InvoiceStatus.SENT
-    ).group_by(
-        InvoiceModel.currency
-    ).all()
-    pending_amount_multi = {
-        str(currency.value): Decimal(str(total or 0))
-        for currency, total in pending_amount_results
-    }
-    pending_amount = converter.convert_multi_currency_amounts(
-        pending_amount_multi, tenant_currency
+    ).scalar()
+    pending_amount = Decimal(str(pending_amount_result or 0)).quantize(
+        Decimal("0.01")
     )
 
-    # Get overdue amount, grouped by currency
-    overdue_amount_results = db.query(
-        InvoiceModel.currency,
-        func.sum(InvoiceModel.total_amount).label('total')
+    # Get overdue amount
+    overdue_amount_result = db.query(
+        func.sum(InvoiceModel.total_amount)
     ).filter(
         InvoiceModel.tenant_id == tenant_id,
         InvoiceModel.status == InvoiceStatus.OVERDUE
-    ).group_by(
-        InvoiceModel.currency
-    ).all()
-    overdue_amount_multi = {
-        str(currency.value): Decimal(str(total or 0))
-        for currency, total in overdue_amount_results
-    }
-    overdue_amount = converter.convert_multi_currency_amounts(
-        overdue_amount_multi, tenant_currency
+    ).scalar()
+    overdue_amount = Decimal(str(overdue_amount_result or 0)).quantize(
+        Decimal("0.01")
     )
 
     result = InvoiceSummary(
@@ -176,10 +143,10 @@ def get_revenue_by_status(
     db: Session = Depends(get_db)
 ):
     """
-    Get revenue breakdown by invoice status in tenant's default currency.
+    Get revenue breakdown by invoice status.
 
     Returns a list of revenue totals grouped by status.
-    All amounts are converted to tenant's default currency.
+    All invoices use the tenant's default currency.
 
     Permissions: All authenticated users can view analytics
     for their tenant.
@@ -201,49 +168,27 @@ def get_revenue_by_status(
     if cached_result:
         return [RevenueByStatus(**item) for item in cached_result]
 
-    # Query revenue by status and currency
+    # Query revenue by status
     results = db.query(
         InvoiceModel.status,
-        InvoiceModel.currency,
         func.count(InvoiceModel.id).label('count'),
         func.sum(InvoiceModel.total_amount).label('total_amount')
     ).filter(
         InvoiceModel.tenant_id == tenant_id
     ).group_by(
-        InvoiceModel.status,
-        InvoiceModel.currency
+        InvoiceModel.status
     ).all()
 
-    # Get currency converter
-    converter = get_currency_converter()
-
-    # Group results by status and convert to user's currency
-    status_map = {}
-    for status, currency, count, total_amount in results:
-        status_key = status.value
-        if status_key not in status_map:
-            status_map[status_key] = {
-                'status': status_key,
-                'count': 0,
-                'amounts_by_currency': {}
-            }
-        status_map[status_key]['count'] += count
-        status_map[status_key]['amounts_by_currency'][
-            str(currency.value)
-        ] = Decimal(str(total_amount or 0))
-
-    # Convert all amounts to tenant's default currency
+    # Build response
     revenue_by_status = []
-    for item in status_map.values():
-        total_in_tenant_currency = converter.convert_multi_currency_amounts(
-            item['amounts_by_currency'],
-            tenant_currency
-        )
+    for status, count, total_amount in results:
         revenue_by_status.append(
             RevenueByStatus(
-                status=item['status'],
-                count=item['count'],
-                total_amount=total_in_tenant_currency,
+                status=status.value,
+                count=count,
+                total_amount=Decimal(str(total_amount or 0)).quantize(
+                    Decimal("0.01")
+                ),
                 currency=tenant_currency
             )
         )
