@@ -2,7 +2,6 @@
 Tests for tenant status validation.
 Users should be blocked when their tenant is deactivated.
 """
-import pytest
 
 
 class TestTenantStatusValidation:
@@ -27,8 +26,9 @@ class TestTenantStatusValidation:
                 "password": "TestPass123!"
             }
         )
-        assert login_response.status_code == 403
-        assert "deactivated" in login_response.json()["message"].lower()
+        assert login_response.status_code == 401
+        # Anti-enumeration: generic message, not "deactivated"
+        assert "incorrect" in login_response.json()["message"].lower()
 
     def test_api_access_blocked_after_tenant_deactivation(
         self, client, test_tenant, auth_headers, db_session, superadmin_auth_headers
@@ -85,7 +85,7 @@ class TestTenantStatusValidation:
                 "password": "TestPass123!"
             }
         )
-        assert blocked_login.status_code == 403
+        assert blocked_login.status_code == 401
 
         # Reactivate the tenant
         reactivate_response = client.put(
