@@ -13,7 +13,8 @@ from app.schemas.tenant import SuperAdminTenantUpdate
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.security import get_password_hash, generate_verification_token
 from app.core.config import settings
-from app.core.deps import require_role, get_current_active_user, require_superadmin
+from app.core.deps import require_role, get_current_active_user
+from app.core.deps import require_superadmin
 from app.services.file_upload import get_file_upload_service, FileUploadError
 from app.services.audit_logger import log_tenant_event
 from app.models.audit_log import AuditAction
@@ -436,7 +437,7 @@ def delete_tenant(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     if not tenant.is_active:
-        raise HTTPException(status_code=400, detail="Tenant is already inactive")
+        raise HTTPException(status_code=400, detail="Tenant already inactive")
 
     tenant.is_active = False
     db.commit()
