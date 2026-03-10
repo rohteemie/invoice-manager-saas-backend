@@ -27,6 +27,8 @@ class TestTenantStatusValidation:
             }
         )
         assert login_response.status_code == 401
+        # Anti-enumeration: generic message, not "deactivated"
+        assert "incorrect" in login_response.json()["message"].lower()
 
     def test_api_access_blocked_after_tenant_deactivation(
         self, client, test_tenant, auth_headers, db_session, superadmin_auth_headers
