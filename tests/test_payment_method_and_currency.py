@@ -200,7 +200,7 @@ def test_payment_method_enum_all_valid_values(
 def test_invoice_summary_unified_currency_ngn(
     client, auth_headers, db_session, test_tenant, test_user
 ):
-    """Test invoice summary returns amounts in user's preferred currency."""
+    """Test invoice summary returns amounts (raw values without conversion)."""
     # Create invoices in different currencies
     # Paid invoice in USD
     paid_usd = Invoice(
@@ -253,29 +253,26 @@ def test_invoice_summary_unified_currency_ngn(
     assert "total_revenue" in data
     assert "pending_amount" in data
     assert "overdue_amount" in data
-    assert "currency" in data
-    assert data["currency"] == "NGN"
 
     # Verify amounts are not dictionaries but single values
     assert isinstance(data["total_revenue"], (int, float, str))
     assert isinstance(data["pending_amount"], (int, float, str))
     assert isinstance(data["overdue_amount"], (int, float, str))
 
-    # Verify conversions (100 USD = 165000 NGN, 50 EUR = 90000 NGN,
-    # 75 GBP = 157500 NGN)
+    # Verify raw amounts (no currency conversion)
     total_revenue = Decimal(str(data["total_revenue"]))
     pending_amount = Decimal(str(data["pending_amount"]))
     overdue_amount = Decimal(str(data["overdue_amount"]))
 
-    assert total_revenue == Decimal("165000.00")  # 100 USD * 1650
-    assert pending_amount == Decimal("90000.00")  # 50 EUR * 1800
-    assert overdue_amount == Decimal("157500.00")  # 75 GBP * 2100
+    assert total_revenue == Decimal("100.00")  # Raw USD amount
+    assert pending_amount == Decimal("50.00")  # Raw EUR amount
+    assert overdue_amount == Decimal("75.00")  # Raw GBP amount
 
 
 def test_revenue_by_status_unified_currency(
     client, auth_headers, db_session, test_tenant, test_user
 ):
-    """Test revenue by status returns amounts in user's preferred currency."""
+    """Test revenue by status returns amounts (raw sum without conversion)."""
     # Create invoices in different currencies with same status
     paid_usd = Invoice(
         invoice_number="INV-USD-002",
@@ -315,15 +312,13 @@ def test_revenue_by_status_unified_currency(
                       None)
     assert paid_entry is not None
     assert "total_amount" in paid_entry
-    assert "currency" in paid_entry
-    assert paid_entry["currency"] == "NGN"
 
     # Verify amount is single value, not dictionary
     assert isinstance(paid_entry["total_amount"], (int, float, str))
 
-    # Verify conversion (100 USD + 50 EUR = 165000 + 90000 = 255000 NGN)
+    # Verify raw sum (100 USD + 50 EUR = 150.00, no conversion)
     total_amount = Decimal(str(paid_entry["total_amount"]))
-    assert total_amount == Decimal("255000.00")
+    assert total_amount == Decimal("150.00")
 
 
 def test_tenant_currency_affects_analytics(
