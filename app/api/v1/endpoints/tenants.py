@@ -300,8 +300,8 @@ def update_tenant(
     Update a tenant.
 
     Permissions:
-    - Super Admins: Can update all fields including plan_type
-    - Tenant Owners: Can update their own tenant details (except plan_type)
+    - Super Admins: Can update all fields including plan_type and default_currency
+    - Tenant Owners: Can update their own tenant details (except plan_type and default_currency)
     """
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
