@@ -56,10 +56,10 @@ def get_current_user(
             detail="Inactive user"
         )
 
-    # Check tenant status (skip for superadmins who have no tenant)
+    # Check tenant status (skipped for all superadmins, regardless of tenant_id)
     if user.tenant_id and not user.is_superadmin:
-        tenant = db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
-        if not tenant or not tenant.is_active:
+        is_active = db.query(Tenant.is_active).filter(Tenant.id == user.tenant_id).scalar()
+        if is_active is None or not is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Your organization has been deactivated"

@@ -272,9 +272,11 @@ async def login(
                 description="Login attempt for user in deactivated tenant"
             )
 
+            # Return a generic auth failure to avoid tenant enumeration
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Your organization has been deactivated",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
     # Successful authentication - clear throttle counters
