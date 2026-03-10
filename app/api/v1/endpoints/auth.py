@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
 from app.models.user import User as UserModel
+from app.models.tenant import Tenant as TenantModel
 from app.schemas.user import UserCreate, User, Token
 from app.schemas.user import ResetPasswordRequest, RefreshTokenRequest
 from app.core.security import verify_password, get_password_hash
@@ -250,6 +251,31 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Check if tenant is active (skip for superadmins)
+    if user.tenant_id and not user.is_superadmin:
+        tenant = db.query(TenantModel).filter(
+            TenantModel.id == user.tenant_id
+        ).first()
+        if not tenant or not tenant.is_active:
+            # Record as failed attempt
+            new_count = throttle.record_failed_attempt(email)
+            await throttle.apply_delay(email, new_count)
+
+            log_auth_event(
+                db=db,
+                request=request,
+                action=AuditAction.LOGIN_FAILED,
+                user_id=user.id,
+                tenant_id=user.tenant_id,
+                status="failure",
+                description="Login attempt for user in deactivated tenant"
+            )
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your organization has been deactivated",
+            )
 
     # Successful authentication - clear throttle counters
     throttle.clear_failed_attempts(email)

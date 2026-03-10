@@ -161,9 +161,12 @@ def test_update_tenant_not_found(client, superadmin_auth_headers):
     assert response.status_code == 404
 
 
-def test_soft_delete_tenant(client, test_tenant):
-    """Test soft deleting a tenant."""
-    response = client.delete(f"/api/v1/tenants/{test_tenant.id}")
+def test_soft_delete_tenant(client, test_tenant, superadmin_auth_headers):
+    """Test soft deleting a tenant (requires superadmin)."""
+    response = client.delete(
+        f"/api/v1/tenants/{test_tenant.id}",
+        headers=superadmin_auth_headers
+    )
     assert response.status_code == 200
     assert "deactivated" in response.json()["message"].lower()
 
@@ -173,10 +176,28 @@ def test_soft_delete_tenant(client, test_tenant):
     assert get_response.json()["is_active"] is False
 
 
-def test_delete_tenant_not_found(client):
+def test_delete_tenant_not_found(client, superadmin_auth_headers):
     """Test deleting a non-existent tenant."""
-    response = client.delete("/api/v1/tenants/nonexistent-id")
+    response = client.delete(
+        "/api/v1/tenants/nonexistent-id",
+        headers=superadmin_auth_headers
+    )
     assert response.status_code == 404
+
+
+def test_delete_tenant_requires_auth(client, test_tenant):
+    """Test that tenant delete requires authentication."""
+    response = client.delete(f"/api/v1/tenants/{test_tenant.id}")
+    assert response.status_code == 401
+
+
+def test_delete_tenant_requires_superadmin(client, test_tenant, auth_headers):
+    """Test that tenant delete requires superadmin role."""
+    response = client.delete(
+        f"/api/v1/tenants/{test_tenant.id}",
+        headers=auth_headers
+    )
+    assert response.status_code == 403
 
 
 def test_tenant_validation_min_name_length(client):
