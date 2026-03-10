@@ -1,12 +1,12 @@
 
 def test_owner_update_all_fields(client, test_tenant, auth_headers):
-    """Test that a tenant owner can update all allowed fields."""
+    """Test that a tenant owner can update all allowed fields (except currency)."""
+    # Note: default_currency can only be changed by superadmin
     update_json = {
         "name": "New Name",
         "domain": "new-domain.com",
         "business_registration_number": "BRN-123456",
         "description": "New Description",
-        "default_currency": "USD",
         "tax_rate": 7.5,
         "tax_label": "GST",
         "address": "456 Street",
@@ -33,6 +33,18 @@ def test_owner_update_all_fields(client, test_tenant, auth_headers):
             assert float(data[key]) == value
         else:
             assert data[key] == value
+
+
+def test_owner_cannot_change_currency(client, test_tenant, auth_headers):
+    """Test that owner cannot change default_currency (superadmin only)."""
+    response = client.put(
+        f"/api/v1/tenants/{test_tenant.id}",
+        json={"default_currency": "USD"},
+        headers=auth_headers
+    )
+    assert response.status_code == 403
+    assert "currency" in response.json()["message"].lower()
+
 
 def test_update_tenant_with_unset_fields(client, test_tenant, auth_headers):
     """Test that unset fields are not updated."""

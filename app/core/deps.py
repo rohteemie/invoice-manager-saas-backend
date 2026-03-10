@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user import User, UserRole
+from app.models.tenant import Tenant
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -45,15 +46,34 @@ def get_current_user(
     if user_id is None:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+    # Single query: fetch user and tenant is_active status via LEFT OUTER JOIN
+    # to avoid a second round-trip for non-superadmin tenant checks.
+    result = (
+        db.query(User, Tenant.is_active)
+        .outerjoin(Tenant, User.tenant_id == Tenant.id)
+        .filter(User.id == user_id)
+        .first()
+    )
+    if result is None:
         raise credentials_exception
+
+    user, tenant_is_active = result
 
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
+
+    # Check tenant status (skipped for all superadmins, regardless of tenant_id).
+    # tenant_is_active is None when tenant_id is set but the tenant row is missing
+    # (orphaned FK); treat that the same as an inactive tenant and block access.
+    if user.tenant_id and not user.is_superadmin:
+        if not tenant_is_active:  # False (deactivated) or None (tenant not found)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your organization has been deactivated"
+            )
 
     return user
 
