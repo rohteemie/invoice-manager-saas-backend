@@ -46,9 +46,18 @@ def get_current_user(
     if user_id is None:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+    # Single query: fetch user and tenant is_active status via LEFT OUTER JOIN
+    # to avoid a second round-trip for non-superadmin tenant checks.
+    result = (
+        db.query(User, Tenant.is_active)
+        .outerjoin(Tenant, User.tenant_id == Tenant.id)
+        .filter(User.id == user_id)
+        .first()
+    )
+    if result is None:
         raise credentials_exception
+
+    user, tenant_is_active = result
 
     if not user.is_active:
         raise HTTPException(
@@ -56,10 +65,11 @@ def get_current_user(
             detail="Inactive user"
         )
 
-    # Check tenant status (skipped for all superadmins, regardless of tenant_id)
+    # Check tenant status (skipped for all superadmins, regardless of tenant_id).
+    # tenant_is_active is None when tenant_id is set but the tenant row is missing
+    # (orphaned FK); treat that the same as an inactive tenant and block access.
     if user.tenant_id and not user.is_superadmin:
-        is_active = db.query(Tenant.is_active).filter(Tenant.id == user.tenant_id).scalar()
-        if is_active is None or not is_active:
+        if not tenant_is_active:  # False (deactivated) or None (tenant not found)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Your organization has been deactivated"
