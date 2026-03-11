@@ -57,7 +57,7 @@ class UserCreate(UserBase):
 
 class OwnerUserCreate(BaseModel):
     """Schema for owner creating users within their tenant.
-    
+
     Owners can create users with any role including other owners.
     All created users must change password on first login.
     """
