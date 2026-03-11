@@ -41,8 +41,8 @@ def create_user(
 
     - Requires Owner role
     - User is created under the same tenant as the owner
-    - Cannot create user with OWNER role
-    - New user must change password on first login
+    - Can create users with any role including OWNER (co-owners)
+    - All new users must change password on first login
     """
     # Check if email already exists
     existing_user = db.query(UserModel).filter(

@@ -56,12 +56,16 @@ class UserCreate(UserBase):
 
 
 class OwnerUserCreate(BaseModel):
-    """Schema for owner creating users within their tenant."""
+    """Schema for owner creating users within their tenant.
+    
+    Owners can create users with any role including other owners.
+    All created users must change password on first login.
+    """
     email: EmailStr = Field(..., description="User's email address")
     full_name: str = Field(..., min_length=1, max_length=100,
                            description="User's full name")
     role: UserRole = Field(default=UserRole.ATTENDANT,
-                           description="User role (cannot be OWNER)")
+                           description="User role (owner, admin, manager, attendant)")
     password: str = Field(
         ..., min_length=8, max_length=100,
         description="User password (min 8 characters)"
@@ -72,13 +76,6 @@ class OwnerUserCreate(BaseModel):
     def normalize_role(cls, v):
         if isinstance(v, str):
             return v.lower()
-        return v
-
-    @field_validator('role', mode='after')
-    @classmethod
-    def prevent_owner_role(cls, v):
-        if v == UserRole.OWNER:
-            raise ValueError('Cannot create user with OWNER role')
         return v
 
     @field_validator('password')

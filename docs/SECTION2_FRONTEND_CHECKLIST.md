@@ -11,21 +11,35 @@ The following backend changes have been made for Section 2 (User Management):
 - New endpoint `POST /api/v1/users` for owners to create users within their tenant
 - Regular users cannot self-register to existing tenants
 
+**⚠️ IMPORTANT: Current Implementation Details**
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Direct user creation by owner | ✅ Implemented | Owner provides email, name, password, role |
+| Creating another OWNER (co-owner) | ✅ Implemented | Owners can create co-owners |
+| Email invitation system | ❌ Not Implemented | No invite links or tokens |
+
+**How User Creation Works:**
+1. Owner creates user via `POST /api/v1/users` providing a temporary password
+2. Owner must communicate the password to the new user **out-of-band** (verbally, SMS, separate email, etc.)
+3. New user logs in with temporary password
+4. System forces password change on first login (**applies to ALL roles including new owners**)
+
 **Frontend Tasks:**
 
 - [ ] **Remove public registration for existing tenants**
-  - If you have a "Join Organization" or similar feature that calls `/auth/register`, this must be removed or reworked
-  - Users should be invited/created by the organization owner
+  - If you have a "Join Organization" or similar feature that calls `/auth/register`, remove it
+  - Users can ONLY be created by the organization owner
 
 - [ ] **Update Admin Panel - User Creation**
   - Add a "Create User" form in the admin panel for owners only
   - Required fields: `email`, `full_name`, `password`, `role`
-  - Role dropdown should NOT include "owner" option
+  - Role dropdown options: `owner`, `admin`, `manager`, `attendant` (all allowed)
   - Call `POST /api/v1/users` with owner's auth token
+  - **Display the temporary password to the owner** so they can share it with the new user
 
-- [ ] **Implement User Invite Flow (Optional Enhancement)**
-  - Instead of owner entering password, generate temp password and email to new user
-  - Or implement email invite link system
+- [ ] **Show success message with instructions**
+  - After creating user, show: "User created successfully. Please share the temporary password with the user. They will be required to change it on first login."
 
 ---
 

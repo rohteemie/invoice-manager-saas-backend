@@ -341,8 +341,8 @@ def test_owner_create_user_success(client, auth_headers, test_tenant):
     assert data["must_change_password"] is True  # Must change password
 
 
-def test_owner_cannot_create_owner_user(client, auth_headers):
-    """Test that owner cannot create another owner."""
+def test_owner_can_create_another_owner(client, auth_headers, test_tenant):
+    """Test that owner can create another owner (co-owner)."""
     response = client.post(
         "/api/v1/users/",
         headers=auth_headers,
@@ -353,7 +353,12 @@ def test_owner_cannot_create_owner_user(client, auth_headers):
             "role": "owner"
         }
     )
-    assert response.status_code == 422  # Validation error from schema
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == "secondowner@testcompany.com"
+    assert data["role"] == "owner"
+    assert data["tenant_id"] == test_tenant.id
+    assert data["must_change_password"] is True  # Co-owners also must change password
 
 
 def test_admin_cannot_create_user(client, admin_auth_headers):
