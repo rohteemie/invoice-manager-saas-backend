@@ -18,6 +18,7 @@ from app.db.session import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import UserCreate, User, Token
 from app.schemas.user import ResetPasswordRequest, RefreshTokenRequest
+from app.schemas.user import ForceChangePasswordRequest
 from app.core.security import verify_password, get_password_hash
 from app.core.security import create_access_token, create_refresh_token
 from app.core.security import decode_token, generate_verification_token
@@ -25,6 +26,7 @@ from app.core.security import generate_password_reset_token
 from app.core.rate_limit import limiter
 from app.core.config import settings
 from app.core.login_throttle import get_login_throttle
+from app.core.deps import require_superadmin
 from app.services.audit_logger import log_auth_event
 from app.models.audit_log import AuditAction
 from app.tasks.email_tasks import send_verification_email_task
@@ -41,16 +43,37 @@ def register(
     request: Request,
     user_in: UserCreate,
     response: Response,
+    current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db),
 ):
     """
-    Register a new user.
+    Register a new superadmin user.
 
+    - Requires SUPERADMIN authentication
+    - Only allows creating superadmin users (no tenant assignment)
     - Validates that email is unique
     - Hashes password using bcrypt
-    - Associates user with tenant for data isolation (unless superadmin)
-    - Returns user without password
+
+    NOTE: For regular user registration:
+    - New organizations: Use POST /api/v1/tenants/register
+    - Adding users to existing tenant: Use POST /api/v1/users (owner only)
     """
+    # Only superadmins can be created via this endpoint
+    if not user_in.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is for superadmin creation only. "
+                   "Use POST /api/v1/tenants/register for new organizations "
+                   "or POST /api/v1/users for adding users to a tenant."
+        )
+
+    # Superadmins should not have tenant_id
+    if user_in.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Superadmins cannot be associated with a tenant"
+        )
+
     existing_user = db.query(UserModel).filter(
         UserModel.email == user_in.email
     ).first()
@@ -60,13 +83,6 @@ def register(
             detail="Email already registered"
         )
 
-    # Validate tenant_id requirement for non-superadmin users
-    if not user_in.is_superadmin and not user_in.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="tenant_id is required for non-superadmin users"
-        )
-
     try:
         hashed_password = get_password_hash(user_in.password)
         db_user = UserModel(
@@ -74,8 +90,8 @@ def register(
             full_name=user_in.full_name,
             hashed_password=hashed_password,
             role=user_in.role,
-            tenant_id=user_in.tenant_id,
-            is_superadmin=user_in.is_superadmin,
+            tenant_id=None,  # Superadmins have no tenant
+            is_superadmin=True,  # Forced superadmin creation
         )
 
         # Generate verification token and expiration and attach to user
@@ -279,7 +295,8 @@ async def login(
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60
+        "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60,
+        "requires_password_change": user.must_change_password
     }
 
 
@@ -725,5 +742,129 @@ def reset_password(
     return {
         "message": "Password has been reset successfully.\
             You can now log in with your new password.",
+        "email": user.email
+    }
+
+
+@router.post("/force-change-password")
+@limiter.limit("5/minute")
+def force_change_password(
+    request: Request,
+    change_request: ForceChangePasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Force password change for users who must change password on first login.
+
+    - Validates current (temporary) password
+    - Updates password with new user-chosen password
+    - Clears must_change_password flag
+    - Logs password change action
+
+    This endpoint is used when a user is created by an owner and must
+    change their temporary password before accessing the system.
+
+    Args:
+        change_request: Current password and new password
+
+    Returns:
+        Success message
+    """
+    # For this endpoint, we'll use the access token to identify the user
+    from app.models.user import User as UserModel
+
+    # Get authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = auth_header.split(" ")[1]
+
+    try:
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Get user from database
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive"
+        )
+
+    # Verify current password
+    if not verify_password(
+        change_request.current_password, user.hashed_password
+    ):
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.PASSWORD_CHANGE_FAILED,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            status="failure",
+            description="Failed password change - incorrect current password"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect current password"
+        )
+
+    # Ensure new password is different from current
+    if verify_password(change_request.new_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+
+    # Update password
+    user.hashed_password = get_password_hash(change_request.new_password)
+    user.must_change_password = False
+
+    db.commit()
+    db.refresh(user)
+
+    # Log password change action
+    log_auth_event(
+        db=db,
+        request=request,
+        action=AuditAction.PASSWORD_CHANGED,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        description=f"Password changed successfully for user {user.email}"
+    )
+
+    logger.info(
+        "Password changed for user: %s (tenant: %s) - "
+        "must_change_password cleared",
+        user.email, user.tenant_id
+    )
+
+    return {
+        "message": "Password changed successfully. You can now access "
+                   "the system with your new password.",
         "email": user.email
     }

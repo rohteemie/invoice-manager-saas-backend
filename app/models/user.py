@@ -45,6 +45,7 @@ class User(Gen_Model, Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     is_superadmin = Column(Boolean, default=False, index=True)
+    must_change_password = Column(Boolean, default=False)
     verification_token = Column(String(255), nullable=True, index=True)
     verification_token_expires_at = Column(UTCDateTime(), nullable=True)
     reset_password_token = Column(String(255), nullable=True, index=True)

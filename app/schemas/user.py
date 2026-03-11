@@ -55,6 +55,38 @@ class UserCreate(UserBase):
         return validate_password_strength(v)
 
 
+class OwnerUserCreate(BaseModel):
+    """Schema for owner creating users within their tenant."""
+    email: EmailStr = Field(..., description="User's email address")
+    full_name: str = Field(..., min_length=1, max_length=100,
+                           description="User's full name")
+    role: UserRole = Field(default=UserRole.ATTENDANT,
+                           description="User role (cannot be OWNER)")
+    password: str = Field(
+        ..., min_length=8, max_length=100,
+        description="User password (min 8 characters)"
+    )
+
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v):
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
+    @field_validator('role', mode='after')
+    @classmethod
+    def prevent_owner_role(cls, v):
+        if v == UserRole.OWNER:
+            raise ValueError('Cannot create user with OWNER role')
+        return v
+
+    @field_validator('password')
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return validate_password_strength(v)
+
+
 class UserUpdate(BaseModel):
     """Schema for updating user information."""
     full_name: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -79,6 +111,7 @@ class UserInDB(UserBase):
     is_active: bool
     is_verified: bool
     is_superadmin: bool
+    must_change_password: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -102,6 +135,7 @@ class Token(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+    requires_password_change: bool = False
 
 
 class TokenPayload(BaseModel):
@@ -137,3 +171,19 @@ class ResetPasswordRequest(BaseModel):
 class RefreshTokenRequest(BaseModel):
     """Schema for refresh token request - sent in request body for security."""
     refresh_token: str = Field(..., description="JWT refresh token")
+
+
+class ForceChangePasswordRequest(BaseModel):
+    """Schema for force password change on first login."""
+    current_password: str = Field(..., description="Current (temporary) password")
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=100,
+        description="New password (min 8 characters)"
+    )
+
+    @field_validator('new_password')
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return validate_password_strength(v)

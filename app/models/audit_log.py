@@ -25,6 +25,7 @@ class AuditAction(str, enum.Enum):
     USER_DELETED = "user_deleted"
     USER_ROLE_CHANGED = "user_role_changed"
     PASSWORD_CHANGED = "password_changed"
+    PASSWORD_CHANGE_FAILED = "password_change_failed"
     PASSWORD_RESET_REQUESTED = "password_reset_requested"
     PASSWORD_RESET_COMPLETED = "password_reset_completed"
 

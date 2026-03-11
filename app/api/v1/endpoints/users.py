@@ -6,11 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User as UserModel, UserRole
-from app.schemas.user import User, UserUpdate
+from app.schemas.user import User, UserUpdate, OwnerUserCreate
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.deps import get_current_user, require_role
 from app.services.audit_logger import log_user_event
 from app.models.audit_log import AuditAction
+from app.core.security import get_password_hash
 
 router = APIRouter()
 
@@ -26,6 +27,67 @@ def get_current_user_info(
     - No special permissions required
     """
     return current_user
+
+
+@router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
+def create_user(
+    user_in: OwnerUserCreate,
+    request: Request,
+    current_user: UserModel = Depends(require_role(UserRole.OWNER)),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new user within the owner's tenant.
+
+    - Requires Owner role
+    - User is created under the same tenant as the owner
+    - Cannot create user with OWNER role
+    - New user must change password on first login
+    """
+    # Check if email already exists
+    existing_user = db.query(UserModel).filter(
+        UserModel.email == user_in.email
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    # Create user with must_change_password flag set to True
+    new_user = UserModel(
+        email=user_in.email,
+        full_name=user_in.full_name,
+        hashed_password=get_password_hash(user_in.password),
+        role=user_in.role,
+        tenant_id=current_user.tenant_id,
+        is_active=True,
+        is_verified=True,  # Owner-created users are pre-verified
+        must_change_password=True  # Force password change on first login
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    # Log user creation
+    log_user_event(
+        db=db,
+        request=request,
+        action=AuditAction.USER_CREATED,
+        resource_id=new_user.id,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        changes={
+            "email": new_user.email,
+            "role": new_user.role.value,
+            "created_by": current_user.email
+        },
+        description=f"User {new_user.email} created by owner {current_user.email}"
+    )
+
+    return new_user
 
 
 @router.get("/", response_model=PaginatedResponse[User])

@@ -6,8 +6,28 @@ from jose import jwt
 from app.core.config import settings
 
 
-def test_register_new_user(client, test_tenant):
-    """Test registering a new user."""
+def test_register_superadmin_by_superadmin(client, superadmin_auth_headers):
+    """Test that superadmin can create another superadmin."""
+    response = client.post(
+        "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
+        json={
+            "email": "newsuperadmin@platform.com",
+            "full_name": "New Superadmin",
+            "password": "SecurePassword123@",
+            "role": "admin",
+            "is_superadmin": True
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == "newsuperadmin@platform.com"
+    assert data["is_superadmin"] is True
+    assert data["tenant_id"] is None
+
+
+def test_register_requires_superadmin_auth(client, test_tenant):
+    """Test that register endpoint requires superadmin authentication."""
     response = client.post(
         "/api/v1/auth/register",
         json={
@@ -18,57 +38,94 @@ def test_register_new_user(client, test_tenant):
             "tenant_id": test_tenant.id
         }
     )
-    assert response.status_code == 201
-    data = response.json()
-    assert data["email"] == "newuser@testcompany.com"
-    assert data["full_name"] == "New User"
-    assert data["role"] == "manager"
-    assert data["tenant_id"] == test_tenant.id
-    assert "hashed_password" not in data  # Password should not be returned
-    assert "password" not in data
+    # Should fail because no auth provided
+    assert response.status_code == 401
 
 
-def test_register_duplicate_email(client, test_user, test_tenant):
+def test_register_non_superadmin_forbidden(
+    client, superadmin_auth_headers, test_tenant
+):
+    """Test that /auth/register rejects non-superadmin user creation."""
+    response = client.post(
+        "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
+        json={
+            "email": "regularuser@testcompany.com",
+            "full_name": "Regular User",
+            "password": "SecurePassword123@",
+            "role": "manager",
+            "tenant_id": test_tenant.id,
+            "is_superadmin": False
+        }
+    )
+    assert response.status_code == 400
+    assert "superadmin creation only" in response.json()["message"].lower()
+
+
+def test_register_superadmin_with_tenant_rejected(
+    client, superadmin_auth_headers, test_tenant
+):
+    """Test that superadmins cannot be associated with a tenant."""
+    response = client.post(
+        "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
+        json={
+            "email": "badsuperadmin@platform.com",
+            "full_name": "Bad Superadmin",
+            "password": "SecurePassword123@",
+            "role": "admin",
+            "tenant_id": test_tenant.id,
+            "is_superadmin": True
+        }
+    )
+    assert response.status_code == 400
+    assert "cannot be associated" in response.json()["message"].lower()
+
+
+def test_register_duplicate_email(client, test_user, superadmin_auth_headers):
     """Test that registering with duplicate email is rejected."""
     response = client.post(
         "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
         json={
             "email": test_user.email,
             "full_name": "Duplicate User",
             "password": "SecurePassword123@",
             "role": "attendant",
-            "tenant_id": test_tenant.id
+            "is_superadmin": True
         }
     )
     assert response.status_code == 400
     assert "already registered" in response.json()["message"].lower()
 
 
-def test_register_invalid_email(client, test_tenant):
+def test_register_invalid_email(client, superadmin_auth_headers):
     """Test that invalid email format is rejected."""
     response = client.post(
         "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
         json={
             "email": "not-an-email",
             "full_name": "Invalid Email",
             "password": "SecurePassword123@",
-            "role": "attendant",
-            "tenant_id": test_tenant.id
+            "role": "admin",
+            "is_superadmin": True
         }
     )
     assert response.status_code == 422  # Validation error
 
 
-def test_register_short_password(client, test_tenant):
+def test_register_short_password(client, superadmin_auth_headers):
     """Test that short passwords are rejected."""
     response = client.post(
         "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
         json={
-            "email": "shortpw@testcompany.com",
+            "email": "shortpw@platform.com",
             "full_name": "Short Password",
             "password": "Short1",  # Less than 8 characters
-            "role": "attendant",
-            "tenant_id": test_tenant.id
+            "role": "admin",
+            "is_superadmin": True
         }
     )
     assert response.status_code == 422  # Validation error
@@ -208,26 +265,27 @@ def test_refresh_token_inactive_user(client, test_user, db_session):
     assert "inactive" in response.json()["message"].lower()
 
 
-def test_password_is_hashed(client, test_tenant, db_session):
+def test_password_is_hashed(client, superadmin_auth_headers, db_session):
     """Test that passwords are properly hashed in database."""
     from app.models.user import User as UserModel
 
     password = "TestPass123!"
     response = client.post(
         "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
         json={
-            "email": "hashtest@testcompany.com",
+            "email": "hashtest@platform.com",
             "full_name": "Hash Test",
             "password": password,
-            "role": "attendant",
-            "tenant_id": test_tenant.id
+            "role": "admin",
+            "is_superadmin": True
         }
     )
     assert response.status_code == 201
 
     # Check that password is hashed in database
     user = db_session.query(UserModel).filter(
-        UserModel.email == "hashtest@testcompany.com"
+        UserModel.email == "hashtest@platform.com"
     ).first()
     assert user.hashed_password != password
     assert user.hashed_password.startswith("$2b$")  # bcrypt hash
