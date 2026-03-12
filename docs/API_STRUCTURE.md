@@ -25,17 +25,19 @@ Multi-Tenant SaaS Backend API
 │   ├── GET    /{tenant_id}/logo - Get tenant logo ✨ NEW
 │   └── DELETE /{tenant_id}/logo - Delete tenant logo (Owner/Admin) ✨ NEW
 │
-├── /api/v1/auth (Authentication - 7 endpoints)
-│   ├── POST /register - Register new user
+├── /api/v1/auth (Authentication - 8 endpoints)
+│   ├── POST /register - Register superadmin (Superadmin only) ⚠️ RESTRICTED
 │   ├── POST /login    - Login and get tokens
 │   ├── POST /refresh  - Refresh access token
 │   ├── POST /verify-email - Verify email with token (Security: Token expires in 24h) ✨ NEW
 │   ├── POST /resend-verification-email - Resend verification email (Rate limited: 3/hour) ✨ NEW
 │   ├── POST /forgot-password - Request password reset (Rate limited: 3/hour) ✨ NEW
-│   └── POST /reset-password - Reset password with token (Rate limited: 5/hour) ✨ NEW
+│   ├── POST /reset-password - Reset password with token (Rate limited: 5/hour) ✨ NEW
+│   └── POST /force-change-password - Change password (Owner-created users) ✨ NEW
 │
-├── /api/v1/users (User Management - 5 endpoints)
+├── /api/v1/users (User Management - 6 endpoints)
 │   ├── GET    /me - Get current user info (Authenticated)
+│   ├── POST   /   - Create user in tenant (Owner only, any role incl. co-owner) ✨ NEW
 │   ├── GET    /   - List users in tenant (Owner only)
 │   ├── GET    /{user_id} - Get user by ID (Owner only)
 │   ├── PUT    /{user_id} - Update user (Owner only)
@@ -71,7 +73,7 @@ Multi-Tenant SaaS Backend API
     ├── GET /audit-logs - Platform-wide audit logs (Super Admin only)
     └── GET /stats - Platform statistics (Super Admin only)
 
-Total API Endpoints: 46 (3 root/monitoring + 43 business API endpoints)
+Total API Endpoints: 48 (3 root/monitoring + 45 business API endpoints)
 ```
 
 ## Role Hierarchy

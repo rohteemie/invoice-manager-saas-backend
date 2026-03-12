@@ -21,6 +21,7 @@ The User model implements the following attributes:
 - **verification_token_expires_at**: Token expiration timestamp (nullable, 24h default - GDPR: Data minimization)
 - **reset_password_token**: Secure token for password reset (nullable, indexed) ✨ **NEW**
 - **reset_password_token_expires_at**: Reset token expiration (nullable, 30min default) ✨ **NEW**
+- **must_change_password**: Boolean flag requiring password change on first login (for owner-created users) ✨ **NEW**
 - **created_at**: Timestamp of user creation (GDPR: Audit trail)
 - **updated_at**: Timestamp of last update (GDPR: Audit trail)
 
@@ -90,25 +91,33 @@ The system implements a hierarchical role-based access control:
 
 ## Authentication Endpoints
 
-### Register User
+### Register Superadmin (Superadmin Only)
 
 **POST** `/api/v1/auth/register`
 
-Register a new user in the system.
+Register a new superadmin user. **Requires SUPERADMIN authentication.**
+
+⚠️ **Important:** This endpoint is restricted to superadmin users only.
+- For new organization registration: Use `POST /api/v1/tenants/register`
+- For adding users to existing tenant: Use `POST /api/v1/users` (Owner only)
 
 **Request Body:**
 
 ```json
 {
-  "email": "user@example.com",
-  "full_name": "John Doe",
+  "email": "superadmin@example.com",
+  "full_name": "Platform Admin",
   "password": "SecurePassword123",
-  "role": "owner",
-  "tenant_id": "tenant-uuid"
+  "is_superadmin": true
 }
 ```
 
 **Response:** User object without password
+
+**Error Responses:**
+- 401 Unauthorized: Not authenticated as superadmin
+- 400 Bad Request: `is_superadmin` must be true
+- 400 Bad Request: Superadmins cannot have `tenant_id`
 
 ### Login
 
@@ -135,9 +144,13 @@ password=SecurePassword123
 {
   "access_token": "eyJhbGc...",
   "refresh_token": "eyJhbGc...",
-  "token_type": "bearer"
+  "token_type": "bearer",
+  "expires_in": 1800,
+  "requires_password_change": false
 }
 ```
+
+**Note:** When `requires_password_change` is `true`, the user must call `POST /api/v1/auth/force-change-password` before accessing the system. This occurs for users created by an owner.
 
 **Security Behavior:**
 
@@ -290,6 +303,49 @@ Reset user password using a valid reset token.
 - 403 Forbidden - User account is inactive
 - 422 Validation Error - Password doesn't meet requirements
 
+### Force Change Password ✨ **NEW**
+
+**POST** `/api/v1/auth/force-change-password`
+
+Change password for users who were created by an owner and must change their temporary password on first login.
+
+**Headers:**
+
+```bash
+Authorization: Bearer {access_token}
+```
+
+**Request Body:**
+
+```json
+{
+  "current_password": "TemporaryPassword123",
+  "new_password": "MyNewSecurePassword456"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Password changed successfully. You can now access the system with your new password.",
+  "email": "user@example.com"
+}
+```
+
+**Features:**
+- Validates current (temporary) password
+- Ensures new password is different from current
+- Clears `must_change_password` flag upon success
+- Logs password change for audit trail
+- Rate limited: 5 requests per minute
+
+**Error Responses:**
+- 401 Unauthorized - Invalid token or incorrect current password
+- 400 Bad Request - New password same as current
+- 403 Forbidden - User account is inactive
+- 404 Not Found - User not found
+
 ## User Management Endpoints
 
 All user management endpoints require authentication.
@@ -412,32 +468,22 @@ REFRESH_TOKEN_EXPIRATION=10080  # minutes (7 days)
 
 ## Testing the Authentication Flow
 
-### 1. Create a Tenant
+### 1. Register Tenant with Owner Account (Recommended)
+
+This creates a tenant and the first owner in a single operation:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/tenants/ \
+curl -X POST http://localhost:8000/api/v1/tenants/register \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My Company",
-    "domain": "mycompany.com"
+    "tenant_name": "My Company",
+    "owner_email": "owner@mycompany.com",
+    "owner_full_name": "John Doe",
+    "owner_password": "SecurePassword123"
   }'
 ```
 
-### 2. Register a User
-
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "owner@mycompany.com",
-    "full_name": "John Doe",
-    "password": "SecurePassword123",
-    "role": "owner",
-    "tenant_id": "tenant-id-from-step-1"
-  }'
-```
-
-### 3. Login
+### 2. Login
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
@@ -445,7 +491,39 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
   -d "username=owner@mycompany.com&password=SecurePassword123"
 ```
 
-### 4. Use the Access Token
+### 3. Create Additional User (Owner only)
+
+Owners can create users within their tenant:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/users/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {access_token}" \
+  -d '{
+    "email": "staff@mycompany.com",
+    "full_name": "Staff Member",
+    "password": "TempPassword123",
+    "role": "manager"
+  }'
+```
+
+Note: New users must change their password on first login.
+
+### 4. Force Password Change (New Users)
+
+Users created by an owner must change their password:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/force-change-password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {access_token}" \
+  -d '{
+    "current_password": "TempPassword123",
+    "new_password": "MyNewSecurePassword456"
+  }'
+```
+
+### 5. Use the Access Token
 
 ```bash
 curl -X GET http://localhost:8000/api/v1/users/me \
@@ -493,10 +571,10 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 
 ## Future Enhancements
 
-- [ ] Email verification workflow
-- [ ] Password reset functionality
+- [x] Email verification workflow ✨ **COMPLETED**
+- [x] Password reset functionality ✨ **COMPLETED**
+- [x] Rate limiting on authentication endpoints ✨ **COMPLETED**
+- [x] Audit logging for security events ✨ **COMPLETED**
+- [x] Account lockout after failed login attempts (Progressive delay) ✨ **COMPLETED**
 - [ ] Two-factor authentication (2FA)
 - [ ] OAuth2 social login integration
-- [ ] Rate limiting on authentication endpoints
-- [ ] Audit logging for security events
-- [ ] Account lockout after failed login attempts
