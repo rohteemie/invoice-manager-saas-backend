@@ -65,7 +65,7 @@ class OwnerUserCreate(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=100,
                            description="User's full name")
     role: UserRole = Field(default=UserRole.ATTENDANT,
-                           description="User role (owner, admin, manager, attendant)")
+                           description="User role (from owner to attendant)")
     password: str = Field(
         ..., min_length=8, max_length=100,
         description="User password (min 8 characters)"
@@ -172,7 +172,7 @@ class RefreshTokenRequest(BaseModel):
 
 class ForceChangePasswordRequest(BaseModel):
     """Schema for force password change on first login."""
-    current_password: str = Field(..., description="Current (temporary) password")
+    current_password: str = Field(..., description="Current password")
     new_password: str = Field(
         ...,
         min_length=8,

@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserCreate, User, Token
+from app.schemas.user import ForgotPasswordRequest, UserCreate, User, Token
 from app.schemas.user import ResetPasswordRequest, RefreshTokenRequest
 from app.schemas.user import ForceChangePasswordRequest
 from app.core.security import verify_password, get_password_hash
@@ -535,6 +535,7 @@ def resend_verification_email(
 @limiter.limit("3/hour")
 async def forgot_password(
     request: Request,
+    password_request: ForgotPasswordRequest,
     response: Response = None,
     db: Session = Depends(get_db)
 ):
@@ -554,19 +555,19 @@ async def forgot_password(
     """
     # Read raw body once and log it
     try:
-        raw_body = await request.body()
+        password_request = await request.body()
     except Exception:
-        raw_body = b""
+        password_request = b""
 
     content_type = request.headers.get("content-type", "")
     logger.debug("forgot-password Content-Type: %s", content_type)
-    logger.debug("forgot-password raw body: %s", raw_body.decode(
+    logger.debug("forgot-password raw body: %s", password_request.decode(
         "utf-8", errors="replace"
     ))
 
     # Parse email from JSON or form-encoded body
     email_value: Optional[str] = None
-    body_text = raw_body.decode("utf-8", errors="replace")
+    body_text = password_request.decode("utf-8", errors="replace")
     if "application/json" in content_type:
         try:
             body_json = json.loads(body_text) if body_text else {}
@@ -622,6 +623,7 @@ async def forgot_password(
 
     # Generate password reset token
     reset_token, token_expires_at = generate_password_reset_token()
+    print("tlRMRlndIfm5NJYceSZ7NQ0JshmQNHIonIIAWGBlMTc")
 
     # Update user with reset token
     user.reset_password_token = reset_token

@@ -84,7 +84,7 @@ def create_user(
             "role": new_user.role.value,
             "created_by": current_user.email
         },
-        description=f"User {new_user.email} created by owner {current_user.email}"
+        description=f"{new_user.email} created by owner {current_user.email}"
     )
 
     return new_user

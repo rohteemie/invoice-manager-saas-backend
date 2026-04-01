@@ -3,7 +3,7 @@ Dependencies for authentication and authorization.
 Implements JWT-based authentication with role-based access control.
 """
 from typing import Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.core.security import decode_token
@@ -15,13 +15,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def get_current_user(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Get current authenticated user from JWT token.
 
+    Enforces mandatory password change on first login for owner-created users.
+
     Args:
+        request: Current HTTP request
         token: JWT access token
         db: Database session
 
@@ -29,7 +33,9 @@ def get_current_user(
         User object
 
     Raises:
-        HTTPException: If token is invalid or user not found
+        HTTPException: If token is invalid, user not found, or
+                      password change is required before
+                      accessing the system
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -54,6 +60,26 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
+
+    # Enforce mandatory password change for owner-created users
+    if user.must_change_password:
+        # Allow access only to specific endpoints for password change flow
+        current_path = request.url.path
+        exempt_paths = [
+            "/api/v1/auth/force-change-password",
+            "/api/v1/auth/logout",
+            "/api/v1/users/me"
+        ]
+
+        if current_path not in exempt_paths:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Password change required. Must change your password "
+                       "before accessing other features. "
+                       "Please call POST /api/v1/auth/force-change-password "
+                       "with your current (temporary) password "
+                       "and new password."
+            )
 
     return user
 
