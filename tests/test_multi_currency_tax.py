@@ -144,9 +144,9 @@ def test_invoice_with_multiple_items_tax_calculation(
     assert float(data["total_amount"]) == 230.00
 
 
-def test_update_tenant_currency_and_tax(client, auth_headers, test_tenant):
-    """Test updating tenant's currency and tax configuration."""
-    # Update tenant with new currency and tax settings
+def test_update_tenant_currency_and_tax(client, superadmin_auth_headers, test_tenant):
+    """Test updating tenant's currency and tax configuration (superadmin only for currency)."""
+    # Update tenant with new currency and tax settings (requires superadmin)
     update_response = client.put(
         f"/api/v1/tenants/{test_tenant.id}",
         json={
@@ -155,7 +155,7 @@ def test_update_tenant_currency_and_tax(client, auth_headers, test_tenant):
             "tax_rate": 19.0,
             "tax_label": "VAT"
         },
-        headers=auth_headers
+        headers=superadmin_auth_headers
     )
     assert update_response.status_code == 200
     updated_data = update_response.json()

@@ -267,6 +267,33 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Check if tenant is active (skip for superadmins)
+    if user.tenant_id and not user.is_superadmin:
+        tenant = db.query(TenantModel).filter(
+            TenantModel.id == user.tenant_id
+        ).first()
+        if not tenant or not tenant.is_active:
+            # Record as failed attempt
+            new_count = throttle.record_failed_attempt(email)
+            await throttle.apply_delay(email, new_count)
+
+            log_auth_event(
+                db=db,
+                request=request,
+                action=AuditAction.LOGIN_FAILED,
+                user_id=user.id,
+                tenant_id=user.tenant_id,
+                status="failure",
+                description="Login attempt for user in deactivated tenant"
+            )
+
+            # Return a generic auth failure to avoid tenant enumeration
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     # Successful authentication - clear throttle counters
     throttle.clear_failed_attempts(email)
 

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user import User, UserRole
+from app.models.tenant import Tenant
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -51,9 +52,18 @@ def get_current_user(
     if user_id is None:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+    # Single query: fetch user and tenant is_active status via LEFT OUTER JOIN
+    # to avoid a second round-trip for non-superadmin tenant checks.
+    result = (
+        db.query(User, Tenant.is_active)
+        .outerjoin(Tenant, User.tenant_id == Tenant.id)
+        .filter(User.id == user_id)
+        .first()
+    )
+    if result is None:
         raise credentials_exception
+
+    user, tenant_is_active = result
 
     if not user.is_active:
         raise HTTPException(

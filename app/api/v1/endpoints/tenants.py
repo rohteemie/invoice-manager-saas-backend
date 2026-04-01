@@ -14,6 +14,7 @@ from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.security import get_password_hash, generate_verification_token
 from app.core.config import settings
 from app.core.deps import require_role, get_current_active_user
+from app.core.deps import require_superadmin
 from app.services.file_upload import get_file_upload_service, FileUploadError
 from app.services.audit_logger import log_tenant_event
 from app.models.audit_log import AuditAction
@@ -299,8 +300,9 @@ def update_tenant(
     Update a tenant.
 
     Permissions:
-    - Super Admins: Can update all fields including plan_type
-    - Tenant Owners: Can update their own tenant details (except plan_type)
+    - Super Admins: Can update all fields including plan_type and default_currency
+    - Tenant Owners: Can update their own tenant details
+      (except plan_type and default_currency)
     """
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
@@ -326,6 +328,16 @@ def update_tenant(
             raise HTTPException(
                 status_code=403,
                 detail="Only super admins can change the plan type"
+            )
+
+        # Check for restricted fields (default_currency)
+        if (
+            tenant_update.default_currency is not None
+            and tenant_update.default_currency != tenant.default_currency
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Only super admins can change the default currency"
             )
 
     update_data = tenant_update.model_dump(exclude_unset=True)
@@ -411,22 +423,36 @@ def update_tenant(
 @router.delete("/{tenant_id}")
 def delete_tenant(
     tenant_id: str,
+    request: Request,
+    current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
     """
     Delete a tenant (soft delete by setting is_active to False).
 
-    Note: This endpoint should not be accessible to organization owners.
-    Organization deletion requires contacting the technical team/developer
-    organization. This endpoint exists for administrative/system-level
-    operations only.
+    Requires SuperAdmin authentication.
+    Organization deletion requires contacting the technical team/developer.
     """
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
+    if not tenant.is_active:
+        raise HTTPException(status_code=400, detail="Tenant already inactive")
+
     tenant.is_active = False
     db.commit()
+
+    # Log tenant deletion
+    log_tenant_event(
+        db=db,
+        request=request,
+        action=AuditAction.TENANT_DELETED,
+        resource_id=tenant.id,
+        tenant_id=tenant.id,
+        description=f"Tenant {tenant.name} deactivated by superadmin"
+    )
+
     return {"message": "Tenant deactivated successfully"}
 
 
