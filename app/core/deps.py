@@ -77,7 +77,6 @@ def get_current_user(
         current_path = request.url.path
         exempt_paths = [
             "/api/v1/auth/force-change-password",
-            "/api/v1/auth/logout",
             "/api/v1/users/me"
         ]
 

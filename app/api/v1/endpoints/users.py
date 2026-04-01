@@ -44,9 +44,17 @@ def create_user(
     - Can create users with any role including OWNER (co-owners)
     - All new users must change password on first login
     """
-    # Check if email already exists
+    # Superadmins do not belong to a tenant; prevent them from calling this
+    if current_user.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmins cannot create tenant users. "
+                   "Use POST /api/v1/tenants/register for new organizations."
+        )
+
+    # Check if email already exists (case-insensitive)
     existing_user = db.query(UserModel).filter(
-        UserModel.email == user_in.email
+        UserModel.email == user_in.email.lower()
     ).first()
 
     if existing_user:
@@ -57,7 +65,7 @@ def create_user(
 
     # Create user with must_change_password flag set to True
     new_user = UserModel(
-        email=user_in.email,
+        email=user_in.email.lower(),
         full_name=user_in.full_name,
         hashed_password=get_password_hash(user_in.password),
         role=user_in.role,

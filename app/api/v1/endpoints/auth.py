@@ -5,9 +5,6 @@ Implements JWT-based authentication with secure password handling.
 from datetime import datetime, timezone
 import logging
 import os
-from typing import Optional
-import json
-from urllib.parse import parse_qs
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi import status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
@@ -26,7 +23,7 @@ from app.core.security import generate_password_reset_token
 from app.core.rate_limit import limiter
 from app.core.config import settings
 from app.core.login_throttle import get_login_throttle
-from app.core.deps import require_superadmin
+from app.core.deps import require_superadmin, get_current_user
 from app.services.audit_logger import log_auth_event
 from app.models.audit_log import AuditAction
 from app.tasks.email_tasks import send_verification_email_task
@@ -560,7 +557,7 @@ def resend_verification_email(
 
 @router.post("/forgot-password")
 @limiter.limit("3/hour")
-async def forgot_password(
+def forgot_password(
     request: Request,
     password_request: ForgotPasswordRequest,
     response: Response = None,
@@ -580,45 +577,7 @@ async def forgot_password(
     Returns:
         Success message
     """
-    # Read raw body once and log it
-    try:
-        password_request = await request.body()
-    except Exception:
-        password_request = b""
-
-    content_type = request.headers.get("content-type", "")
-    logger.debug("forgot-password Content-Type: %s", content_type)
-    logger.debug("forgot-password raw body: %s", password_request.decode(
-        "utf-8", errors="replace"
-    ))
-
-    # Parse email from JSON or form-encoded body
-    email_value: Optional[str] = None
-    body_text = password_request.decode("utf-8", errors="replace")
-    if "application/json" in content_type:
-        try:
-            body_json = json.loads(body_text) if body_text else {}
-            email_value = body_json.get("email")
-        except Exception:
-            email_value = None
-    elif "application/x-www-form-urlencoded" in content_type:
-        parsed = parse_qs(body_text)
-        vals = parsed.get("email")
-        if vals:
-            email_value = vals[0]
-    else:
-        # Try JSON as fallback
-        try:
-            body_json = json.loads(body_text) if body_text else {}
-            email_value = body_json.get("email")
-        except Exception:
-            email_value = None
-
-    if not email_value:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Email is required",
-        )
+    email_value = password_request.email
 
     # Find user by email
     user = db.query(UserModel).filter(
@@ -780,6 +739,7 @@ def reset_password(
 def force_change_password(
     request: Request,
     change_request: ForceChangePasswordRequest,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -799,46 +759,15 @@ def force_change_password(
     Returns:
         Success message
     """
-    # For this endpoint, we'll use the access token to identify the user
-    from app.models.user import User as UserModel
-
-    # Get authorization header
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+    # Ensure this endpoint is only usable when a password change is required
+    if not current_user.must_change_password:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token = auth_header.split(" ")[1]
-
-    try:
-        payload = decode_token(token)
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Get user from database
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password change is not required for this account"
         )
 
     # Check if user is active
-    if not user.is_active:
+    if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive"
@@ -846,14 +775,14 @@ def force_change_password(
 
     # Verify current password
     if not verify_password(
-        change_request.current_password, user.hashed_password
+        change_request.current_password, current_user.hashed_password
     ):
         log_auth_event(
             db=db,
             request=request,
             action=AuditAction.PASSWORD_CHANGE_FAILED,
-            user_id=user.id,
-            tenant_id=user.tenant_id,
+            user_id=current_user.id,
+            tenant_id=current_user.tenant_id,
             status="failure",
             description="Failed password change - incorrect current password"
         )
@@ -863,37 +792,37 @@ def force_change_password(
         )
 
     # Ensure new password is different from current
-    if verify_password(change_request.new_password, user.hashed_password):
+    if verify_password(change_request.new_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="New password must be different from current password"
         )
 
     # Update password
-    user.hashed_password = get_password_hash(change_request.new_password)
-    user.must_change_password = False
+    current_user.hashed_password = get_password_hash(change_request.new_password)
+    current_user.must_change_password = False
 
     db.commit()
-    db.refresh(user)
+    db.refresh(current_user)
 
     # Log password change action
     log_auth_event(
         db=db,
         request=request,
         action=AuditAction.PASSWORD_CHANGED,
-        user_id=user.id,
-        tenant_id=user.tenant_id,
-        description=f"Password changed successfully for user {user.email}"
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        description=f"Password changed successfully for user {current_user.email}"
     )
 
     logger.info(
         "Password changed for user: %s (tenant: %s) - "
         "must_change_password cleared",
-        user.email, user.tenant_id
+        current_user.email, current_user.tenant_id
     )
 
     return {
         "message": "Password changed successfully. You can now access "
                    "the system with your new password.",
-        "email": user.email
+        "email": current_user.email
     }

@@ -108,9 +108,14 @@ Register a new superadmin user. **Requires SUPERADMIN authentication.**
   "email": "superadmin@example.com",
   "full_name": "Platform Admin",
   "password": "SecurePassword123",
-  "is_superadmin": true
+  "is_superadmin": true,
+  "role": "attendant"
 }
 ```
+
+> **Note:** The `role` field is accepted but superadmin accounts are platform-level
+> and do not belong to any tenant. The `is_superadmin` flag must be `true`; omitting
+> it or setting it to `false` will result in a 400 error.
 
 **Response:** User object without password
 

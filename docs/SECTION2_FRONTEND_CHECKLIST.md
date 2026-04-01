@@ -110,13 +110,16 @@ The following backend changes have been made for Section 2 (User Management):
 
 ## Error Response Examples
 
-### Creating user with owner role (from POST /users):
+### Creating user with owner role (co-owner):
 ```json
 {
-  "status": "error",
-  "message": "Cannot create user with OWNER role"
+  "email": "coowner@example.com",
+  "full_name": "Co Owner",
+  "password": "TempPass123!",
+  "role": "owner"
 }
 ```
+This is valid — owners can create co-owners.
 
 ### Creating non-superadmin via /auth/register:
 ```json
@@ -138,7 +141,7 @@ The following backend changes have been made for Section 2 (User Management):
 
 ## Testing Checklist
 
-- [ ] Owner can create new users (non-owner roles only)
+- [ ] Owner can create new users, including assigning the OWNER (co-owner) role
 - [ ] Admin/Manager/Attendant cannot access user creation
 - [ ] New user created by owner must change password on first login
 - [ ] Password change flow works correctly
