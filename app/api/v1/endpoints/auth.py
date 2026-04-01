@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
 from app.models.user import User as UserModel
+from app.models.tenant import Tenant as TenantModel
 from app.schemas.user import ForgotPasswordRequest, UserCreate, User, Token
 from app.schemas.user import ResetPasswordRequest, RefreshTokenRequest
 from app.schemas.user import ForceChangePasswordRequest
