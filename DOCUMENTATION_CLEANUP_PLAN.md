@@ -295,7 +295,7 @@ docs/
 │   ├── EMAIL_VERIFICATION.md  (⭐ Consolidated from 4 files)
 │   ├── SUPER_ADMIN.md         (⭐ Consolidated, kept here)
 │   ├── AUDIT_LOGGING.md
-│   ├── INVOICING.md           (⭐ Consolidate EMAIL_VERIFICATION.md + PDF_GENERATION.md + INVOICE_IMPLEMENTATION.md)
+│   ├── INVOICING.md           (⭐ Consolidate PDF_GENERATION.md + INVOICE_IMPLEMENTATION.md)
 │   ├── PASSWORD_RESET.md
 │   ├── USER_MANAGEMENT.md
 │   ├── RATE_LIMITING.md

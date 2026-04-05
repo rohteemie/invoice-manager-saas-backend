@@ -12,7 +12,7 @@ All notable changes to the Multi-Tenant SaaS Backend project are documented here
 - ✅ Automated testing with PostgreSQL and Redis services
 - ✅ Docker build and push to GitHub Container Registry
 - ✅ Production Dockerfile with health checks
-- ✅ Fully automated deployment pipeline
+- ✅ Optional/example deployment job scaffold (automated image build/push; deployment gated by configuration)
 
 **API Documentation Enhancement**:
 - ✅ Enhanced FastAPI metadata (title, description, contact, license)

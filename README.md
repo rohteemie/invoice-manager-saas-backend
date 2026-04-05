@@ -461,7 +461,7 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 - [System Requirements Document (SRD)](docs/specifications/SYSTEM_REQUIREMENTS.md) - Technical specifications
 - [Product Requirements Document (PRD)](docs/specifications/PRODUCT_REQUIREMENT.md) - Business requirements
 - [Release History](CHANGELOG.md) - Version history with features and changes (v1.0–v1.4)
-- [Sprint Documentation](docs/) - Sprint summaries in documentation folder
+- [GitHub Releases](https://github.com/rohteemie/multi-tenant-saas-backend/releases) - Published release notes and milestones
 
 ### Diagrams
 
