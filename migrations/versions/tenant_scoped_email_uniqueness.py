@@ -12,7 +12,6 @@ This migration:
 5. Ensures email is still unique within each tenant
 """
 from alembic import op
-import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
@@ -73,4 +72,3 @@ def downgrade():
         'users',
         ['email']
     )
-
