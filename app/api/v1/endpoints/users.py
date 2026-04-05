@@ -4,6 +4,7 @@ Supports CRUD operations with tenant-aware data isolation.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.db.session import get_db
 from app.models.user import User as UserModel, UserRole
 from app.schemas.user import User, UserUpdate, OwnerUserCreate
@@ -61,7 +62,7 @@ def create_user(
     # Check if email already exists in THIS TENANT ONLY (case-insensitive)
     # Tenant-scoped uniqueness: same email can exist in different tenants
     existing_user = db.query(UserModel).filter(
-        UserModel.email == user_in.email.lower(),
+        func.lower(UserModel.email) == user_in.email.lower(),
         UserModel.tenant_id == current_user.tenant_id
     ).first()
 

@@ -10,6 +10,7 @@ from fastapi import status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from typing import Union
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
@@ -75,7 +76,7 @@ def register(
         )
 
     existing_user = db.query(UserModel).filter(
-        UserModel.email == user_in.email
+        func.lower(UserModel.email) == user_in.email.lower()
     ).first()
     if existing_user:
         raise HTTPException(
@@ -86,7 +87,7 @@ def register(
     try:
         hashed_password = get_password_hash(user_in.password)
         db_user = UserModel(
-            email=user_in.email,
+            email=user_in.email.lower(),
             full_name=user_in.full_name,
             hashed_password=hashed_password,
             role=user_in.role,

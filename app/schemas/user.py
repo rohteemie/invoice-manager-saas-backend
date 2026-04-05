@@ -153,7 +153,10 @@ class MultiTenantLoginResponse(BaseModel):
         ..., description="List of tenants user belongs to"
     )
     message: str = Field(
-        default="You belong to multiple organizations. Please select the one you want to access.",
+        default=(
+            "You belong to multiple organizations. "
+            "Please select the one you want to access."
+        ),
         description="Message for frontend"
     )
 

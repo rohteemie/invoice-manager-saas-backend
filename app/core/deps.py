@@ -71,6 +71,16 @@ def get_current_user(
             detail="Inactive user"
         )
 
+    # Check tenant status for non-superadmin users.
+    # tenant_is_active is None when tenant_id is set but the tenant row is
+    # missing (orphaned FK); treat that the same as an inactive tenant.
+    if user.tenant_id and not user.is_superadmin:
+        if not tenant_is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your organization has been deactivated"
+            )
+
     # Enforce mandatory password change for owner-created users
     if user.must_change_password:
         # Allow access only to specific endpoints for password change flow

@@ -431,8 +431,9 @@ class TestEmailValidationWithPasswordChange:
         )
         assert response.status_code == 201
         user_data = response.json()
-        # Initially should not require password change
-        assert user_data.get("must_change_password") is False
+        # Owner-created users are always required to change their password
+        # on first login (must_change_password=True is set by the endpoint)
+        assert user_data.get("must_change_password") is True
 
     def test_get_current_user_accessible_with_must_change_password(
         self, client, db_session, test_tenant

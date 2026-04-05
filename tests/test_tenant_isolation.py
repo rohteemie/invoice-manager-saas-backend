@@ -184,43 +184,44 @@ def test_cross_tenant_user_access_via_auth_token(
 
 def test_multiple_users_same_email_different_tenants(
     client,
+    auth_headers,
+    auth_headers_tenant2,
     test_tenant,
-    second_tenant,
-    db_session
+    test_tenant2
 ):
     """
-    Test that the same email can exist in different tenants
-    (as tenant_id + email should be unique, not just email).
-    Note: Current implementation has global unique email constraint.
-    This test documents the current behavior.
+    Test that the same email can exist in different tenants.
+
+    With tenant-scoped email uniqueness, email + tenant_id is the unique
+    key, so the same email address is allowed across different tenants.
     """
-    # Register user with same email in first tenant
+    # Create user in tenant 1
     response1 = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/users/",
+        headers=auth_headers,
         json={
             "email": "sameuser@example.com",
             "full_name": "User in Tenant 1",
             "password": "TestPass123!",
-            "role": "attendant",
-            "tenant_id": test_tenant.id
+            "role": "attendant"
         }
     )
     assert response1.status_code == 201
 
-    # Try to register user with same email in second tenant
-    # This will fail in current implementation due to unique email constraint
+    # Create user with same email in tenant 2
     response2 = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/users/",
+        headers=auth_headers_tenant2,
         json={
             "email": "sameuser@example.com",
             "full_name": "User in Tenant 2",
             "password": "TestPass123!",
-            "role": "attendant",
-            "tenant_id": second_tenant.id
+            "role": "attendant"
         }
     )
-    # Current implementation: email must be globally unique
-    assert response2.status_code == 400
+    # Tenant-scoped uniqueness: same email is allowed in a different tenant
+    assert response2.status_code == 201
+    assert response1.json()["email"] == response2.json()["email"]
 
 
 def test_tenant_isolation_with_deactivated_user(
@@ -266,20 +267,40 @@ def test_tenant_isolation_with_deactivated_user(
     assert "inactive@secondcompany.com" not in emails
 
 
-def test_registration_enforces_tenant_id(client, test_tenant):
-    """Test that user registration requires tenant_id."""
-    # Note: This would fail validation, but let's verify the behavior
-    response = client.post(
+def test_registration_enforces_tenant_id(client, test_tenant,
+                                          superadmin_auth_headers):
+    """
+    Test that POST /api/v1/auth/register is superadmin-only and
+    rejects creation of non-superadmin users.
+
+    Regular tenant users must be created via POST /api/v1/users/ (owner)
+    or POST /api/v1/tenants/register (new organization).
+    """
+    # Without auth the endpoint rejects with 401
+    response_no_auth = client.post(
         "/api/v1/auth/register",
         json={
             "email": "notenant@example.com",
             "full_name": "No Tenant User",
             "password": "TestPass123!",
             "role": "attendant"
-            # Missing tenant_id
         }
     )
-    assert response.status_code == 400  # Bad request (tenant_id required for non-superadmin)
+    assert response_no_auth.status_code == 401
+
+    # Even with superadmin auth, creating a non-superadmin user is rejected
+    response_bad = client.post(
+        "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
+        json={
+            "email": "notenant@example.com",
+            "full_name": "No Tenant User",
+            "password": "TestPass123!",
+            "role": "attendant",
+            "is_superadmin": False
+        }
+    )
+    assert response_bad.status_code == 400  # endpoint is superadmin-only
 
 
 def test_user_from_tenant_a_manages_only_tenant_a_users(
