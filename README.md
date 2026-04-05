@@ -407,20 +407,19 @@ pytest tests/test_auth.py -v
 **Comprehensive Documentation:**
 
 - [API Structure Overview](docs/API_STRUCTURE.md) - Complete API documentation
-- [Authentication Guide](docs/authentication.md) - Auth implementation details
-- [Email Verification](docs/EMAIL_VERIFICATION.md) - Email verification feature ✨ **NEW**
-- [Password Reset](docs/PASSWORD_RESET.md) - Password reset functionality ✨ **NEW**
-- [Audit Logging](docs/AUDIT_LOGGING.md) - Comprehensive audit logging ✨ **NEW**
-- [Super Admin Guide](docs/SUPER_ADMIN.md) - Platform management features ✨ **NEW**
-- [Tenant Branding](docs/branding.md) - Logo upload and branding ✨ **NEW**
-- [User Account Management](docs/USER_ACCOUNT_MANAGEMENT.md) - User management guide
-- [PDF Generation Guide](docs/PDF_GENERATION.md) - Invoice PDF generation
-- [Invoice Implementation](docs/INVOICE_IMPLEMENTATION.md) - Multi-currency & tax support
-- [Security & GDPR Compliance](docs/SECURITY_GDPR_COMPLIANCE.md) - Security documentation
-- [CI/CD Pipeline](docs/ci_cd_pipeline.md) - GitHub Actions workflow ✨ **Sprint 4**
-- [Logging & Monitoring](docs/logging_monitoring.md) - Observability guide ✨ **Sprint 4**
-- [Rate Limiting](docs/rate_limiting.md) - Rate limit configuration ✨ **Sprint 4**
-- [Sprint Summaries](docs/) - Sprint implementation details
+- [Authentication Guide](docs/features/AUTHENTICATION.md) - Auth implementation details
+- [Email Verification](docs/features/EMAIL_VERIFICATION.md) - Email verification feature ✨ **NEW**
+- [Password Reset](docs/features/PASSWORD_RESET.md) - Password reset functionality ✨ **NEW**
+- [Audit Logging](docs/features/AUDIT_LOGGING.md) - Comprehensive audit logging ✨ **NEW**
+- [Super Admin Guide](docs/features/SUPER_ADMIN.md) - Platform management features ✨ **NEW**
+- [Tenant Branding](docs/features/BRANDING.md) - Logo upload and branding ✨ **NEW**
+- [User Account Management](docs/features/USER_ACCOUNT_MANAGEMENT.md) - User management guide
+- [Invoicing Guide](docs/features/INVOICING.md) - Invoice management with PDF generation & multi-currency
+- [Security & GDPR Compliance](docs/SECURITY.md) - Security documentation
+- [CI/CD Pipeline](docs/guides/CI_CD_PIPELINE.md) - GitHub Actions workflow ✨ **Sprint 4**
+- [Logging & Monitoring](docs/guides/MONITORING.md) - Observability guide ✨ **Sprint 4**
+- [Rate Limiting](docs/features/RATE_LIMITING.md) - Rate limit configuration ✨ **Sprint 4**
+- [Documentation Index](docs/README.md) - Full documentation navigation hub
 
 ### Example Usage
 
@@ -459,9 +458,10 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 
 ### Technical Documentation
 
-- [System Requirements Document (SRD)](docs/srs_technical_design.md) - Technical specifications
-- [Product Requirements Document (PRD)](docs/product_requirement.md) - Business requirements
-- [Sprint Summaries](docs/) - Implementation summaries for all sprints
+- [System Requirements Document (SRD)](docs/specifications/SYSTEM_REQUIREMENTS.md) - Technical specifications
+- [Product Requirements Document (PRD)](docs/specifications/PRODUCT_REQUIREMENT.md) - Business requirements
+- [Release History](CHANGELOG.md) - Version history with features and changes (v1.0–v1.4)
+- [Sprint Documentation](docs/) - Sprint summaries in documentation folder
 
 ### Diagrams
 
