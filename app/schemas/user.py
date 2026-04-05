@@ -1,6 +1,6 @@
 from datetime import datetime
 import re
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 from app.models.user import UserRole
 
@@ -133,6 +133,41 @@ class Token(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     requires_password_change: bool = False
+
+
+class TenantOption(BaseModel):
+    """Tenant option for users with multiple tenants."""
+    tenant_id: str = Field(..., description="Tenant unique identifier")
+    tenant_name: str = Field(..., description="Tenant display name")
+    role: str = Field(..., description="User's role in this tenant")
+
+
+class MultiTenantLoginResponse(BaseModel):
+    """
+    Response when user belongs to multiple tenants.
+    Client should prompt user to select desired tenant.
+    """
+    requires_tenant_selection: bool = True
+    email: str = Field(..., description="User's email address")
+    tenants: List[TenantOption] = Field(
+        ..., description="List of tenants user belongs to"
+    )
+    message: str = Field(
+        default="You belong to multiple organizations. Please select the one you want to access.",
+        description="Message for frontend"
+    )
+
+
+class SelectTenantRequest(BaseModel):
+    """
+    Request schema for tenant selection after multi-tenant login.
+
+    User has already been authenticated; this request selects which
+    tenant they want to access.
+    """
+    email: EmailStr = Field(..., description="User's email address")
+    password: str = Field(..., description="User's password for re-authentication")
+    tenant_id: str = Field(..., description="Tenant ID to select and authenticate into")
 
 
 class TokenPayload(BaseModel):

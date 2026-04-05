@@ -39,8 +39,14 @@ def create_user(
     """
     Create a new user within the owner's tenant.
 
-    - Requires Owner role
-    - User is created under the same tenant as the owner
+    **Multi-Tenant Email Uniqueness**:
+    - Same email can exist in different tenants
+    - Email must be unique only within the current tenant
+    - This allows users to work in multiple organizations with the same email
+
+    **Requirements**:
+    - Owner role required
+    - User created under same tenant as owner
     - Can create users with any role including OWNER (co-owners)
     - All new users must change password on first login
     """
@@ -52,15 +58,17 @@ def create_user(
                    "Use POST /api/v1/tenants/register for new organizations."
         )
 
-    # Check if email already exists (case-insensitive)
+    # Check if email already exists in THIS TENANT ONLY (case-insensitive)
+    # Tenant-scoped uniqueness: same email can exist in different tenants
     existing_user = db.query(UserModel).filter(
-        UserModel.email == user_in.email.lower()
+        UserModel.email == user_in.email.lower(),
+        UserModel.tenant_id == current_user.tenant_id
     ).first()
 
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail="Email already registered in this organization"
         )
 
     # Create user with must_change_password flag set to True

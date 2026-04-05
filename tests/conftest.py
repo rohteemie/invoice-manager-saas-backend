@@ -35,6 +35,8 @@ TestingSessionLocal = sessionmaker(
 )
 
 # --- Superadmin fixtures (must be after imports) ---
+
+
 @pytest.fixture
 def test_superadmin(db_session):
     """
@@ -56,6 +58,7 @@ def test_superadmin(db_session):
     db_session.refresh(user)
     return user
 
+
 @pytest.fixture
 def superadmin_auth_headers(client, test_superadmin):
     """
@@ -70,7 +73,6 @@ def superadmin_auth_headers(client, test_superadmin):
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
-
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -364,6 +366,59 @@ def second_tenant_auth_headers(client, second_tenant_user):
         "/api/v1/auth/login",
         data={
             "username": "owner@secondcompany.com",
+            "password": "TestPass123!"
+        }
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def test_tenant2(db_session):
+    """
+    Create a second test tenant for multi-tenant tests.
+    """
+    tenant = Tenant(
+        name="Test Company 2",
+        domain="testcompany2.com",
+        plan_type="Standard",
+        description="A second test company"
+    )
+    db_session.add(tenant)
+    db_session.commit()
+    db_session.refresh(tenant)
+    return tenant
+
+
+@pytest.fixture
+def test_tenant2_owner(db_session, test_tenant2):
+    """
+    Create an owner user for test_tenant2.
+    """
+    user = User(
+        email="owner2@testcompany2.com",
+        full_name="Test Owner 2",
+        hashed_password=get_password_hash("TestPass123!"),
+        role=UserRole.OWNER,
+        tenant_id=test_tenant2.id,
+        is_active=True,
+        is_verified=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def auth_headers_tenant2(client, test_tenant2_owner):
+    """
+    Get authentication headers for test_tenant2 owner.
+    """
+    response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "owner2@testcompany2.com",
             "password": "TestPass123!"
         }
     )
