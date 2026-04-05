@@ -19,54 +19,24 @@ class TestInvoiceLifecycleIntegration:
         self,
         client,
         test_tenant,
+        test_manager,
+        manager_auth_headers,
         db_session
     ):
         """
-        Test complete invoice lifecycle: registration → login → create → send → pay.
+        Test complete invoice lifecycle: login → create → send → pay.
 
         This simulates a real business workflow where:
-        1. A new user registers
-        2. User logs in
-        3. User creates a draft invoice
-        4. Manager approves and sends invoice
-        5. Invoice is marked as paid
+        1. A verified tenant manager logs in
+        2. User creates a draft invoice
+        3. Manager approves and sends invoice
+        4. Invoice is marked as paid
         """
-        # Step 1: Register a new manager user
-        register_response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "email": "workflow.manager@testcompany.com",
-                "full_name": "Workflow Manager",
-                "password": "TestPass123!",
-                "role": "manager",
-                "tenant_id": test_tenant.id
-            }
-        )
-        assert register_response.status_code == 201
-        user_data = register_response.json()
-        assert user_data["email"] == "workflow.manager@testcompany.com"
+        # Step 1: Use the pre-created verified manager (from fixtures)
+        # The manager_auth_headers fixture provides authenticated access.
+        headers = manager_auth_headers
 
-        # Verify the user's email to allow invoice creation
-        from app.models.user import User as UserModel
-        user = db_session.query(UserModel).filter(
-            UserModel.email == "workflow.manager@testcompany.com"
-        ).first()
-        user.is_verified = True
-        db_session.commit()
-
-        # Step 2: Login with the new user
-        login_response = client.post(
-            "/api/v1/auth/login",
-            data={
-                "username": "workflow.manager@testcompany.com",
-                "password": "TestPass123!"
-            }
-        )
-        assert login_response.status_code == 200
-        token = login_response.json()["access_token"]
-        headers = {"Authorization": f"Bearer {token}"}
-
-        # Step 3: Create a draft invoice
+        # Step 2: Create a draft invoice
         invoice_data = {
             "customer_name": "John Doe",
             "customer_email": "john.doe@example.com",
@@ -99,7 +69,7 @@ class TestInvoiceLifecycleIntegration:
         assert invoice["status"] == "draft"
         assert invoice["total_amount"] == "450.00"
 
-        # Step 4: Send the invoice (status transition)
+        # Step 3: Send the invoice (status transition)
         send_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
             json={"status": "sent"},
@@ -109,7 +79,7 @@ class TestInvoiceLifecycleIntegration:
         sent_invoice = send_response.json()
         assert sent_invoice["status"] == "sent"
 
-        # Step 5: Mark invoice as paid
+        # Step 4: Mark invoice as paid
         pay_response = client.patch(
             f"/api/v1/invoices/{invoice_id}/status",
             json={
@@ -125,7 +95,7 @@ class TestInvoiceLifecycleIntegration:
         assert paid_invoice["paid_at"] is not None
         assert paid_invoice["payment_method"] == "card"
 
-        # Step 6: Verify invoice cannot be modified after paid
+        # Step 5: Verify invoice cannot be modified after paid
         update_response = client.put(
             f"/api/v1/invoices/{invoice_id}",
             json={"notes": "Updated notes"},

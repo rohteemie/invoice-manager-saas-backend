@@ -32,6 +32,7 @@ ATTENDANT (Lowest)
 #### OWNER
 - Full tenant/organization management
 - **Exclusive ability** to manage users (create, read, update, delete)
+- Can create users with ANY role, including other owners (co-owners) ✨ **NEW**
 - Can upgrade/downgrade roles for non-owner users
 - Can delete low-level users (Admin, Manager, Attendant)
 - **Cannot** delete themselves
@@ -56,6 +57,29 @@ ATTENDANT (Lowest)
 - Basic operations only
 
 ## Account Management Rules
+
+### User Creation Rules ✨ **NEW**
+
+1. **Only owners can create user accounts**
+   - Users are created via `POST /api/v1/users`
+   - All roles can be assigned, including OWNER (for co-owners)
+   - Users inherit the owner's tenant_id automatically
+
+2. **Mandatory password change on first login**
+   - All owner-created users have `must_change_password=true`
+   - Login response includes `requires_password_change: true`
+   - User must call `POST /api/v1/auth/force-change-password`
+   - Password cannot be the same as the temporary password
+
+3. **Pre-verified accounts**
+   - Owner-created users are automatically marked as verified
+   - No email verification required
+   - Owners share temporary credentials out-of-band
+
+4. **Co-owner support**
+   - Owners can create additional owners (co-owners)
+   - Useful for multi-partner businesses
+   - Co-owners have identical privileges
 
 ### User Deletion Rules
 
@@ -107,6 +131,40 @@ ATTENDANT (Lowest)
    - Reserved for system administrators
 
 ## API Endpoints
+
+### Create User ✨ **NEW**
+```
+POST /api/v1/users/
+Authorization: Bearer <token>
+Required Role: OWNER
+
+Request Body:
+{
+  "email": "newuser@example.com",
+  "full_name": "New User",
+  "password": "TemporaryPassword123",
+  "role": "manager"  // can be: owner, admin, manager, attendant
+}
+
+Response: 201 Created
+{
+  "id": "user-uuid",
+  "email": "newuser@example.com",
+  "full_name": "New User",
+  "role": "manager",
+  "tenant_id": "tenant-uuid",
+  "is_active": true,
+  "is_verified": true,
+  "must_change_password": true,
+  "created_at": "2024-01-01T00:00:00",
+  "updated_at": "2024-01-01T00:00:00"
+}
+
+Error Responses:
+- 400 Bad Request: Email already registered
+- 401 Unauthorized: Missing or invalid token
+- 403 Forbidden: Insufficient permissions (not an owner)
+```
 
 ### List Users
 ```
@@ -274,7 +332,7 @@ All error responses follow this format:
 | "Cannot delete your own account" | Owner attempting self-deletion | Have another owner delete your account if needed |
 | "Cannot delete another owner account" | Owner attempting to delete another owner | Contact technical team for owner account deletion |
 | "Owner role cannot be changed via API" | Attempting to change owner's role | Owner role changes require technical team intervention |
-| "Cannot assign owner role via API" | Attempting to assign owner role to user | Owner role assignment requires technical team intervention |
+| "Cannot assign owner role via update API" | Attempting to assign owner role via PUT | Use POST /api/v1/users to create owners |
 
 ## Security Considerations
 

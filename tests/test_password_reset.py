@@ -38,9 +38,9 @@ def test_forgot_password_invalid_email(client):
         "/api/v1/auth/forgot-password",
         json={"email": "not-an-email"}
     )
-    # The endpoint intentionally returns a generic success response
-    # (200) for password reset requests to avoid account enumeration.
-    assert response.status_code == 200
+    # Email format validation rejects malformed addresses with 422.
+    # This does not leak any user existence information.
+    assert response.status_code == 422
 
 
 def test_forgot_password_inactive_user(client, test_user, db_session):

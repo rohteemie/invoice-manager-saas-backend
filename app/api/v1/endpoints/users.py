@@ -4,13 +4,15 @@ Supports CRUD operations with tenant-aware data isolation.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.db.session import get_db
 from app.models.user import User as UserModel, UserRole
-from app.schemas.user import User, UserUpdate
+from app.schemas.user import User, UserUpdate, OwnerUserCreate
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.deps import get_current_user, require_role
 from app.services.audit_logger import log_user_event
 from app.models.audit_log import AuditAction
+from app.core.security import get_password_hash
 
 router = APIRouter()
 
@@ -26,6 +28,83 @@ def get_current_user_info(
     - No special permissions required
     """
     return current_user
+
+
+@router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
+def create_user(
+    user_in: OwnerUserCreate,
+    request: Request,
+    current_user: UserModel = Depends(require_role(UserRole.OWNER)),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new user within the owner's tenant.
+
+    **Multi-Tenant Email Uniqueness**:
+    - Same email can exist in different tenants
+    - Email must be unique only within the current tenant
+    - This allows users to work in multiple organizations with the same email
+
+    **Requirements**:
+    - Owner role required
+    - User created under same tenant as owner
+    - Can create users with any role including OWNER (co-owners)
+    - All new users must change password on first login
+    """
+    # Superadmins do not belong to a tenant; prevent them from calling this
+    if current_user.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmins cannot create tenant users. "
+                   "Use POST /api/v1/tenants/register for new organizations."
+        )
+
+    # Check if email already exists in THIS TENANT ONLY (case-insensitive)
+    # Tenant-scoped uniqueness: same email can exist in different tenants
+    existing_user = db.query(UserModel).filter(
+        func.lower(UserModel.email) == user_in.email.lower(),
+        UserModel.tenant_id == current_user.tenant_id
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered in this organization"
+        )
+
+    # Create user with must_change_password flag set to True
+    new_user = UserModel(
+        email=user_in.email.lower(),
+        full_name=user_in.full_name,
+        hashed_password=get_password_hash(user_in.password),
+        role=user_in.role,
+        tenant_id=current_user.tenant_id,
+        is_active=True,
+        is_verified=True,  # Owner-created users are pre-verified
+        must_change_password=True  # Force password change on first login
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    # Log user creation
+    log_user_event(
+        db=db,
+        request=request,
+        action=AuditAction.USER_CREATED,
+        resource_id=new_user.id,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        changes={
+            "email": new_user.email,
+            "role": new_user.role.value,
+            "created_by": current_user.email
+        },
+        description=f"{new_user.email} created by owner {current_user.email}"
+    )
+
+    return new_user
 
 
 @router.get("/", response_model=PaginatedResponse[User])

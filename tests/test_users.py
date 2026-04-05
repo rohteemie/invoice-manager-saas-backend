@@ -315,3 +315,109 @@ def test_role_hierarchy_admin_cannot_manage_users(client, admin_auth_headers, te
         headers=admin_auth_headers
     )
     assert response.status_code == 403
+
+
+# --- Owner User Creation Tests ---
+
+def test_owner_create_user_success(client, auth_headers, test_tenant):
+    """Test that owner can create a user within their tenant."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=auth_headers,
+        json={
+            "email": "newemployee@testcompany.com",
+            "full_name": "New Employee",
+            "password": "SecurePassword123@",
+            "role": "manager"
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == "newemployee@testcompany.com"
+    assert data["full_name"] == "New Employee"
+    assert data["role"] == "manager"
+    assert data["tenant_id"] == test_tenant.id
+    assert data["is_verified"] is True  # Pre-verified when created by owner
+    assert data["must_change_password"] is True  # Must change password
+
+
+def test_owner_can_create_another_owner(client, auth_headers, test_tenant):
+    """Test that owner can create another owner (co-owner)."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=auth_headers,
+        json={
+            "email": "secondowner@testcompany.com",
+            "full_name": "Second Owner",
+            "password": "SecurePassword123@",
+            "role": "owner"
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == "secondowner@testcompany.com"
+    assert data["role"] == "owner"
+    assert data["tenant_id"] == test_tenant.id
+    assert data["must_change_password"] is True  # Co-owners also must change password
+
+
+def test_admin_cannot_create_user(client, admin_auth_headers):
+    """Test that admin cannot create users (requires Owner role)."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=admin_auth_headers,
+        json={
+            "email": "shouldfail@testcompany.com",
+            "full_name": "Should Fail",
+            "password": "SecurePassword123@",
+            "role": "attendant"
+        }
+    )
+    assert response.status_code == 403
+    assert "insufficient" in response.json()["message"].lower()
+
+
+def test_manager_cannot_create_user(client, manager_auth_headers):
+    """Test that manager cannot create users."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=manager_auth_headers,
+        json={
+            "email": "shouldfail@testcompany.com",
+            "full_name": "Should Fail",
+            "password": "SecurePassword123@",
+            "role": "attendant"
+        }
+    )
+    assert response.status_code == 403
+
+
+def test_owner_create_user_duplicate_email(client, auth_headers, test_admin):
+    """Test that creating user with duplicate email fails."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=auth_headers,
+        json={
+            "email": test_admin.email,
+            "full_name": "Duplicate",
+            "password": "SecurePassword123@",
+            "role": "attendant"
+        }
+    )
+    assert response.status_code == 400
+    assert "already registered" in response.json()["message"].lower()
+
+
+def test_owner_create_user_invalid_password(client, auth_headers):
+    """Test that weak passwords are rejected."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=auth_headers,
+        json={
+            "email": "weakpw@testcompany.com",
+            "full_name": "Weak Password",
+            "password": "short",  # Too weak
+            "role": "attendant"
+        }
+    )
+    assert response.status_code == 422  # Validation error

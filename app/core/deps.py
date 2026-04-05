@@ -3,7 +3,7 @@ Dependencies for authentication and authorization.
 Implements JWT-based authentication with role-based access control.
 """
 from typing import Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.core.security import decode_token
@@ -16,13 +16,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def get_current_user(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Get current authenticated user from JWT token.
 
+    Enforces mandatory password change on first login for owner-created users.
+
     Args:
+        request: Current HTTP request
         token: JWT access token
         db: Database session
 
@@ -30,7 +34,9 @@ def get_current_user(
         User object
 
     Raises:
-        HTTPException: If token is invalid or user not found
+        HTTPException: If token is invalid, user not found, or
+                      password change is required before
+                      accessing the system
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,14 +71,33 @@ def get_current_user(
             detail="Inactive user"
         )
 
-    # Check tenant status (skipped for all superadmins, regardless of tenant_id).
-    # tenant_is_active is None when tenant_id is set but the tenant row is missing
-    # (orphaned FK); treat that the same as an inactive tenant and block access.
+    # Check tenant status for non-superadmin users.
+    # tenant_is_active is None when tenant_id is set but the tenant row is
+    # missing (orphaned FK); treat that the same as an inactive tenant.
     if user.tenant_id and not user.is_superadmin:
-        if not tenant_is_active:  # False (deactivated) or None (tenant not found)
+        if not tenant_is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Your organization has been deactivated"
+            )
+
+    # Enforce mandatory password change for owner-created users
+    if user.must_change_password:
+        # Allow access only to specific endpoints for password change flow
+        current_path = request.url.path
+        exempt_paths = [
+            "/api/v1/auth/force-change-password",
+            "/api/v1/users/me"
+        ]
+
+        if current_path not in exempt_paths:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Password change required. Must change your password "
+                       "before accessing other features. "
+                       "Please call POST /api/v1/auth/force-change-password "
+                       "with your current (temporary) password "
+                       "and new password."
             )
 
     return user

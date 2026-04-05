@@ -5,20 +5,21 @@ Implements JWT-based authentication with secure password handling.
 from datetime import datetime, timezone
 import logging
 import os
-from typing import Optional
-import json
-from urllib.parse import parse_qs
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi import status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
+from typing import Union
 from pydantic import BaseModel, EmailStr
 from app.db.session import get_db
 from app.models.user import User as UserModel
 from app.models.tenant import Tenant as TenantModel
-from app.schemas.user import UserCreate, User, Token
+from app.schemas.user import ForgotPasswordRequest, UserCreate, User, Token
 from app.schemas.user import ResetPasswordRequest, RefreshTokenRequest
+from app.schemas.user import ForceChangePasswordRequest, MultiTenantLoginResponse
+from app.schemas.user import SelectTenantRequest
 from app.core.security import verify_password, get_password_hash
 from app.core.security import create_access_token, create_refresh_token
 from app.core.security import decode_token, generate_verification_token
@@ -26,6 +27,7 @@ from app.core.security import generate_password_reset_token
 from app.core.rate_limit import limiter
 from app.core.config import settings
 from app.core.login_throttle import get_login_throttle
+from app.core.deps import require_superadmin, get_current_user
 from app.services.audit_logger import log_auth_event
 from app.models.audit_log import AuditAction
 from app.tasks.email_tasks import send_verification_email_task
@@ -42,18 +44,39 @@ def register(
     request: Request,
     user_in: UserCreate,
     response: Response,
+    current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db),
 ):
     """
-    Register a new user.
+    Register a new superadmin user.
 
+    - Requires SUPERADMIN authentication
+    - Only allows creating superadmin users (no tenant assignment)
     - Validates that email is unique
     - Hashes password using bcrypt
-    - Associates user with tenant for data isolation (unless superadmin)
-    - Returns user without password
+
+    NOTE: For regular user registration:
+    - New organizations: Use POST /api/v1/tenants/register
+    - Adding users to existing tenant: Use POST /api/v1/users (owner only)
     """
+    # Only superadmins can be created via this endpoint
+    if not user_in.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is for superadmin creation only. "
+                   "Use POST /api/v1/tenants/register for new organizations "
+                   "or POST /api/v1/users for adding users to a tenant."
+        )
+
+    # Superadmins should not have tenant_id
+    if user_in.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Superadmins cannot be associated with a tenant"
+        )
+
     existing_user = db.query(UserModel).filter(
-        UserModel.email == user_in.email
+        func.lower(UserModel.email) == user_in.email.lower()
     ).first()
     if existing_user:
         raise HTTPException(
@@ -61,22 +84,15 @@ def register(
             detail="Email already registered"
         )
 
-    # Validate tenant_id requirement for non-superadmin users
-    if not user_in.is_superadmin and not user_in.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="tenant_id is required for non-superadmin users"
-        )
-
     try:
         hashed_password = get_password_hash(user_in.password)
         db_user = UserModel(
-            email=user_in.email,
+            email=user_in.email.lower(),
             full_name=user_in.full_name,
             hashed_password=hashed_password,
             role=user_in.role,
-            tenant_id=user_in.tenant_id,
-            is_superadmin=user_in.is_superadmin,
+            tenant_id=None,  # Superadmins have no tenant
+            is_superadmin=True,  # Forced superadmin creation
         )
 
         # Generate verification token and expiration and attach to user
@@ -132,7 +148,7 @@ def register(
         )
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Union[Token, MultiTenantLoginResponse])
 @limiter.limit("10/minute")
 async def login(
     request: Request,
@@ -140,11 +156,20 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """
-    Login endpoint for OAuth2 password flow with progressive throttling.
+    Login endpoint for OAuth2 password flow with multi-tenant support.
 
-    - Validates email and password
+    **Single-Tenant Response** (unchanged from before):
+    - Returns Token with access_token, refresh_token, expires_in
+    - Backward compatible with existing single-tenant users
+
+    **Multi-Tenant Response** (NEW):
+    - When user belongs to 2+ organizations, returns MultiTenantLoginResponse
+    - Contains list of tenants with tenant_id, tenant_name, and user's role
+    - Frontend uses this to show tenant selection screen
+    - User must call /select-tenant endpoint to complete login
+
+    **Security**:
     - Implements progressive delay based on failed attempts (OWASP ASVS)
-    - Returns JWT access, refresh tokens and expires_in
     - Access token expires in configured time (default: 30 min)
     - Refresh token expires in configured time (default: 7 days)
 
@@ -153,22 +178,29 @@ async def login(
     - 4-5 attempts: Short delay (default 2s)
     - 6-8 attempts: Medium delay (default 30s)
     - 9+ attempts: Long cooldown (default 15min)
+
+    **Email Behavior**:
+    - Emails are case-insensitive and unique per tenant
+    - Same email can exist in different organizations
+    - Example: john@example.com can be in both "Acme Corp" and "TechCo"
     """
     throttle = get_login_throttle()
     email = form_data.username.lower()
 
-    # Query user using case-insensitive comparison
-    user = db.query(UserModel).filter(
+    # Query ALL users with this email (case-insensitive)
+    # Users can have the same email across different tenants
+    users = db.query(UserModel).filter(
         UserModel.email.ilike(email)
-    ).first()
+    ).all()
 
-    # Validate credentials
-    credentials_valid = user and verify_password(
-        form_data.password, user.hashed_password
-    )
+    # Validate credentials against all matching users
+    authenticated_users = []
+    for user in users:
+        if verify_password(form_data.password, user.hashed_password):
+            authenticated_users.append(user)
 
     # Handle failed authentication
-    if not credentials_valid:
+    if not authenticated_users:
         # Record failed attempt
         new_count = throttle.record_failed_attempt(email)
 
@@ -177,8 +209,8 @@ async def login(
             db=db,
             request=request,
             action=AuditAction.LOGIN_FAILED,
-            user_id=user.id if user else None,
-            tenant_id=user.tenant_id if user else None,
+            user_id=None,
+            tenant_id=None,
             status="failure",
             description=(
                 f"Failed login attempt for {form_data.username} "
@@ -192,8 +224,8 @@ async def login(
                 db=db,
                 request=request,
                 action=AuditAction.LOGIN_EXCESSIVE_FAILURES,
-                user_id=user.id if user else None,
-                tenant_id=user.tenant_id if user else None,
+                user_id=None,
+                tenant_id=None,
                 status="warning",
                 description=(
                     f"Excessive login failures for {form_data.username} "
@@ -210,8 +242,8 @@ async def login(
                 db=db,
                 request=request,
                 action=AuditAction.LOGIN_THROTTLED,
-                user_id=user.id if user else None,
-                tenant_id=user.tenant_id if user else None,
+                user_id=None,
+                tenant_id=None,
                 status="info",
                 description=(
                     f"Login throttled for {form_data.username} "
@@ -226,24 +258,46 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Credentials valid - check if user is active
-    if not user.is_active:
-        # Record as failed attempt to prevent enumeration
+    # Filter out inactive users and check their tenants
+    active_users = []
+    for user in authenticated_users:
+        if not user.is_active:
+            # Log failed login for inactive user
+            log_auth_event(
+                db=db,
+                request=request,
+                action=AuditAction.LOGIN_FAILED,
+                user_id=user.id,
+                tenant_id=user.tenant_id,
+                status="failure",
+                description="Login attempt for inactive user account"
+            )
+            continue
+
+        # Check if tenant is active (skip for superadmins)
+        if user.tenant_id and not user.is_superadmin:
+            tenant = db.query(TenantModel).filter(
+                TenantModel.id == user.tenant_id
+            ).first()
+            if not tenant or not tenant.is_active:
+                log_auth_event(
+                    db=db,
+                    request=request,
+                    action=AuditAction.LOGIN_FAILED,
+                    user_id=user.id,
+                    tenant_id=user.tenant_id,
+                    status="failure",
+                    description="Login attempt for user in deactivated tenant"
+                )
+                continue
+
+        active_users.append(user)
+
+    # No active users found
+    if not active_users:
+        # Record as failed attempt
         new_count = throttle.record_failed_attempt(email)
-
-        # Apply delay for inactive account (constant-time)
         await throttle.apply_delay(email, new_count)
-
-        # Log failed login for inactive user
-        log_auth_event(
-            db=db,
-            request=request,
-            action=AuditAction.LOGIN_FAILED,
-            user_id=user.id,
-            tenant_id=user.tenant_id,
-            status="failure",
-            description="Login attempt for inactive user account"
-        )
 
         # Generic error message to avoid account enumeration
         raise HTTPException(
@@ -252,37 +306,188 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Check if tenant is active (skip for superadmins)
-    if user.tenant_id and not user.is_superadmin:
-        tenant = db.query(TenantModel).filter(
-            TenantModel.id == user.tenant_id
-        ).first()
-        if not tenant or not tenant.is_active:
-            # Record as failed attempt
-            new_count = throttle.record_failed_attempt(email)
-            await throttle.apply_delay(email, new_count)
-
-            log_auth_event(
-                db=db,
-                request=request,
-                action=AuditAction.LOGIN_FAILED,
-                user_id=user.id,
-                tenant_id=user.tenant_id,
-                status="failure",
-                description="Login attempt for user in deactivated tenant"
-            )
-
-            # Return a generic auth failure to avoid tenant enumeration
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
     # Successful authentication - clear throttle counters
     throttle.clear_failed_attempts(email)
 
-    # Generate tokens
+    # SINGLE TENANT: User exists in only one tenant
+    if len(active_users) == 1:
+        user = active_users[0]
+
+        # Generate tokens
+        token_data = {
+            "sub": user.id,
+            "tenant_id": user.tenant_id,
+            "role": user.role.value,
+            "is_superadmin": user.is_superadmin
+        }
+
+        access_token = create_access_token(token_data)
+        refresh_token = create_refresh_token(token_data)
+
+        # Log successful login
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            description=f"Successful login for {user.email}"
+        )
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60,
+            "requires_password_change": user.must_change_password
+        }
+
+    # MULTI-TENANT: User exists in multiple tenants
+    # Return list of tenants for user to select from
+    tenant_options = []
+    for user in active_users:
+        tenant = db.query(TenantModel).filter(
+            TenantModel.id == user.tenant_id
+        ).first()
+
+        tenant_options.append({
+            "tenant_id": user.tenant_id,
+            "tenant_name": tenant.name if tenant else "Unknown Organization",
+            "role": user.role.value
+        })
+
+    # Log multi-tenant login attempt
+    log_auth_event(
+        db=db,
+        request=request,
+        action=AuditAction.LOGIN,
+        user_id=None,
+        tenant_id=None,
+        status="info",
+        description=(
+            f"Multi-tenant login for {email} - "
+            f"user belongs to {len(active_users)} tenants"
+        )
+    )
+
+    return {
+        "requires_tenant_selection": True,
+        "email": email,
+        "tenants": tenant_options,
+        "message": "You belong to multiple organizations. "
+                   "Please select the one you want to access."
+    }
+
+
+@router.post("/select-tenant", response_model=Token)
+@limiter.limit("10/minute")
+async def select_tenant(
+    request: Request,
+    select_request: SelectTenantRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Complete login by selecting desired tenant.
+
+    **Used for**:
+    - Multi-tenant users who need to select which organization to access
+    - Called AFTER the initial login returns requires_tenant_selection=true
+
+    **Flow**:
+    1. User logs in with email/password (initial login)
+    2. If user has multiple tenants, frontend shows tenant selection screen
+    3. User selects a tenant
+    4. Frontend calls this endpoint with email, password, and selected tenant_id
+    5. Backend re-authenticates and returns tokens for that tenant
+
+    **Security**:
+    - Requires re-authentication (email + password must be valid)
+    - Validates that user actually belongs to the selected tenant
+    - Rate limited to 10 requests per minute
+    - Returns 401 if credentials invalid
+    - Returns 400 if tenant invalid or user doesn't have access
+
+    **Parameters**:
+    - email: User's email address
+    - password: User's password (re-authentication required)
+    - tenant_id: ID of tenant to authenticate into
+
+    **Response**:
+    - Same as regular login: access_token, refresh_token, token_type, expires_in
+    - Token will be scoped to the selected tenant
+    """
+    email = select_request.email.lower()
+
+    # Find user by email and tenant_id combination
+    user = db.query(UserModel).filter(
+        UserModel.email.ilike(email),
+        UserModel.tenant_id == select_request.tenant_id
+    ).first()
+
+    # User not found in specified tenant
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid tenant selection or user not in this tenant"
+        )
+
+    # Verify password
+    if not verify_password(select_request.password, user.hashed_password):
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILED,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            status="failure",
+            description="Failed tenant selection - incorrect password"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Check if user is active
+    if not user.is_active:
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILED,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            status="failure",
+            description="Tenant selection for inactive user"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive"
+        )
+
+    # Check if tenant is active
+    tenant = db.query(TenantModel).filter(
+        TenantModel.id == select_request.tenant_id
+    ).first()
+
+    if not tenant or not tenant.is_active:
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILED,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            status="failure",
+            description="Tenant selection for deactivated tenant"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected tenant is not active"
+        )
+
+    # All checks passed - generate tokens
     token_data = {
         "sub": user.id,
         "tenant_id": user.tenant_id,
@@ -293,21 +498,25 @@ async def login(
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
-    # Log successful login
+    # Log successful tenant selection
     log_auth_event(
         db=db,
         request=request,
         action=AuditAction.LOGIN,
         user_id=user.id,
         tenant_id=user.tenant_id,
-        description=f"Successful login for {user.email}"
+        description=(
+            f"Successful tenant selection login for {user.email} "
+            f"in tenant {tenant.name}"
+        )
     )
 
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60
+        "expires_in": settings.ACCESS_TOKEN_EXPIRATION * 60,
+        "requires_password_change": user.must_change_password
     }
 
 
@@ -544,8 +753,9 @@ def resend_verification_email(
 
 @router.post("/forgot-password")
 @limiter.limit("3/hour")
-async def forgot_password(
+def forgot_password(
     request: Request,
+    password_request: ForgotPasswordRequest,
     response: Response = None,
     db: Session = Depends(get_db)
 ):
@@ -563,45 +773,7 @@ async def forgot_password(
     Returns:
         Success message
     """
-    # Read raw body once and log it
-    try:
-        raw_body = await request.body()
-    except Exception:
-        raw_body = b""
-
-    content_type = request.headers.get("content-type", "")
-    logger.debug("forgot-password Content-Type: %s", content_type)
-    logger.debug("forgot-password raw body: %s", raw_body.decode(
-        "utf-8", errors="replace"
-    ))
-
-    # Parse email from JSON or form-encoded body
-    email_value: Optional[str] = None
-    body_text = raw_body.decode("utf-8", errors="replace")
-    if "application/json" in content_type:
-        try:
-            body_json = json.loads(body_text) if body_text else {}
-            email_value = body_json.get("email")
-        except Exception:
-            email_value = None
-    elif "application/x-www-form-urlencoded" in content_type:
-        parsed = parse_qs(body_text)
-        vals = parsed.get("email")
-        if vals:
-            email_value = vals[0]
-    else:
-        # Try JSON as fallback
-        try:
-            body_json = json.loads(body_text) if body_text else {}
-            email_value = body_json.get("email")
-        except Exception:
-            email_value = None
-
-    if not email_value:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Email is required",
-        )
+    email_value = password_request.email
 
     # Find user by email
     user = db.query(UserModel).filter(
@@ -633,6 +805,8 @@ async def forgot_password(
 
     # Generate password reset token
     reset_token, token_expires_at = generate_password_reset_token()
+    print("______________TOKEN________________")
+    print(reset_token)
 
     # Update user with reset token
     user.reset_password_token = reset_token
@@ -754,4 +928,98 @@ def reset_password(
         "message": "Password has been reset successfully.\
             You can now log in with your new password.",
         "email": user.email
+    }
+
+
+@router.post("/force-change-password")
+@limiter.limit("5/minute")
+def force_change_password(
+    request: Request,
+    change_request: ForceChangePasswordRequest,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Force password change for users who must change password on first login.
+
+    - Validates current (temporary) password
+    - Updates password with new user-chosen password
+    - Clears must_change_password flag
+    - Logs password change action
+
+    This endpoint is used when a user is created by an owner and must
+    change their temporary password before accessing the system.
+
+    Args:
+        change_request: Current password and new password
+
+    Returns:
+        Success message
+    """
+    # Ensure this endpoint is only usable when a password change is required
+    if not current_user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password change is not required for this account"
+        )
+
+    # Check if user is active
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive"
+        )
+
+    # Verify current password
+    if not verify_password(
+        change_request.current_password, current_user.hashed_password
+    ):
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.PASSWORD_CHANGE_FAILED,
+            user_id=current_user.id,
+            tenant_id=current_user.tenant_id,
+            status="failure",
+            description="Failed password change - incorrect current password"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect current password"
+        )
+
+    # Ensure new password is different from current
+    if verify_password(change_request.new_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+
+    # Update password
+    current_user.hashed_password = get_password_hash(change_request.new_password)
+    current_user.must_change_password = False
+
+    db.commit()
+    db.refresh(current_user)
+
+    # Log password change action
+    log_auth_event(
+        db=db,
+        request=request,
+        action=AuditAction.PASSWORD_CHANGED,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        description=f"Password changed successfully for user {current_user.email}"
+    )
+
+    logger.info(
+        "Password changed for user: %s (tenant: %s) - "
+        "must_change_password cleared",
+        current_user.email, current_user.tenant_id
+    )
+
+    return {
+        "message": "Password changed successfully. You can now access "
+                   "the system with your new password.",
+        "email": current_user.email
     }

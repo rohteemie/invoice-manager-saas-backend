@@ -513,10 +513,11 @@ def test_normal_user_token_has_is_superadmin_false(
     assert payload["is_superadmin"] is False
 
 
-def test_can_register_superadmin(client):
-    """Test that superadmin users can be registered."""
+def test_can_register_superadmin(client, superadmin_auth_headers):
+    """Test that an authenticated superadmin can register another superadmin."""
     response = client.post(
         "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
         json={
             "email": "newsuperadmin@platform.com",
             "full_name": "New Super Admin",
@@ -532,10 +533,13 @@ def test_can_register_superadmin(client):
     assert user["tenant_id"] is None
 
 
-def test_cannot_register_user_without_tenant_if_not_superadmin(client, test_tenant):
-    """Test that non-superadmin users must have a tenant_id."""
+def test_cannot_register_user_without_tenant_if_not_superadmin(
+    client, superadmin_auth_headers, test_tenant
+):
+    """Test that the register endpoint rejects non-superadmin creation."""
     response = client.post(
         "/api/v1/auth/register",
+        headers=superadmin_auth_headers,
         json={
             "email": "notenantuser@test.com",
             "full_name": "No Tenant User",
@@ -545,5 +549,7 @@ def test_cannot_register_user_without_tenant_if_not_superadmin(client, test_tena
             "is_superadmin": False
         }
     )
+    # The endpoint is superadmin-creation-only; passing is_superadmin=False
+    # must be rejected regardless of the caller's credentials.
     assert response.status_code == 400
-    assert "tenant_id is required" in response.json()["message"].lower()
+    assert "superadmin" in response.json()["message"].lower()

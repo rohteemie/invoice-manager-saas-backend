@@ -41,6 +41,9 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - [x] Tenant registration & management ✅
 - [x] User registration & JWT authentication ✅
 - [x] Role-based access (Owner, Admin, Manager, Attendant) ✅
+- [x] **Owner-controlled user creation (no public registration)** ✅ **NEW**
+- [x] **Multi-owner (co-owner) support** ✅ **NEW**
+- [x] **Forced password change on first login** ✅ **NEW**
 - [x] **Super Admin role for platform management** ✅ **NEW**
 - [x] Invoice CRUD (tenant-aware) ✅ **Sprint 2**
 - [x] Invoice lifecycle (Draft → Sent → Paid → Overdue) ✅ **Sprint 2**
@@ -169,7 +172,9 @@ All queries automatically filtered by tenant_id
 ┌─────────────────────────────────────┐
 │            OWNER                    │
 │  - Full tenant management           │
-│  - Delete users                     │
+│  - Create users (any role incl.     │
+│    other owners = co-owners)        │
+│  - Delete users (except owners)     │
 │  - All admin privileges             │
 └─────────────┬───────────────────────┘
               │

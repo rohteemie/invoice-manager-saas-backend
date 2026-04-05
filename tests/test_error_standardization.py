@@ -3,20 +3,18 @@ Test suite for standardized error response format.
 
 Verifies that all API errors follow consistent format with proper codes.
 """
+import pytest
 from fastapi import status
 
 
 def test_validation_error_format(client):
     """Test that validation errors return standardized format."""
-    # Try to register with invalid email
+    # Use forgot-password with an invalid email format to trigger a
+    # Pydantic validation error without requiring authentication.
     response = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/forgot-password",
         json={
             "email": "not-an-email",  # Invalid email
-            "full_name": "Test User",
-            "password": "TestPass123!",
-            "role": "manager",
-            "tenant_id": "some-tenant-id"
         }
     )
 
@@ -100,30 +98,30 @@ def test_forbidden_error_format(client, test_user, db_session):
     assert data["code"] == "FORBIDDEN"
 
 
-def test_duplicate_entry_error_format(client, test_tenant):
+def test_duplicate_entry_error_format(client, auth_headers, test_tenant):
     """Test that duplicate entry errors return standardized format."""
-    # Register a user
+    # Create a user via the owner-user endpoint
     response1 = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/users/",
+        headers=auth_headers,
         json={
             "email": "duplicate@testcompany.com",
             "full_name": "First User",
             "password": "TestPass123!",
             "role": "manager",
-            "tenant_id": test_tenant.id
         }
     )
     assert response1.status_code == status.HTTP_201_CREATED
 
-    # Try to register with same email
+    # Try to create the same user again (same email in same tenant)
     response2 = client.post(
-        "/api/v1/auth/register",
+        "/api/v1/users/",
+        headers=auth_headers,
         json={
             "email": "duplicate@testcompany.com",
             "full_name": "Second User",
             "password": "TestPass123!",
-            "role": "manager",
-            "tenant_id": test_tenant.id
+            "role": "attendant",
         }
     )
 
