@@ -224,7 +224,7 @@ All notable changes to the Multi-Tenant SaaS Backend project are documented here
 - ✅ `/metrics` - Prometheus metrics
 - ✅ `/docs` - Swagger API documentation
 - ✅ `/redoc` - ReDoc API documentation
-- ✅ `/openapi.json` - OpenAPI schema
+- ✅ `/api/v1/openapi.json` - OpenAPI schema
 
 **Security Foundation**:
 - ✅ CORS configuration
