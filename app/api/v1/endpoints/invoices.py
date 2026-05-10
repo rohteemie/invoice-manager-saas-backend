@@ -1087,7 +1087,11 @@ def export_invoices(
                 "tax_amount": float(invoice.tax_amount),
                 "discount_amount": float(invoice.discount_amount),
                 "total_amount": float(invoice.total_amount),
-                "payment_method": invoice.payment_method,
+                "payment_method": (
+                    invoice.payment_method.value
+                    if hasattr(invoice.payment_method, "value")
+                    else invoice.payment_method
+                ),
                 "paid_at": invoice.paid_at,
                 "created_at": invoice.created_at.isoformat() if hasattr(
                     invoice.created_at, 'isoformat'
