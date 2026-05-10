@@ -969,9 +969,13 @@ def test_export_invoices_json(client, auth_headers):
     assert len(json_data[0]["items"]) == 2
     assert paid_invoice_number is not None
     paid_invoice = next(
-        invoice for invoice in json_data
-        if invoice["invoice_number"] == paid_invoice_number
+        (
+            invoice for invoice in json_data
+            if invoice["invoice_number"] == paid_invoice_number
+        ),
+        None
     )
+    assert paid_invoice is not None
     assert paid_invoice["payment_method"] == "cash"
 
 
