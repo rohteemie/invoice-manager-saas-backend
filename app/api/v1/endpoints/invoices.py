@@ -1089,7 +1089,8 @@ def export_invoices(
                 "total_amount": float(invoice.total_amount),
                 "payment_method": (
                     invoice.payment_method.value
-                    if hasattr(invoice.payment_method, "value")
+                    if invoice.payment_method is not None
+                    and hasattr(invoice.payment_method, "value")
                     else invoice.payment_method
                 ),
                 "paid_at": invoice.paid_at,

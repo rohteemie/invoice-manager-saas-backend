@@ -967,7 +967,9 @@ def test_export_invoices_json(client, auth_headers):
     assert "items" in json_data[0]
     assert isinstance(json_data[0]["items"], list)
     assert len(json_data[0]["items"]) == 2
-    assert paid_invoice_number is not None
+    assert (
+        paid_invoice_number is not None
+    ), "Paid invoice was not created during test setup"
     paid_invoice = next(
         (
             invoice for invoice in json_data
