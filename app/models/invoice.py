@@ -70,10 +70,9 @@ def format_payment_method(
         try:
             method = PaymentMethod(normalized)
         except ValueError:
-            try:
-                method = PaymentMethod[cleaned.upper()]
-            except KeyError:
-                return cleaned
+            method = PaymentMethod.__members__.get(cleaned.upper())
+        if method is None:
+            return cleaned
         return PAYMENT_METHOD_LABELS.get(method, cleaned)
 
     return str(payment_method)

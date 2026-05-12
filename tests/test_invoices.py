@@ -991,6 +991,7 @@ def test_export_invoices_csv(client, auth_headers):
     rows = list(reader)
     header = rows[0]
     payment_method_index = header.index("Payment Method")
+    # Locate the paid invoice row to verify formatted payment method output.
     paid_row = next(
         (
             row for row in rows[1:]
