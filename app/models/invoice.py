@@ -1,6 +1,7 @@
 from app.models.general_model import Gen_Model, Base
 from sqlalchemy import Column, String, Numeric, ForeignKey, Enum, Text
 from sqlalchemy.orm import relationship
+from typing import Optional, Any
 import enum
 
 
@@ -36,6 +37,47 @@ class PaymentMethod(str, enum.Enum):
     CARD = "card"
     MOBILE_MONEY = "mobile_money"
     OTHER = "other"
+
+
+PAYMENT_METHOD_LABELS = {
+    PaymentMethod.TRANSFER: "Bank Transfer",
+    PaymentMethod.CASH: "Cash",
+    PaymentMethod.POS: "POS",
+    PaymentMethod.CHEQUE: "Cheque",
+    PaymentMethod.CARD: "Credit Card",
+    PaymentMethod.MOBILE_MONEY: "Mobile Money",
+    PaymentMethod.OTHER: "Other",
+}
+
+
+def format_payment_method(payment_method: Optional[Any]) -> Optional[str]:
+    """Format payment method enum/value for user-facing output."""
+    if payment_method is None:
+        return None
+
+    if isinstance(payment_method, PaymentMethod):
+        return PAYMENT_METHOD_LABELS.get(
+            payment_method, payment_method.value
+        )
+
+    if isinstance(payment_method, enum.Enum) and hasattr(payment_method, "value"):
+        return format_payment_method(payment_method.value)
+
+    if isinstance(payment_method, str):
+        cleaned = payment_method.strip()
+        if not cleaned:
+            return None
+        normalized = cleaned.lower().replace(" ", "_")
+        try:
+            method = PaymentMethod(normalized)
+        except ValueError:
+            try:
+                method = PaymentMethod[cleaned.upper()]
+            except KeyError:
+                return cleaned
+        return PAYMENT_METHOD_LABELS.get(method, cleaned)
+
+    return str(payment_method)
 
 
 class Invoice(Gen_Model, Base):

@@ -53,7 +53,8 @@ ssh ubuntu@YOUR_SERVER_IP
 sudo apt-get update && sudo apt-get upgrade -y
 
 # Install dependencies
-sudo apt-get install -y python3.11 python3.11-venv python3.11-dev python3-pip build-essential libpq-dev nginx
+sudo apt-get install -y python3.11 python3.11-venv python3.11-dev python3-pip build-essential libpq-dev nginx \
+    libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 libffi8 shared-mime-info
 ```
 
 ### 2. Application Setup

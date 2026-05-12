@@ -4,6 +4,9 @@ Test suite for Invoice CRUD operations and lifecycle management.
 Tests invoice creation, retrieval, updates, status transitions, and deletion.
 """
 
+import csv
+from io import StringIO
+
 import app.tasks.email_tasks
 
 
@@ -931,8 +934,10 @@ def test_tenant_isolation(client, auth_headers, second_tenant_auth_headers):
 def test_export_invoices_csv(client, auth_headers):
     """Test exporting invoices in CSV format."""
     # Create test invoices
+    paid_invoice_id = None
+    paid_invoice_number = None
     for i in range(3):
-        client.post(
+        create_response = client.post(
             "/api/v1/invoices/",
             json={
                 "customer_name": f"Customer {i}",
@@ -943,6 +948,24 @@ def test_export_invoices_csv(client, auth_headers):
             },
             headers=auth_headers
         )
+        assert create_response.status_code == 201
+        if i == 0:
+            paid_invoice_id = create_response.json()["id"]
+            paid_invoice_number = create_response.json()["invoice_number"]
+
+    if paid_invoice_id:
+        sent_response = client.patch(
+            f"/api/v1/invoices/{paid_invoice_id}/status",
+            json={"status": "sent"},
+            headers=auth_headers
+        )
+        assert sent_response.status_code == 200
+        paid_response = client.patch(
+            f"/api/v1/invoices/{paid_invoice_id}/status",
+            json={"status": "paid", "payment_method": "cash"},
+            headers=auth_headers
+        )
+        assert paid_response.status_code == 200
 
     # Export as CSV
     response = client.get(
@@ -962,6 +985,15 @@ def test_export_invoices_csv(client, auth_headers):
     assert "Invoice Number" in lines[0]
     assert "Customer Name" in lines[0]
     assert "Total Amount" in lines[0]
+    if paid_invoice_number:
+        reader = csv.reader(StringIO(csv_content))
+        rows = list(reader)
+        header = rows[0]
+        payment_method_index = header.index("Payment Method")
+        paid_row = next(
+            row for row in rows[1:] if row and row[0] == paid_invoice_number
+        )
+        assert paid_row[payment_method_index] == "Cash"
 
 
 def test_export_invoices_json(client, auth_headers):
@@ -1034,7 +1066,7 @@ def test_export_invoices_json(client, auth_headers):
         None
     )
     assert paid_invoice is not None
-    assert paid_invoice["payment_method"] == "cash"
+    assert paid_invoice["payment_method"] == "Cash"
 
 
 def test_export_invoices_with_status_filter(client, auth_headers,

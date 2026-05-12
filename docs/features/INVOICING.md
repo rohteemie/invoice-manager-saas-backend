@@ -657,7 +657,8 @@ pytest tests/test_invoices.py tests/test_invoice_pdf.py tests/test_multi_currenc
 **WeasyPrint Installation**:
 ```bash
 # Ubuntu/Debian
-sudo apt-get install libpango-1.0-0 libpangocairo-1.0-0
+sudo apt-get install libpango-1.0-0 libpangocairo-1.0-0 libcairo2 \
+    libgdk-pixbuf-2.0-0 libffi8 shared-mime-info
 
 # macOS
 brew install pango
@@ -718,4 +719,3 @@ Potential improvements for future versions:
 - [ ] Custom invoice numbering schemes
 - [ ] Payment gateway integration
 - [ ] Batch invoice operations
-

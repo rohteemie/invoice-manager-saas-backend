@@ -13,7 +13,12 @@ from app.services.pdf_generator import (
     PDFGenerationError,
     get_pdf_generator
 )
-from app.models.invoice import Invoice, InvoiceItem, InvoiceStatus
+from app.models.invoice import (
+    Invoice,
+    InvoiceItem,
+    InvoiceStatus,
+    PaymentMethod
+)
 
 
 class MockTenant:
@@ -134,6 +139,18 @@ def test_prepare_invoice_data(pdf_generator, sample_invoice):
     assert data["items"][0]["description"] == "Product A"
     assert data["items"][0]["quantity"] == 2.0
     assert data["items"][0]["unit_price"] == "$100.00"
+
+
+def test_prepare_invoice_data_formats_payment_method(
+    pdf_generator,
+    sample_invoice
+):
+    """Test that payment method is formatted for display."""
+    sample_invoice.payment_method = PaymentMethod.CARD
+
+    data = pdf_generator._prepare_invoice_data(sample_invoice)
+
+    assert data["payment_method"] == "Credit Card"
 
 
 def test_prepare_invoice_data_with_minimal_fields(pdf_generator):
