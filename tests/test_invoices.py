@@ -90,6 +90,12 @@ def test_create_invoice_invalid_due_date_format(client, auth_headers):
             headers=auth_headers
         )
         assert response.status_code == 422  # Validation error
+        error = response.json()
+        assert "details" in error
+        assert any(
+            "due_date" in str(detail) and "YYYY-MM-DD" in str(detail)
+            for detail in error["details"]
+        )
 
 
 def test_create_invoice_no_items(client, auth_headers):
