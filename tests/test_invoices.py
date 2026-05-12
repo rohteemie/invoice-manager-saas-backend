@@ -953,19 +953,21 @@ def test_export_invoices_csv(client, auth_headers):
             paid_invoice_id = create_response.json()["id"]
             paid_invoice_number = create_response.json()["invoice_number"]
 
-    if paid_invoice_id:
-        sent_response = client.patch(
-            f"/api/v1/invoices/{paid_invoice_id}/status",
-            json={"status": "sent"},
-            headers=auth_headers
-        )
-        assert sent_response.status_code == 200
-        paid_response = client.patch(
-            f"/api/v1/invoices/{paid_invoice_id}/status",
-            json={"status": "paid", "payment_method": "cash"},
-            headers=auth_headers
-        )
-        assert paid_response.status_code == 200
+    assert paid_invoice_id is not None
+    assert paid_invoice_number is not None
+
+    sent_response = client.patch(
+        f"/api/v1/invoices/{paid_invoice_id}/status",
+        json={"status": "sent"},
+        headers=auth_headers
+    )
+    assert sent_response.status_code == 200
+    paid_response = client.patch(
+        f"/api/v1/invoices/{paid_invoice_id}/status",
+        json={"status": "paid", "payment_method": "cash"},
+        headers=auth_headers
+    )
+    assert paid_response.status_code == 200
 
     # Export as CSV
     response = client.get(
@@ -985,20 +987,19 @@ def test_export_invoices_csv(client, auth_headers):
     assert "Invoice Number" in lines[0]
     assert "Customer Name" in lines[0]
     assert "Total Amount" in lines[0]
-    if paid_invoice_number:
-        reader = csv.reader(StringIO(csv_content))
-        rows = list(reader)
-        header = rows[0]
-        payment_method_index = header.index("Payment Method")
-        paid_row = next(
-            (
-                row for row in rows[1:]
-                if row and row[0] == paid_invoice_number
-            ),
-            None
-        )
-        assert paid_row is not None
-        assert paid_row[payment_method_index] == "Cash"
+    reader = csv.reader(StringIO(csv_content))
+    rows = list(reader)
+    header = rows[0]
+    payment_method_index = header.index("Payment Method")
+    paid_row = next(
+        (
+            row for row in rows[1:]
+            if row and row[0] == paid_invoice_number
+        ),
+        None
+    )
+    assert paid_row is not None
+    assert paid_row[payment_method_index] == "Cash"
 
 
 def test_export_invoices_json(client, auth_headers):

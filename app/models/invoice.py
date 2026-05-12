@@ -1,7 +1,7 @@
 from app.models.general_model import Gen_Model, Base
 from sqlalchemy import Column, String, Numeric, ForeignKey, Enum, Text
 from sqlalchemy.orm import relationship
-from typing import Optional, Any
+from typing import Optional, Union
 import enum
 
 
@@ -50,7 +50,9 @@ PAYMENT_METHOD_LABELS = {
 }
 
 
-def format_payment_method(payment_method: Optional[Any]) -> Optional[str]:
+def format_payment_method(
+    payment_method: Optional[Union[PaymentMethod, str]]
+) -> Optional[str]:
     """Format payment method enum/value for user-facing output."""
     if payment_method is None:
         return None
@@ -58,13 +60,6 @@ def format_payment_method(payment_method: Optional[Any]) -> Optional[str]:
     if isinstance(payment_method, PaymentMethod):
         return PAYMENT_METHOD_LABELS.get(
             payment_method, payment_method.value
-        )
-
-    if isinstance(payment_method, enum.Enum) and not isinstance(
-        payment_method, PaymentMethod
-    ):
-        return format_payment_method(
-            getattr(payment_method, "value", str(payment_method))
         )
 
     if isinstance(payment_method, str):
