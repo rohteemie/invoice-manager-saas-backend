@@ -60,8 +60,12 @@ def format_payment_method(payment_method: Optional[Any]) -> Optional[str]:
             payment_method, payment_method.value
         )
 
-    if isinstance(payment_method, enum.Enum) and hasattr(payment_method, "value"):
-        return format_payment_method(payment_method.value)
+    if isinstance(payment_method, enum.Enum) and not isinstance(
+        payment_method, PaymentMethod
+    ):
+        return format_payment_method(
+            getattr(payment_method, "value", str(payment_method))
+        )
 
     if isinstance(payment_method, str):
         cleaned = payment_method.strip()

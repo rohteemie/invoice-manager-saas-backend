@@ -991,8 +991,13 @@ def test_export_invoices_csv(client, auth_headers):
         header = rows[0]
         payment_method_index = header.index("Payment Method")
         paid_row = next(
-            row for row in rows[1:] if row and row[0] == paid_invoice_number
+            (
+                row for row in rows[1:]
+                if row and row[0] == paid_invoice_number
+            ),
+            None
         )
+        assert paid_row is not None
         assert paid_row[payment_method_index] == "Cash"
 
 
