@@ -70,6 +70,28 @@ def test_create_invoice_minimal(client, auth_headers):
     assert float(data["total_amount"]) == 100.00
 
 
+def test_create_invoice_invalid_due_date_format(client, auth_headers):
+    """Test that invoice creation fails with invalid due date formats."""
+    for due_date in ["2024-02-15T10:00:00", "02/15/2024"]:
+        response = client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": "John Doe",
+                "issue_date": "2024-01-15",
+                "due_date": due_date,
+                "items": [
+                    {
+                        "description": "Service",
+                        "quantity": 1,
+                        "unit_price": 100.00
+                    }
+                ]
+            },
+            headers=auth_headers
+        )
+        assert response.status_code == 422  # Validation error
+
+
 def test_create_invoice_no_items(client, auth_headers):
     """Test that invoice creation fails without items."""
     response = client.post(

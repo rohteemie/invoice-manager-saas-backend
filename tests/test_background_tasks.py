@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from decimal import Decimal
 
@@ -192,6 +192,52 @@ def test_check_overdue_invoices_skips_no_due_date(
     # Verify status unchanged
     db_session.refresh(invoice)
     assert invoice.status == InvoiceStatus.SENT
+
+
+def test_check_overdue_invoices_handles_invalid_due_dates(
+    db_session: Session,
+    test_tenant: Tenant,
+    test_user: User
+):
+    """Test that invalid due dates are skipped and datetime strings are handled."""
+    past_datetime = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
+    invoice_with_datetime = Invoice(
+        invoice_number="INV-010",
+        tenant_id=test_tenant.id,
+        creator_id=test_user.id,
+        customer_name="Customer 1",
+        status=InvoiceStatus.SENT,
+        issue_date="2024-01-01",
+        due_date=past_datetime,
+        total_amount=Decimal("100.00")
+    )
+
+    invoice_with_invalid_date = Invoice(
+        invoice_number="INV-011",
+        tenant_id=test_tenant.id,
+        creator_id=test_user.id,
+        customer_name="Customer 2",
+        status=InvoiceStatus.SENT,
+        issue_date="2024-01-01",
+        due_date="01/01/2024",
+        total_amount=Decimal("200.00")
+    )
+
+    db_session.add_all([invoice_with_datetime, invoice_with_invalid_date])
+    db_session.commit()
+
+    result = check_overdue_invoices()
+
+    assert result["status"] == "success"
+    assert result["updated_count"] == 1
+    assert result["affected_tenants"] == 1
+
+    db_session.refresh(invoice_with_datetime)
+    db_session.refresh(invoice_with_invalid_date)
+
+    assert invoice_with_datetime.status == InvoiceStatus.OVERDUE
+    assert invoice_with_invalid_date.status == InvoiceStatus.SENT
 
 
 def test_process_invoice_reminder_existing_invoice(

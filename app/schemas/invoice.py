@@ -1,8 +1,31 @@
-from datetime import datetime
+import re
+from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from decimal import Decimal
 from app.models.invoice import InvoiceStatus, Currency, PaymentMethod
+
+ISO_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def validate_iso_date(value: Optional[str], field_name: str) -> Optional[str]:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
+        )
+    if not ISO_DATE_PATTERN.match(value):
+        raise ValueError(
+            f"{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
+        )
+    try:
+        date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(
+            f"{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
+        ) from exc
+    return value
 
 
 class InvoiceItemBase(BaseModel):
@@ -72,6 +95,11 @@ class InvoiceCreate(InvoiceBase):
         ..., min_length=1, max_length=100, description="Invoice line items"
     )
 
+    @field_validator('due_date')
+    @classmethod
+    def validate_due_date(cls, v):
+        return validate_iso_date(v, "due_date")
+
 
 class InvoiceUpdate(BaseModel):
     """Schema for updating invoice information."""
@@ -87,6 +115,11 @@ class InvoiceUpdate(BaseModel):
     items: Optional[List[InvoiceItemCreate]] = Field(
         None, min_length=1, max_length=100
     )
+
+    @field_validator('due_date')
+    @classmethod
+    def validate_due_date(cls, v):
+        return validate_iso_date(v, "due_date")
 
 
 class InvoiceStatusUpdate(BaseModel):
