@@ -24,10 +24,10 @@ def parse_due_date(value: str | None) -> date | None:
     """
     if not value:
         return None
-    normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
     try:
-        return date.fromisoformat(normalized)
+        return date.fromisoformat(value)
     except ValueError:
+        normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
         try:
             return datetime.fromisoformat(normalized).date()
         except ValueError:

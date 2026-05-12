@@ -1,11 +1,9 @@
-import re
 from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from decimal import Decimal
 from app.models.invoice import InvoiceStatus, Currency, PaymentMethod
 
-ISO_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ISO_DATE_ERROR_TEMPLATE = (
     "{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
 )
@@ -16,8 +14,6 @@ def validate_iso_date(value: Optional[str], field_name: str) -> Optional[str]:
         return None
     error_message = ISO_DATE_ERROR_TEMPLATE.format(field_name=field_name)
     if not isinstance(value, str):
-        raise ValueError(error_message)
-    if not ISO_DATE_PATTERN.match(value):
         raise ValueError(error_message)
     try:
         date.fromisoformat(value)
