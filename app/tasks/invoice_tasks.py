@@ -51,12 +51,14 @@ def check_overdue_invoices():
     try:
         # Get current date
         current_date = datetime.now(timezone.utc).date()
+        current_date_str = current_date.isoformat()
 
-        # Find SENT invoices with due_date set
+        # Find SENT invoices with due_date set and likely in the past
         overdue_invoices = db.query(Invoice).filter(
             Invoice.status == InvoiceStatus.SENT,
-            Invoice.due_date.isnot(None)
-        ).all()
+            Invoice.due_date.isnot(None),
+            Invoice.due_date < current_date_str
+        ).yield_per(500)
 
         updated_count = 0
         affected_tenants = set()

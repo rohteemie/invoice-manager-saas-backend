@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from decimal import Decimal
 
@@ -200,7 +200,9 @@ def test_check_overdue_invoices_handles_invalid_due_dates(
     test_user: User
 ):
     """Test that invalid due dates are skipped and datetime strings are handled."""
-    past_datetime = "2024-01-01T00:00:00+00:00"
+    past_datetime = (
+        datetime.now(timezone.utc) - timedelta(days=7)
+    ).isoformat()
 
     invoice_with_datetime = Invoice(
         invoice_number="INV-010",
