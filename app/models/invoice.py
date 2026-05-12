@@ -67,12 +67,12 @@ def format_payment_method(
         if not cleaned:
             return None
         normalized = cleaned.lower().replace(" ", "_")
-        try:
-            method = PaymentMethod(normalized)
-        except ValueError:
-            method = PaymentMethod.__members__.get(cleaned.upper())
+        method = PaymentMethod.__members__.get(cleaned.upper())
         if method is None:
-            return cleaned
+            try:
+                method = PaymentMethod(normalized)
+            except ValueError:
+                return cleaned
         return PAYMENT_METHOD_LABELS.get(method, cleaned)
 
     return str(payment_method)
