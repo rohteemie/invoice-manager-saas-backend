@@ -1,7 +1,7 @@
 """
 Background tasks for invoice processing.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.celery_app import celery_app
@@ -13,6 +13,25 @@ from app.core.cache import invalidate_tenant_cache
 # Create database engine for tasks
 engine = create_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def parse_due_date(value: str | None) -> date | None:
+    """
+    Parse due_date strings into a date.
+
+    Tries YYYY-MM-DD first, then ISO datetime strings (including Z suffixes) to
+    handle stored values that include time components.
+    """
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+        try:
+            return datetime.fromisoformat(normalized).date()
+        except ValueError:
+            return None
 
 
 @celery_app.task(name='app.tasks.invoice_tasks.check_overdue_invoices')
@@ -31,19 +50,24 @@ def check_overdue_invoices():
     db = SessionLocal()
     try:
         # Get current date
-        current_date = datetime.now(timezone.utc).date().isoformat()
+        current_date = datetime.now(timezone.utc).date()
+        current_date_str = current_date.isoformat()
 
-        # Find SENT invoices with due_date in the past
+        # Find SENT invoices with due_date set and likely in the past
         overdue_invoices = db.query(Invoice).filter(
             Invoice.status == InvoiceStatus.SENT,
             Invoice.due_date.isnot(None),
-            Invoice.due_date < current_date
-        ).all()
+            Invoice.due_date < current_date_str
+        ).yield_per(500)
 
         updated_count = 0
         affected_tenants = set()
 
         for invoice in overdue_invoices:
+            due_date = parse_due_date(invoice.due_date)
+            if due_date is None or due_date >= current_date:
+                continue
+
             invoice.status = InvoiceStatus.OVERDUE
             updated_count += 1
             affected_tenants.add(invoice.tenant_id)
