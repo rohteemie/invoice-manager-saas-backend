@@ -911,8 +911,9 @@ def test_export_invoices_csv(client, auth_headers):
 def test_export_invoices_json(client, auth_headers):
     """Test exporting invoices in JSON format."""
     # Create test invoices
+    paid_invoice_number = None
     for i in range(2):
-        client.post(
+        create_response = client.post(
             "/api/v1/invoices/",
             json={
                 "customer_name": f"Customer {i}",
@@ -927,6 +928,24 @@ def test_export_invoices_json(client, auth_headers):
             },
             headers=auth_headers
         )
+        assert create_response.status_code == 201
+        if i == 0:
+            invoice_id = create_response.json()["id"]
+            paid_invoice_number = create_response.json()["invoice_number"]
+
+            sent_response = client.patch(
+                f"/api/v1/invoices/{invoice_id}/status",
+                json={"status": "sent"},
+                headers=auth_headers
+            )
+            assert sent_response.status_code == 200
+
+            paid_response = client.patch(
+                f"/api/v1/invoices/{invoice_id}/status",
+                json={"status": "paid", "payment_method": "cash"},
+                headers=auth_headers
+            )
+            assert paid_response.status_code == 200
 
     # Export as JSON
     response = client.get(
@@ -948,6 +967,18 @@ def test_export_invoices_json(client, auth_headers):
     assert "items" in json_data[0]
     assert isinstance(json_data[0]["items"], list)
     assert len(json_data[0]["items"]) == 2
+    assert (
+        paid_invoice_number is not None
+    ), "Paid invoice was not created during test setup"
+    paid_invoice = next(
+        (
+            invoice for invoice in json_data
+            if invoice["invoice_number"] == paid_invoice_number
+        ),
+        None
+    )
+    assert paid_invoice is not None
+    assert paid_invoice["payment_method"] == "cash"
 
 
 def test_export_invoices_with_status_filter(client, auth_headers,
