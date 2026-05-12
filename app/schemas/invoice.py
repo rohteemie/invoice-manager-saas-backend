@@ -6,25 +6,23 @@ from decimal import Decimal
 from app.models.invoice import InvoiceStatus, Currency, PaymentMethod
 
 ISO_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ISO_DATE_ERROR_TEMPLATE = (
+    "{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
+)
 
 
 def validate_iso_date(value: Optional[str], field_name: str) -> Optional[str]:
     if value is None:
         return None
+    error_message = ISO_DATE_ERROR_TEMPLATE.format(field_name=field_name)
     if not isinstance(value, str):
-        raise ValueError(
-            f"{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
-        )
+        raise ValueError(error_message)
     if not ISO_DATE_PATTERN.match(value):
-        raise ValueError(
-            f"{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
-        )
+        raise ValueError(error_message)
     try:
         date.fromisoformat(value)
     except ValueError as exc:
-        raise ValueError(
-            f"{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
-        ) from exc
+        raise ValueError(error_message) from exc
     return value
 
 

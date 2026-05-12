@@ -16,6 +16,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def parse_due_date(value: str) -> date | None:
+    """Parse due_date strings into a date, supporting ISO datetimes and Z suffixes."""
     if not value:
         return None
     normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
