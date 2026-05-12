@@ -93,7 +93,7 @@ class InvoiceCreate(InvoiceBase):
         ..., min_length=1, max_length=100, description="Invoice line items"
     )
 
-    @field_validator('due_date')
+    @field_validator('due_date', mode='before')
     @classmethod
     def validate_due_date(cls, v):
         return validate_iso_date(v, "due_date")
@@ -114,7 +114,7 @@ class InvoiceUpdate(BaseModel):
         None, min_length=1, max_length=100
     )
 
-    @field_validator('due_date')
+    @field_validator('due_date', mode='before')
     @classmethod
     def validate_due_date(cls, v):
         return validate_iso_date(v, "due_date")
