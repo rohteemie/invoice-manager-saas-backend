@@ -999,7 +999,9 @@ def test_export_invoices_csv(client, auth_headers):
         ),
         None
     )
-    assert paid_row is not None
+    assert paid_row is not None, (
+        f"Could not find invoice {paid_invoice_number} in CSV output"
+    )
     assert paid_row[payment_method_index] == "Cash"
 
 
