@@ -15,7 +15,8 @@ from app.models.invoice import (
     Invoice as InvoiceModel,
     InvoiceItem as InvoiceItemModel,
     InvoiceStatus,
-    Currency
+    Currency,
+    format_payment_method
 )
 from app.models.user import User, UserRole
 from app.models.tenant import Tenant as TenantModel
@@ -1041,7 +1042,7 @@ def export_invoices(
                 float(invoice.tax_amount),
                 float(invoice.discount_amount),
                 float(invoice.total_amount),
-                invoice.payment_method or "",
+                format_payment_method(invoice.payment_method) or "",
                 invoice.paid_at or "",
                 invoice.created_at.isoformat() if hasattr(
                     invoice.created_at, 'isoformat'
@@ -1087,11 +1088,8 @@ def export_invoices(
                 "tax_amount": float(invoice.tax_amount),
                 "discount_amount": float(invoice.discount_amount),
                 "total_amount": float(invoice.total_amount),
-                "payment_method": (
-                    invoice.payment_method.value
-                    if invoice.payment_method is not None
-                    and hasattr(invoice.payment_method, "value")
-                    else invoice.payment_method
+                "payment_method": format_payment_method(
+                    invoice.payment_method
                 ),
                 "paid_at": invoice.paid_at,
                 "created_at": invoice.created_at.isoformat() if hasattr(

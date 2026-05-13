@@ -15,7 +15,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 
-from app.models.invoice import Invoice, InvoiceStatus
+from app.models.invoice import Invoice, InvoiceStatus, format_payment_method
 
 
 # Regex pattern for validating hex color codes
@@ -152,7 +152,9 @@ class PDFGenerator:
             "discount_amount": format_money(invoice.discount_amount),
             "total_amount": format_money(invoice.total_amount),
             "notes": invoice.notes or "",
-            "payment_method": invoice.payment_method or "N/A",
+            "payment_method": (
+                format_payment_method(invoice.payment_method) or "N/A"
+            ),
             "paid_at": format_date(invoice.paid_at) if invoice.paid_at else "N/A",  # noqa: E501
             "generated_at": datetime.now(timezone.utc).strftime(
                 "%B %d, %Y at %I:%M %p"
