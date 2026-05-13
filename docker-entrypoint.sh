@@ -12,6 +12,11 @@ echo "📋 Running Alembic migrations..."
 alembic upgrade head
 echo "✅ Migrations completed successfully"
 
+if [ "$#" -gt 0 ]; then
+    echo "⚙️ Running custom command: $*"
+    exec "$@"
+fi
+
 # Start the FastAPI application
 echo "🌐 Starting FastAPI application..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000

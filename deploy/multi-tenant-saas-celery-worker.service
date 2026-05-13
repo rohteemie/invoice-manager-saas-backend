@@ -1,0 +1,18 @@
+[Unit]
+Description=Multi-Tenant SaaS Backend Celery Worker
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/multi-tenant-saas
+Environment=PATH=/home/ubuntu/multi-tenant-saas/venv/bin
+ExecStart=/home/ubuntu/multi-tenant-saas/venv/bin/celery -A app.core.celery_app:celery_app worker --loglevel=info
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/multi-tenant-saas/celery-worker.log
+StandardError=append:/var/log/multi-tenant-saas/celery-worker-error.log
+
+[Install]
+WantedBy=multi-user.target

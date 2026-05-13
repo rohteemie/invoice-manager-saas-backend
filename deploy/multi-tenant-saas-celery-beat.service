@@ -1,0 +1,18 @@
+[Unit]
+Description=Multi-Tenant SaaS Backend Celery Beat
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/multi-tenant-saas
+Environment=PATH=/home/ubuntu/multi-tenant-saas/venv/bin
+ExecStart=/home/ubuntu/multi-tenant-saas/venv/bin/celery -A app.core.celery_app:celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/multi-tenant-saas/celery-beat.log
+StandardError=append:/var/log/multi-tenant-saas/celery-beat-error.log
+
+[Install]
+WantedBy=multi-user.target
