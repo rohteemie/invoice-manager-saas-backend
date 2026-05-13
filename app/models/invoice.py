@@ -1,8 +1,17 @@
 from app.models.general_model import Gen_Model, Base
-from sqlalchemy import Column, String, Numeric, ForeignKey, Enum, Text
+from sqlalchemy import (
+    Column,
+    String,
+    Numeric,
+    ForeignKey,
+    Enum,
+    Text,
+    UniqueConstraint
+)
 from sqlalchemy.orm import relationship
 from typing import Optional, Union
 import enum
+import re
 
 
 class InvoiceStatus(str, enum.Enum):
@@ -48,6 +57,58 @@ PAYMENT_METHOD_LABELS = {
     PaymentMethod.MOBILE_MONEY: "Mobile Money",
     PaymentMethod.OTHER: "Other",
 }
+
+PAYMENT_METHOD_ALIASES = {
+    "bank_transfer": PaymentMethod.TRANSFER,
+    "banktransfer": PaymentMethod.TRANSFER,
+    "transfer": PaymentMethod.TRANSFER,
+    "cash": PaymentMethod.CASH,
+    "pos": PaymentMethod.POS,
+    "point_of_sale": PaymentMethod.POS,
+    "cheque": PaymentMethod.CHEQUE,
+    "check": PaymentMethod.CHEQUE,
+    "card": PaymentMethod.CARD,
+    "credit_card": PaymentMethod.CARD,
+    "creditcard": PaymentMethod.CARD,
+    "debit_card": PaymentMethod.CARD,
+    "debitcard": PaymentMethod.CARD,
+    "mobile_money": PaymentMethod.MOBILE_MONEY,
+    "mobilemoney": PaymentMethod.MOBILE_MONEY,
+    "momo": PaymentMethod.MOBILE_MONEY,
+    "other": PaymentMethod.OTHER,
+}
+
+
+def normalize_payment_method_input(
+    payment_method: Optional[Union[PaymentMethod, str]]
+) -> Optional[PaymentMethod]:
+    """Normalize payment method input to enum value when possible."""
+    if payment_method is None:
+        return None
+
+    if isinstance(payment_method, PaymentMethod):
+        return payment_method
+
+    if isinstance(payment_method, str):
+        cleaned = payment_method.strip()
+        if not cleaned:
+            return None
+        enum_member = PaymentMethod.__members__.get(cleaned.upper())
+        if enum_member:
+            return enum_member
+        normalized = re.sub(r"[\s\-]+", "_", cleaned.lower())
+        normalized = re.sub(r"_+", "_", normalized)
+        normalized_no_sep = normalized.replace("_", "")
+        for key in (normalized, normalized_no_sep):
+            mapped = PAYMENT_METHOD_ALIASES.get(key)
+            if mapped:
+                return mapped
+        try:
+            return PaymentMethod(normalized)
+        except ValueError:
+            pass
+
+    raise ValueError(f"Invalid payment method '{payment_method}'")
 
 
 def format_payment_method(
@@ -103,6 +164,14 @@ class Invoice(Gen_Model, Base):
         paid_at: Timestamp when invoice was paid (optional)
     """
     __tablename__ = "invoices"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "invoice_number",
+            name="uq_invoice_tenant_invoice_number"
+        ),
+    )
 
     invoice_number = Column(String(50), nullable=False, index=True)
     tenant_id = Column(String(60), ForeignKey("tenants.id"), nullable=False,

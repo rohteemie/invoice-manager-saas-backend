@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal
 from datetime import datetime, date, timezone
+from string import Formatter
 import csv
 import io
 import json
@@ -60,6 +61,22 @@ def validate_invoice_number_format(format_string: str) -> bool:
           (e.g., {sequence:04d})
     """
     if not format_string:
+        return False
+
+    formatter = Formatter()
+    field_names = [
+        field_name
+        for _, field_name, _, _ in formatter.parse(format_string)
+        if field_name
+    ]
+    if not field_names:
+        return False
+
+    allowed_fields = {"prefix", "date", "sequence"}
+    if any(name not in allowed_fields for name in field_names):
+        return False
+
+    if "sequence" not in field_names:
         return False
 
     # Test formatting with sample values to ensure format is valid
@@ -266,6 +283,18 @@ def create_invoice(
         return db_invoice
     except IntegrityError as e:
         db.rollback()
+        error_message = str(e.orig) if getattr(e, "orig", None) else str(e)
+        if (
+            "uq_invoice_tenant_invoice_number" in error_message
+            or (
+                "invoices.tenant_id" in error_message
+                and "invoices.invoice_number" in error_message
+            )
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invoice number already exists for this tenant."
+            )
         raise HTTPException(
             status_code=400,
             detail=f"Failed to create invoice: {str(e)}"

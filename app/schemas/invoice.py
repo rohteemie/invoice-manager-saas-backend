@@ -2,7 +2,12 @@ from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from decimal import Decimal
-from app.models.invoice import InvoiceStatus, Currency, PaymentMethod
+from app.models.invoice import (
+    InvoiceStatus,
+    Currency,
+    PaymentMethod,
+    normalize_payment_method_input
+)
 
 ISO_DATE_ERROR_TEMPLATE = (
     "{field_name} must be a valid ISO 8601 date (YYYY-MM-DD)"
@@ -137,23 +142,17 @@ class InvoiceStatusUpdate(BaseModel):
     @field_validator('payment_method', mode='before')
     @classmethod
     def normalize_payment_method(cls, v):
-        """Normalize payment method to lowercase for enum matching."""
+        """Normalize payment method input to enum values."""
         if v is None:
             return v
-        if isinstance(v, str):
-            # Convert to lowercase for case-insensitive matching
-            normalized = v.lower()
-            # Try to match with enum values
-            try:
-                return PaymentMethod(normalized)
-            except ValueError:
-                # Provide helpful error message with valid options
-                valid_methods = [m.value for m in PaymentMethod]
-                raise ValueError(
-                    f"Invalid payment method '{v}'. "
-                    f"Valid options are: {', '.join(valid_methods)}"
-                )
-        return v
+        try:
+            return normalize_payment_method_input(v)
+        except ValueError:
+            valid_methods = [m.value for m in PaymentMethod]
+            raise ValueError(
+                f"Invalid payment method '{v}'. "
+                f"Valid options are: {', '.join(valid_methods)}"
+            )
 
 
 class InvoiceInDB(InvoiceBase):
