@@ -120,33 +120,34 @@ echo "🚀 Starting Multi-Tenant SaaS Backend..."
 run_migrations=false
 # Run migrations only for API server commands (uvicorn directly or via python -m)
 if [ "$#" -eq 0 ]; then
-  run_migrations=true
+    run_migrations=true
 else
-  case "$1" in
-    uvicorn)
-      run_migrations=true
-      ;;
-    celery)
-      run_migrations=false
-      ;;
-    python|python3)
-      prev=""
-      for arg in "$@"; do
-        if [ "$prev" = "-m" ] && [ "$arg" = "uvicorn" ]; then
-          run_migrations=true
-          break
-        fi
-        prev="$arg"
-      done
-      ;;
-  esac
+    case "$1" in
+        uvicorn)
+            run_migrations=true
+            ;;
+        celery)
+            # Celery commands should not run migrations.
+            ;;
+        python|python3)
+            # Only inspect python/python3 invocations for -m uvicorn.
+            prev=""
+            for arg in "$@"; do
+                if [ "$prev" = "-m" ] && [ "$arg" = "uvicorn" ]; then
+                    run_migrations=true
+                    break
+                fi
+                prev="$arg"
+            done
+            ;;
+    esac
 fi
 
 if [ "$run_migrations" = "true" ]; then
-  # Run Alembic migrations
-  echo "📋 Running Alembic migrations..."
-  alembic upgrade head
-  echo "✅ Migrations completed successfully"
+    # Run Alembic migrations
+    echo "📋 Running Alembic migrations..."
+    alembic upgrade head
+    echo "✅ Migrations completed successfully"
 fi
 
 if [ "$#" -gt 0 ]; then

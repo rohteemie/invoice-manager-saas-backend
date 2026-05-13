@@ -17,9 +17,10 @@ else
             run_migrations=true
             ;;
         celery)
-            run_migrations=false
+            # Celery commands should not run migrations.
             ;;
         python|python3)
+            # Only inspect python/python3 invocations for -m uvicorn.
             prev=""
             for arg in "$@"; do
                 if [ "$prev" = "-m" ] && [ "$arg" = "uvicorn" ]; then
