@@ -118,6 +118,7 @@ set -e
 echo "🚀 Starting Multi-Tenant SaaS Backend..."
 
 run_migrations=false
+# Run migrations only for API server commands (uvicorn directly or via python -m)
 if [ "$#" -eq 0 ]; then
   run_migrations=true
 else
@@ -125,10 +126,18 @@ else
     uvicorn)
       run_migrations=true
       ;;
-    python)
-      if [ "$#" -ge 3 ] && [ "$2" = "-m" ] && [ "$3" = "uvicorn" ]; then
-        run_migrations=true
-      fi
+    celery)
+      run_migrations=false
+      ;;
+    python|python3)
+      prev=""
+      for arg in "$@"; do
+        if [ "$prev" = "-m" ] && [ "$arg" = "uvicorn" ]; then
+          run_migrations=true
+          break
+        fi
+        prev="$arg"
+      done
       ;;
   esac
 fi
