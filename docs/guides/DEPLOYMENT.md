@@ -106,7 +106,8 @@ INFO  [alembic.runtime.migration] Running upgrade abc123 -> def456, add invoices
 
 ### Using Docker Entrypoint
 
-The Dockerfile now includes an **entrypoint script** that automatically runs migrations:
+The Dockerfile now includes an **entrypoint script** that runs migrations when
+starting the API. Custom commands (like Celery worker/beat) skip migrations.
 
 **`docker-entrypoint.sh`**:
 ```bash
@@ -115,15 +116,15 @@ set -e
 
 echo "🚀 Starting Multi-Tenant SaaS Backend..."
 
-# Run Alembic migrations
-echo "📋 Running Alembic migrations..."
-alembic upgrade head
-echo "✅ Migrations completed successfully"
-
 if [ "$#" -gt 0 ]; then
   echo "⚙️ Running custom command: $*"
   exec "$@"
 fi
+
+# Run Alembic migrations
+echo "📋 Running Alembic migrations..."
+alembic upgrade head
+echo "✅ Migrations completed successfully"
 
 # Start the FastAPI application
 echo "🌐 Starting FastAPI application..."
@@ -154,27 +155,24 @@ docker run -d \
 
 Make sure the containers share a network with your database and Redis, or
 replace the `db`/`redis` hostnames with reachable addresses.
-Override the image entrypoint for Celery so worker and beat containers do not
-run the API startup migrations on boot.
+Passing a Celery command skips API startup migrations automatically.
 
 ```bash
 docker run -d \
   --name multi-tenant-saas-worker \
-  --entrypoint celery \
   -e DATABASE_URL="postgresql://user:password@db:5432/saas_db" \
   -e SECRET_KEY="your-secret-key-here" \
   -e REDIS_URL="redis://redis:6379/0" \
   multi-tenant-saas:latest \
-  -A app.core.celery_app:celery_app worker --loglevel=info
+  celery -A app.core.celery_app:celery_app worker --loglevel=info
 
 docker run -d \
   --name multi-tenant-saas-beat \
-  --entrypoint celery \
   -e DATABASE_URL="postgresql://user:password@db:5432/saas_db" \
   -e SECRET_KEY="your-secret-key-here" \
   -e REDIS_URL="redis://redis:6379/0" \
   multi-tenant-saas:latest \
-  -A app.core.celery_app:celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
+  celery -A app.core.celery_app:celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
 ```
 
 #### Using Docker Compose:
