@@ -93,7 +93,7 @@ def normalize_payment_method_input(
         cleaned = payment_method.strip()
         if not cleaned:
             return None
-        enum_member = PaymentMethod.__members__.get(cleaned.upper())
+        enum_member = getattr(PaymentMethod, cleaned.upper(), None)
         if enum_member:
             return enum_member
         normalized = re.sub(r"[\s\-]+", "_", cleaned.lower())
