@@ -117,13 +117,9 @@ set -e
 
 echo "🚀 Starting Multi-Tenant SaaS Backend..."
 
-run_migrations=true
-if [ "$#" -gt 0 ]; then
-  if [ "$1" = "celery" ]; then
-    run_migrations=false
-  elif [ "$1" != "uvicorn" ]; then
-    run_migrations=false
-  fi
+run_migrations=false
+if [ "$#" -eq 0 ] || [ "${1:-}" = "uvicorn" ]; then
+  run_migrations=true
 fi
 
 if [ "$run_migrations" = "true" ]; then

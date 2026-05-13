@@ -104,6 +104,9 @@ sudo systemctl enable multi-tenant-saas-celery-worker multi-tenant-saas-celery-b
 sudo systemctl start multi-tenant-saas-celery-worker multi-tenant-saas-celery-beat
 ```
 
+Celery Beat stores its PID file under the systemd runtime directory:
+`/run/multi-tenant-saas/celerybeat.pid`.
+
 ### 4. Nginx Setup (Optional)
 
 ```bash
