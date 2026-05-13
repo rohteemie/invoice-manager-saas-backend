@@ -99,6 +99,27 @@ def validate_invoice_number_format(format_string: str) -> bool:
         return False
 
 
+def _is_invoice_number_unique_violation(error: IntegrityError) -> bool:
+    """Check if integrity error is due to invoice number uniqueness."""
+    orig = getattr(error, "orig", None)
+    if orig is None:
+        return False
+    constraint_name = getattr(getattr(orig, "diag", None), "constraint_name", None)
+    if constraint_name == "uq_invoice_tenant_invoice_number":
+        return True
+    if getattr(orig, "pgcode", None) == "23505":
+        if "uq_invoice_tenant_invoice_number" in str(orig):
+            return True
+    message = str(orig)
+    return (
+        "uq_invoice_tenant_invoice_number" in message
+        or (
+            "invoices.tenant_id" in message
+            and "invoices.invoice_number" in message
+        )
+    )
+
+
 def generate_invoice_number(db: Session, tenant_id: str) -> str:
     """
     Generate unique invoice number for tenant using atomic counter.
@@ -283,14 +304,7 @@ def create_invoice(
         return db_invoice
     except IntegrityError as e:
         db.rollback()
-        error_message = str(e.orig) if getattr(e, "orig", None) else str(e)
-        if (
-            "uq_invoice_tenant_invoice_number" in error_message
-            or (
-                "invoices.tenant_id" in error_message
-                and "invoices.invoice_number" in error_message
-            )
-        ):
+        if _is_invoice_number_unique_violation(e):
             raise HTTPException(
                 status_code=400,
                 detail="Invoice number already exists for this tenant."
