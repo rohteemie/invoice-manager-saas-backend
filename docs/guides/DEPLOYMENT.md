@@ -154,23 +154,27 @@ docker run -d \
 
 Make sure the containers share a network with your database and Redis, or
 replace the `db`/`redis` hostnames with reachable addresses.
+Override the image entrypoint for Celery so worker and beat containers do not
+run the API startup migrations on boot.
 
 ```bash
 docker run -d \
   --name multi-tenant-saas-worker \
+  --entrypoint celery \
   -e DATABASE_URL="postgresql://user:password@db:5432/saas_db" \
   -e SECRET_KEY="your-secret-key-here" \
   -e REDIS_URL="redis://redis:6379/0" \
   multi-tenant-saas:latest \
-  celery -A app.core.celery_app:celery_app worker --loglevel=info
+  -A app.core.celery_app:celery_app worker --loglevel=info
 
 docker run -d \
   --name multi-tenant-saas-beat \
+  --entrypoint celery \
   -e DATABASE_URL="postgresql://user:password@db:5432/saas_db" \
   -e SECRET_KEY="your-secret-key-here" \
   -e REDIS_URL="redis://redis:6379/0" \
   multi-tenant-saas:latest \
-  celery -A app.core.celery_app:celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
+  -A app.core.celery_app:celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
 ```
 
 #### Using Docker Compose:
