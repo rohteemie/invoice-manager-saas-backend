@@ -120,10 +120,17 @@ echo "🚀 Starting Multi-Tenant SaaS Backend..."
 run_migrations=false
 if [ "$#" -eq 0 ]; then
   run_migrations=true
-elif [ "$1" = "uvicorn" ]; then
-  run_migrations=true
-elif [ "$#" -ge 3 ] && [ "$1" = "python" ] && [ "$2" = "-m" ] && [ "$3" = "uvicorn" ]; then
-  run_migrations=true
+else
+  case "$1" in
+    uvicorn)
+      run_migrations=true
+      ;;
+    python)
+      if [ "$#" -ge 3 ] && [ "$2" = "-m" ] && [ "$3" = "uvicorn" ]; then
+        run_migrations=true
+      fi
+      ;;
+  esac
 fi
 
 if [ "$run_migrations" = "true" ]; then
@@ -134,11 +141,7 @@ if [ "$run_migrations" = "true" ]; then
 fi
 
 if [ "$#" -gt 0 ]; then
-  if [ "$run_migrations" = "false" ]; then
-    echo "⚙️ Running custom command: $*"
-  else
-    echo "🌐 Starting API command: $*"
-  fi
+  echo "⚙️ Running command: $*"
   exec "$@"
 fi
 
