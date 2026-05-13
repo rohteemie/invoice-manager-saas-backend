@@ -93,9 +93,10 @@ def normalize_payment_method_input(
         cleaned = payment_method.strip()
         if not cleaned:
             return None
-        enum_member = getattr(PaymentMethod, cleaned.upper(), None)
-        if isinstance(enum_member, PaymentMethod):
-            return enum_member
+        try:
+            return PaymentMethod[cleaned.upper()]
+        except KeyError:
+            pass
         normalized = re.sub(r"[\s\-]+", "_", cleaned.lower())
         normalized = re.sub(r"_+", "_", normalized)
         normalized_no_sep = normalized.replace("_", "")

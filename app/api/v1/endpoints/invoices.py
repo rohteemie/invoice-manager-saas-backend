@@ -111,7 +111,7 @@ def _is_invoice_number_unique_violation(error: IntegrityError) -> bool:
         if "uq_invoice_tenant_invoice_number" in str(orig):
             return True
     message = str(orig)
-    # fallback for SQLite and drivers without constraint metadata.
+    # Fallback for SQLite and drivers without constraint metadata.
     return (
         "uq_invoice_tenant_invoice_number" in message
         or (
