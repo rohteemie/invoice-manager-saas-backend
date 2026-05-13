@@ -83,6 +83,12 @@ alembic upgrade head
 # Create systemd service
 echo "Creating systemd service..."
 sudo mv ~/multi-tenant-saas.service /etc/systemd/system/
+if [ -f ~/multi-tenant-saas-celery-worker.service ]; then
+    sudo mv ~/multi-tenant-saas-celery-worker.service /etc/systemd/system/
+fi
+if [ -f ~/multi-tenant-saas-celery-beat.service ]; then
+    sudo mv ~/multi-tenant-saas-celery-beat.service /etc/systemd/system/
+fi
 sudo systemctl daemon-reload
 
 # Setup Nginx (optional - for reverse proxy)

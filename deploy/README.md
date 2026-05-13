@@ -11,8 +11,8 @@ Before deploying, ensure you have:
    - Server IP: Set DEPLOY_SERVER_IP environment variable or update in deploy.sh
 
 2. **External Services:**
-   - PostgreSQL database (already configured)
-   - Redis server (already configured)
+    - PostgreSQL database (already configured)
+    - Redis server (Celery broker + caching)
 
 3. **Local Setup:**
    - SSH key configured for passwordless access to server
@@ -88,6 +88,25 @@ sudo systemctl enable multi-tenant-saas
 sudo systemctl start multi-tenant-saas
 ```
 
+### 3b. Background Workers (Celery)
+
+The invoice lifecycle jobs (overdue updates, verification reminders, invoice emails)
+run in Celery workers. Enable both the worker and beat services:
+
+```bash
+# Copy Celery service files
+sudo cp deploy/multi-tenant-saas-celery-worker.service /etc/systemd/system/
+sudo cp deploy/multi-tenant-saas-celery-beat.service /etc/systemd/system/
+
+# Reload and enable
+sudo systemctl daemon-reload
+sudo systemctl enable multi-tenant-saas-celery-worker multi-tenant-saas-celery-beat
+sudo systemctl start multi-tenant-saas-celery-worker multi-tenant-saas-celery-beat
+```
+
+Celery Beat stores its PID file under the systemd runtime directory:
+`/run/multi-tenant-saas/celerybeat.pid`.
+
 ### 4. Nginx Setup (Optional)
 
 ```bash
@@ -107,7 +126,7 @@ PROJECT_NAME=Multi-Tenant SaaS Backend API
 SECRET_KEY=your-production-secret-key
 ACCESS_TOKEN_EXPIRATION=30
 DATABASE_URL=postgresql+psycopg2://user:pass@your-db-server:5432/dbname
-REDIS_URL=redis://user:pass@your-redis-server:6379
+REDIS_URL=redis://user:pass@your-redis-server:6379  # Celery broker + caching
 ```
 
 ## Post-Deployment
@@ -117,9 +136,13 @@ REDIS_URL=redis://user:pass@your-redis-server:6379
 ```bash
 # Check service status
 sudo systemctl status multi-tenant-saas
+sudo systemctl status multi-tenant-saas-celery-worker
+sudo systemctl status multi-tenant-saas-celery-beat
 
 # View logs
 sudo journalctl -u multi-tenant-saas -f
+sudo journalctl -u multi-tenant-saas-celery-worker -f
+sudo journalctl -u multi-tenant-saas-celery-beat -f
 
 # Check if app is responding
 curl http://localhost:8000/
@@ -163,6 +186,10 @@ tail -f /var/log/multi-tenant-saas/error.log
 ```bash
 # Restart application
 sudo systemctl restart multi-tenant-saas
+
+# Restart Celery services
+sudo systemctl restart multi-tenant-saas-celery-worker
+sudo systemctl restart multi-tenant-saas-celery-beat
 
 # Restart Nginx
 sudo systemctl restart nginx

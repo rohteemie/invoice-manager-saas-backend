@@ -70,7 +70,7 @@ Configure these secrets in your repository settings (`Settings > Secrets and var
 | Secret Name | Description | Example |
 |------------|-------------|---------|
 | `DATABASE_URL` | Production database connection string | `postgresql://user:pass@host:5432/dbname` |
-| `REDIS_URL` | Redis connection string (optional) | `redis://host:6379/0` |
+| `REDIS_URL` | Redis connection string (Celery broker/cache) | `redis://host:6379/0` |
 | `SECRET_KEY` | JWT secret key for production | (generate with `openssl rand -hex 32`) |
 
 ### Required GitHub Variables
@@ -106,7 +106,9 @@ INFO  [alembic.runtime.migration] Running upgrade abc123 -> def456, add invoices
 
 ### Using Docker Entrypoint
 
-The Dockerfile now includes an **entrypoint script** that automatically runs migrations:
+The Dockerfile now includes an **entrypoint script** that runs migrations when
+starting the API (default or `uvicorn` command). Custom commands like Celery
+skip migrations.
 
 **`docker-entrypoint.sh`**:
 ```bash
@@ -115,10 +117,43 @@ set -e
 
 echo "🚀 Starting Multi-Tenant SaaS Backend..."
 
-# Run Alembic migrations
-echo "📋 Running Alembic migrations..."
-alembic upgrade head
-echo "✅ Migrations completed successfully"
+run_migrations=false
+# Run migrations only for API server commands (uvicorn directly or via python -m)
+if [ "$#" -eq 0 ]; then
+    run_migrations=true
+else
+    case "$1" in
+        uvicorn)
+            run_migrations=true
+            ;;
+        celery)
+            # Celery commands should not run migrations.
+            ;;
+        python|python3)
+            # Only inspect python/python3 invocations for -m uvicorn.
+            prev=""
+            for arg in "$@"; do
+                if [ "$prev" = "-m" ] && [ "$arg" = "uvicorn" ]; then
+                    run_migrations=true
+                    break
+                fi
+                prev="$arg"
+            done
+            ;;
+    esac
+fi
+
+if [ "$run_migrations" = "true" ]; then
+    # Run Alembic migrations
+    echo "📋 Running Alembic migrations..."
+    alembic upgrade head
+    echo "✅ Migrations completed successfully"
+fi
+
+if [ "$#" -gt 0 ]; then
+  echo "⚙️ Running command: $*"
+  exec "$@"
+fi
 
 # Start the FastAPI application
 echo "🌐 Starting FastAPI application..."
@@ -145,6 +180,30 @@ docker run -d \
   multi-tenant-saas:latest
 ```
 
+#### Run Celery worker and beat:
+
+Make sure the containers share a network with your database and Redis, or
+replace the `db`/`redis` hostnames with reachable addresses.
+Passing a Celery command skips API startup migrations automatically.
+
+```bash
+docker run -d \
+  --name multi-tenant-saas-worker \
+  -e DATABASE_URL="postgresql://user:password@db:5432/saas_db" \
+  -e SECRET_KEY="your-secret-key-here" \
+  -e REDIS_URL="redis://redis:6379/0" \
+  multi-tenant-saas:latest \
+  celery -A app.core.celery_app:celery_app worker --loglevel=info
+
+docker run -d \
+  --name multi-tenant-saas-beat \
+  -e DATABASE_URL="postgresql://user:password@db:5432/saas_db" \
+  -e SECRET_KEY="your-secret-key-here" \
+  -e REDIS_URL="redis://redis:6379/0" \
+  multi-tenant-saas:latest \
+  celery -A app.core.celery_app:celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
+```
+
 #### Using Docker Compose:
 
 ```yaml
@@ -155,6 +214,32 @@ services:
     build: .
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/saas_db
+      - SECRET_KEY=your-secret-key-here
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_worker:
+    build: .
+    command: celery -A app.core.celery_app:celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/saas_db
+      - SECRET_KEY=your-secret-key-here
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_beat:
+    build: .
+    command: celery -A app.core.celery_app:celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/saas_db
       - SECRET_KEY=your-secret-key-here
@@ -241,6 +326,10 @@ The deployment script will:
 2. Install dependencies (including Alembic)
 3. **Run migrations automatically** (via `server_setup.sh`)
 4. Start the application service
+5. Start Celery worker and beat services for overdue updates and email jobs
+
+Make sure Redis is running and the `REDIS_URL` points to it before starting
+the Celery services.
 
 ### Server Setup Script
 
@@ -253,6 +342,18 @@ alembic upgrade head
 ```
 
 This runs automatically during deployment.
+
+### Background Workers (Celery)
+
+To manage workers manually on the server:
+
+```bash
+sudo systemctl status multi-tenant-saas-celery-worker
+sudo systemctl status multi-tenant-saas-celery-beat
+
+sudo systemctl restart multi-tenant-saas-celery-worker
+sudo systemctl restart multi-tenant-saas-celery-beat
+```
 
 ### Manual Migration on Server
 
@@ -283,7 +384,7 @@ REFRESH_TOKEN_EXPIRATION=10080   # Minutes (7 days)
 # Database Configuration
 DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/saas_db
 
-# Redis Configuration
+# Redis Configuration (Celery broker + caching)
 REDIS_URL=redis://localhost:6379/0
 
 # Optional: Monitoring and Logging

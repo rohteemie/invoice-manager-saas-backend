@@ -19,6 +19,8 @@ APP_NAME="multi-tenant-saas"
 APP_DIR="/home/ubuntu/$APP_NAME"
 VENV_DIR="$APP_DIR/venv"
 SERVICE_NAME="$APP_NAME"
+CELERY_WORKER_SERVICE="$APP_NAME-celery-worker"
+CELERY_BEAT_SERVICE="$APP_NAME-celery-beat"
 
 # Validate configuration
 if [ -z "$SERVER_IP" ] || [ -z "$SERVER_USER" ] || [ "$SERVER_IP" = "your.server.ip.here" ]; then
@@ -80,6 +82,8 @@ scp -q -o StrictHostKeyChecking=accept-new .env "$SERVER_USER@$SERVER_IP:$APP_DI
 print_status "Copying deployment scripts..."
 scp -q -o StrictHostKeyChecking=accept-new deploy/server_setup.sh "$SERVER_USER@$SERVER_IP:~/"
 scp -q -o StrictHostKeyChecking=accept-new "deploy/$SERVICE_NAME.service" "$SERVER_USER@$SERVER_IP:~/"
+scp -q -o StrictHostKeyChecking=accept-new "deploy/$CELERY_WORKER_SERVICE.service" "$SERVER_USER@$SERVER_IP:~/"
+scp -q -o StrictHostKeyChecking=accept-new "deploy/$CELERY_BEAT_SERVICE.service" "$SERVER_USER@$SERVER_IP:~/"
 
 # Step 4: Execute server setup
 print_status "Setting up server environment..."
@@ -87,11 +91,14 @@ ssh -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_IP" "chmod +x ~/se
 
 # Step 5: Start the application
 print_status "Starting the application..."
-ssh -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_IP" "sudo systemctl enable $SERVICE_NAME && sudo systemctl start $SERVICE_NAME"
+ssh -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_IP" "sudo systemctl enable $SERVICE_NAME $CELERY_WORKER_SERVICE $CELERY_BEAT_SERVICE"
+ssh -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_IP" "sudo systemctl start $SERVICE_NAME $CELERY_WORKER_SERVICE $CELERY_BEAT_SERVICE"
 
 # Step 6: Check status
 print_status "Checking application status..."
 ssh -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_IP" "sudo systemctl status $SERVICE_NAME --no-pager"
+ssh -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_IP" "sudo systemctl status $CELERY_WORKER_SERVICE --no-pager"
+ssh -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_IP" "sudo systemctl status $CELERY_BEAT_SERVICE --no-pager"
 
 print_status "🎉 Deployment completed successfully!"
 print_status "Your API is now running at: http://$SERVER_IP:8000"
