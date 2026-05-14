@@ -408,6 +408,24 @@ def test_owner_create_user_duplicate_email(client, auth_headers, test_admin):
     assert "already registered" in response.json()["message"].lower()
 
 
+def test_owner_create_user_duplicate_email_case_insensitive(
+    client, auth_headers, test_admin
+):
+    """Test that duplicate emails are rejected regardless of case."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=auth_headers,
+        json={
+            "email": test_admin.email.upper(),
+            "full_name": "Duplicate Case",
+            "password": "SecurePassword123@",
+            "role": "attendant"
+        }
+    )
+    assert response.status_code == 400
+    assert "already registered" in response.json()["message"].lower()
+
+
 def test_owner_create_user_invalid_password(client, auth_headers):
     """Test that weak passwords are rejected."""
     response = client.post(

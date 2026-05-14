@@ -7,8 +7,6 @@ Tests invoice creation, retrieval, updates, status transitions, and deletion.
 import csv
 from io import StringIO
 
-import app.tasks.email_tasks
-
 
 def test_create_invoice(client, auth_headers):
     """Test creating a new invoice."""

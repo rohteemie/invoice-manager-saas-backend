@@ -58,7 +58,7 @@ Built with **FastAPI + SQLAlchemy** and **PostgreSQL**, containerized with **Doc
 - CSV and JSON export functionality
 
 **User & Security**
-- Email verification for new users
+- Email verification required before protected account access
 - Password reset functionality
 - Tenant branding with logo upload
 - Comprehensive audit logging

@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from app.models.tenant import Tenant as TenantModel
 from app.models.user import User as UserModel, UserRole
-from app.models.invoice import Invoice as InvoiceModel
 from app.core.security import get_password_hash
 
 
@@ -51,7 +50,7 @@ def superadmin_token_headers(client, superadmin_user):
 @pytest.fixture
 def test_invoice(db_session, test_tenant, test_user):
     """Create a test invoice."""
-    from app.models.invoice import Invoice, InvoiceItem, InvoiceStatus, Currency
+    from app.models.invoice import Invoice, InvoiceStatus, Currency
 
     invoice = Invoice(
         invoice_number="INV-001",

@@ -487,6 +487,15 @@ async def select_tenant(
             detail="Selected tenant is not active"
         )
 
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Password change required. Please call POST "
+                "/api/v1/auth/force-change-password before selecting a tenant."
+            )
+        )
+
     # All checks passed - generate tokens
     token_data = {
         "sub": user.id,
@@ -625,19 +634,17 @@ def verify_email(
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is already verified.\
-                You can now log in to your account."
+            detail="Email is already verified. You can now log in to your account."
         )
 
     # Check if token has expired
     if (
-            user.verification_token_expires_at
-            and user.verification_token_expires_at < datetime.now(timezone.utc)
+        user.verification_token_expires_at
+        and user.verification_token_expires_at < datetime.now(timezone.utc)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has expired.\
-                Please request a new verification email."
+            detail="Verification token has expired. Please request a new verification email."
         )
 
     # Mark user as verified and clear token
@@ -647,24 +654,30 @@ def verify_email(
     db.commit()
     db.refresh(user)
 
-    # Generate tokens (same as login)
+    # Capture values before logging, because audit logging commits too.
+    user_id = user.id
+    user_tenant_id = user.tenant_id
+    user_email = user.email
+    user_role = user.role.value
+    user_is_superadmin = user.is_superadmin
+
+    log_auth_event(
+        db=db,
+        request=request,
+        action=AuditAction.EMAIL_VERIFIED,
+        user_id=user_id,
+        tenant_id=user_tenant_id,
+        description=f"Email verified successfully for {user_email}"
+    )
+
     token_data = {
-        "sub": user.id,
-        "tenant_id": user.tenant_id,
-        "role": user.role.value,
-        "is_superadmin": user.is_superadmin
+        "sub": user_id,
+        "tenant_id": user_tenant_id,
+        "role": user_role,
+        "is_superadmin": user_is_superadmin
     }
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
-
-    # Optionally, log the verification event
-    # log_auth_event(
-    #     db=db,
-    #     request=request,
-    #     action=AuditAction.EMAIL_VERIFIED,
-    #     user_id=user.id,
-    #     tenant_id=user.tenant_id,
-    #     description=
 
     return {
         "access_token": access_token,
@@ -700,9 +713,9 @@ def resend_verification_email(
     Returns:
         Success message
     """
-    # Find user by email
+    # Find user by email, case-insensitively
     user = db.query(UserModel).filter(
-        UserModel.email == resend_request.email
+        func.lower(UserModel.email) == resend_request.email.lower()
     ).first()
 
     if not user:
@@ -775,9 +788,9 @@ def forgot_password(
     """
     email_value = password_request.email
 
-    # Find user by email
+    # Find user by email, case-insensitively
     user = db.query(UserModel).filter(
-        UserModel.email == email_value
+        func.lower(UserModel.email) == email_value.lower()
     ).first()
 
     # Always return success message to prevent email enumeration
@@ -803,10 +816,15 @@ def forgot_password(
         )
         return success_message
 
+    if not user.is_verified:
+        logger.warning(
+            "Password reset requested for unverified user: %s",
+            email_value
+        )
+        return success_message
+
     # Generate password reset token
     reset_token, token_expires_at = generate_password_reset_token()
-    print("______________TOKEN________________")
-    print(reset_token)
 
     # Update user with reset token
     user.reset_password_token = reset_token
@@ -906,6 +924,15 @@ def reset_password(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive"
+        )
+
+    if not user.is_verified:
+        user.reset_password_token = None
+        user.reset_password_token_expires_at = None
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
         )
 
     # Update password with new hashed password

@@ -3,7 +3,6 @@ Test suite for standardized error response format.
 
 Verifies that all API errors follow consistent format with proper codes.
 """
-import pytest
 from fastapi import status
 
 

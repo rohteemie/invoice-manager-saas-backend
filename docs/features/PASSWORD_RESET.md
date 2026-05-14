@@ -35,6 +35,7 @@ Initiates the password reset process by sending a reset link to the user's email
 - Sets token expiration to 30 minutes
 - Stores token hash in database
 - Logs all password reset requests for audit
+- Password reset tokens are only issued for verified accounts
 
 ---
 
@@ -70,6 +71,7 @@ Validates the reset token and updates the user's password.
 - Token must exist in database
 - Password must be at least 8 characters
 - User account must be active
+- User account must be verified
 - Token is invalidated after successful reset
 
 ---

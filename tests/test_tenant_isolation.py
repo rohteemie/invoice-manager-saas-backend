@@ -263,12 +263,14 @@ def test_tenant_isolation_with_deactivated_user(
         headers=auth_headers
     )
     assert response.status_code == 200
-    data = response.json(); emails = [u["email"] for u in data.get("items", data)]
+    data = response.json()
+    emails = [u["email"] for u in data.get("items", data)]
     assert "inactive@secondcompany.com" not in emails
 
 
-def test_registration_enforces_tenant_id(client, test_tenant,
-                                          superadmin_auth_headers):
+def test_registration_enforces_tenant_id(
+    client, test_tenant, superadmin_auth_headers
+):
     """
     Test that POST /api/v1/auth/register is superadmin-only and
     rejects creation of non-superadmin users.

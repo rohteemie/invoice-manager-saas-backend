@@ -2,8 +2,6 @@
 Test suite for Email Verification Enforcement and Async Email Processing.
 Tests email verification requirement for critical operations and async processing.
 """
-from datetime import datetime, timezone, timedelta
-from unittest.mock import patch, Mock
 import pytest
 
 
@@ -229,7 +227,7 @@ def test_async_password_reset_email_task_called(client, db_session):
     assert 'token' in call_kwargs
 
 
-def test_user_response_includes_verification_status(client):
+def test_user_response_includes_verification_status(client, db_session):
     """Test that user API responses include is_verified field."""
     # Register a tenant
     response = client.post(
@@ -254,6 +252,19 @@ def test_user_response_includes_verification_status(client):
     assert "is_verified" in data["owner"]
     assert data["owner"]["is_verified"] is False
 
+    # Verify the email first, then login and get user info
+    from app.models.user import User as UserModel
+
+    user = db_session.query(UserModel).filter(
+        UserModel.email == "statustest@test.com"
+    ).first()
+    assert user is not None
+
+    verify_response = client.post(
+        f"/api/v1/auth/verify-email?token={user.verification_token}"
+    )
+    assert verify_response.status_code == 200
+
     # Login and get user info
     login_response = client.post(
         "/api/v1/auth/login",
@@ -273,7 +284,7 @@ def test_user_response_includes_verification_status(client):
     assert me_response.status_code == 200
     user_data = me_response.json()
     assert "is_verified" in user_data
-    assert user_data["is_verified"] is False
+    assert user_data["is_verified"] is True
 
 
 def test_email_provider_modularity():

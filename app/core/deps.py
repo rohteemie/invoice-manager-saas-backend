@@ -81,10 +81,26 @@ def get_current_user(
                 detail="Your organization has been deactivated"
             )
 
+    current_path = request.url.path
+
+    # Enforce mandatory email verification before accessing protected routes.
+    # The onboarding flow remains available so users can still complete the
+    # verification or password-change steps required to finish setup.
+    if not user.is_verified and not user.is_superadmin:
+        exempt_paths = [
+            "/api/v1/auth/force-change-password"
+        ]
+
+        if current_path not in exempt_paths:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email verification required. Please verify your "
+                       "email before accessing this feature."
+            )
+
     # Enforce mandatory password change for owner-created users
     if user.must_change_password:
         # Allow access only to specific endpoints for password change flow
-        current_path = request.url.path
         exempt_paths = [
             "/api/v1/auth/force-change-password",
             "/api/v1/users/me"

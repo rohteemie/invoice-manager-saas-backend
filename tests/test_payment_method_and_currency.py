@@ -3,8 +3,8 @@ Test suite for payment method enumerators and currency preference features.
 Tests payment method validation, currency conversion, and unified analytics.
 """
 from decimal import Decimal
-import pytest
-from app.models.invoice import Invoice, InvoiceStatus, Currency, PaymentMethod
+
+from app.models.invoice import Invoice, InvoiceStatus, Currency
 from app.models.user import User
 
 

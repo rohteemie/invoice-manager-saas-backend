@@ -61,6 +61,7 @@ def test_update_tenant_with_unset_fields(client, test_tenant, auth_headers):
     assert data["description"] == "Just updating description"
     assert data["name"] == original_name
 
+
 def test_owner_can_update_plan_type_if_same(client, test_tenant, auth_headers):
     """Test if owner is allowed if sending the current plan_type."""
     current_plan = test_tenant.plan_type

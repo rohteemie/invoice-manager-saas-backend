@@ -183,7 +183,7 @@ def test_verification_token_is_unique(client, db_session):
 
 
 def test_owner_can_login_before_verification(client):
-    """Test that owner can login even before email verification (for testing)."""
+    """Test that login works before verification but protected routes stay blocked."""
     # Register tenant
     register_response = client.post(
         "/api/v1/tenants/register",
@@ -209,11 +209,19 @@ def test_owner_can_login_before_verification(client):
         }
     )
 
-    # Should be able to login (but is_verified will be False)
+    # Login is allowed so the user can complete onboarding, but protected
+    # routes remain blocked until the email is verified.
     assert login_response.status_code == 200
     data = login_response.json()
     assert "access_token" in data
     assert "refresh_token" in data
+
+    me_response = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {data['access_token']}"}
+    )
+    assert me_response.status_code == 403
+    assert "email verification required" in me_response.json()["message"].lower()
 
 
 def test_token_has_expiration(client, db_session):
