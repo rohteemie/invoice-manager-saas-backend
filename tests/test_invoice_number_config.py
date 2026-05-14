@@ -410,4 +410,4 @@ def test_invoice_number_duplicate_rejected(
         headers=auth_headers
     )
     assert response2.status_code == 400
-    assert "Invoice number already exists" in response2.json()["detail"]
+    assert "Invoice number already exists" in response2.json()["message"]
