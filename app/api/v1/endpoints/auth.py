@@ -796,25 +796,16 @@ def forgot_password(
 
     if not user:
         # Don't reveal whether user exists for security
-        logger.info(
-            "Password reset requested for non-existent email: %s",
-            email_value
-        )
+        logger.info("Password reset requested for non-existent account")
         return success_message
 
     # Check if user is active
     if not user.is_active:
-        logger.warning(
-            "Password reset requested for inactive user: %s",
-            email_value
-        )
+        logger.warning("Password reset requested for inactive account")
         return success_message
 
     if not user.is_verified:
-        logger.warning(
-            "Password reset requested for unverified user: %s",
-            email_value
-        )
+        logger.warning("Password reset requested for unverified account")
         return success_message
 
     # Generate password reset token
