@@ -5,6 +5,7 @@ Supports CRUD operations with tenant-aware data isolation.
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from app.db.session import get_db
 from app.models.user import User as UserModel, UserRole
 from app.schemas.user import User, UserUpdate, OwnerUserCreate
@@ -84,9 +85,16 @@ def create_user(
         must_change_password=True  # Force password change on first login
     )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered in this organization"
+        )
 
     # Log user creation
     log_user_event(

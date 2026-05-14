@@ -2,6 +2,7 @@
 Background tasks for invoice processing.
 """
 from datetime import datetime, timezone, date
+from typing import Optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.celery_app import celery_app
@@ -15,7 +16,7 @@ engine = create_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def parse_due_date(value: str | None) -> date | None:
+def parse_due_date(value: Optional[str]) -> Optional[date]:
     """
     Parse due_date strings into a date.
 

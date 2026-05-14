@@ -4,6 +4,7 @@ from fastapi import Request, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from app.db.session import get_db
 from app.models.tenant import Tenant as TenantModel
 from app.models.user import User as UserModel, UserRole
@@ -157,7 +158,7 @@ def register_tenant_with_owner(
 
     # Check if owner email already exists
     existing_user = db.query(UserModel).filter(
-        UserModel.email == tenant_register.owner.email
+        func.lower(UserModel.email) == tenant_register.owner.email.lower()
     ).first()
     if existing_user:
         raise HTTPException(

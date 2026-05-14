@@ -239,4 +239,3 @@ def test_rate_limit_headers_in_error():
         assert "X-RateLimit-Remaining" in response.headers
         assert "X-RateLimit-Reset" in response.headers
         assert response.headers["X-RateLimit-Remaining"] == "0"
-

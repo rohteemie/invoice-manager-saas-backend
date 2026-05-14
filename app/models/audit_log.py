@@ -17,6 +17,7 @@ class AuditAction(str, enum.Enum):
     LOGIN_FAILED = "login_failed"
     LOGIN_THROTTLED = "login_throttled"
     LOGIN_EXCESSIVE_FAILURES = "login_excessive_failures"
+    EMAIL_VERIFIED = "email_verified"
     TOKEN_REFRESH = "token_refresh"
 
     # User management events

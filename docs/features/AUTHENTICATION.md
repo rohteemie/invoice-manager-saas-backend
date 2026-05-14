@@ -211,7 +211,9 @@ Verify user's email address using a verification token sent during registration.
 - Tokens expire after 24 hours (configurable)
 - Single-use tokens (deleted after verification)
 - Cryptographically secure token generation
-- User must verify email before full account access
+- User must verify email before protected route access
+- Successful verification is recorded in the auth audit log
+- Verified users can continue the onboarding flow through password change
 
 ### Resend Verification Email ✨ **NEW**
 

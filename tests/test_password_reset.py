@@ -2,9 +2,8 @@
 Test suite for Password Reset functionality.
 Tests forgot password and reset password endpoints.
 """
-import time
 from datetime import datetime, timedelta, timezone
-from app.models.user import User as UserModel
+
 from app.core.security import generate_password_reset_token, verify_password
 
 
@@ -58,6 +57,25 @@ def test_forgot_password_inactive_user(client, test_user, db_session):
 
     # Reactivate user for other tests
     test_user.is_active = True
+    db_session.commit()
+
+
+def test_forgot_password_unverified_user_does_not_issue_token(client, test_user, db_session):
+    """Test that unverified users do not receive password reset tokens."""
+    test_user.is_verified = False
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": test_user.email}
+    )
+    assert response.status_code == 200
+
+    db_session.refresh(test_user)
+    assert test_user.reset_password_token is None
+    assert test_user.reset_password_token_expires_at is None
+
+    test_user.is_verified = True
     db_session.commit()
 
 
@@ -125,6 +143,25 @@ def test_reset_password_with_valid_token(client, test_user, db_session):
     # Verify token was cleared
     assert test_user.reset_password_token is None
     assert test_user.reset_password_token_expires_at is None
+
+
+def test_reset_password_with_unverified_user_token_is_rejected(client, test_user, db_session):
+    """Test that reset tokens for unverified users are rejected."""
+    reset_token, token_expires_at = generate_password_reset_token()
+    test_user.reset_password_token = reset_token
+    test_user.reset_password_token_expires_at = token_expires_at
+    test_user.is_verified = False
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": reset_token,
+            "new_password": "NewSecurePassword123@"
+        }
+    )
+    assert response.status_code == 400
+    assert "invalid or expired" in response.json()["message"].lower()
 
 
 def test_reset_password_with_invalid_token(client):

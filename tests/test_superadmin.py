@@ -8,7 +8,7 @@ Validates:
 - Platform statistics
 """
 import pytest
-from fastapi.testclient import TestClient
+
 from app.models.user import UserRole
 
 
