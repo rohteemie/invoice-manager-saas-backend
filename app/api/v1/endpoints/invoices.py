@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal
 from datetime import datetime, date, timezone
+from string import Formatter
 import csv
 import io
 import json
@@ -62,6 +63,22 @@ def validate_invoice_number_format(format_string: str) -> bool:
     if not format_string:
         return False
 
+    formatter = Formatter()
+    field_names = [
+        field_name
+        for _, field_name, _, _ in formatter.parse(format_string)
+        if field_name
+    ]
+    if not field_names:
+        return False
+
+    allowed_fields = {"prefix", "date", "sequence"}
+    if any(name not in allowed_fields for name in field_names):
+        return False
+
+    if "sequence" not in field_names:
+        return False
+
     # Test formatting with sample values to ensure format is valid
     # This will catch any malformed placeholders or invalid format strings
     try:
@@ -80,6 +97,28 @@ def validate_invoice_number_format(format_string: str) -> bool:
         return test_result != format_string
     except (KeyError, ValueError, IndexError):
         return False
+
+
+def _is_invoice_number_unique_violation(error: IntegrityError) -> bool:
+    """Check if integrity error is due to invoice number uniqueness."""
+    orig = getattr(error, "orig", None)
+    if orig is None:
+        return False
+    constraint_name = getattr(getattr(orig, "diag", None), "constraint_name", None)
+    if constraint_name == "uq_invoice_tenant_invoice_number":
+        return True
+    if getattr(orig, "pgcode", None) == "23505":
+        if "uq_invoice_tenant_invoice_number" in str(orig):
+            return True
+    message = str(orig)
+    # Fallback for SQLite and drivers without constraint metadata.
+    return (
+        "uq_invoice_tenant_invoice_number" in message
+        or (
+            "invoices.tenant_id" in message
+            and "invoices.invoice_number" in message
+        )
+    )
 
 
 def generate_invoice_number(db: Session, tenant_id: str) -> str:
@@ -266,6 +305,11 @@ def create_invoice(
         return db_invoice
     except IntegrityError as e:
         db.rollback()
+        if _is_invoice_number_unique_violation(e):
+            raise HTTPException(
+                status_code=400,
+                detail="Invoice number already exists for this tenant."
+            )
         raise HTTPException(
             status_code=400,
             detail=f"Failed to create invoice: {str(e)}"

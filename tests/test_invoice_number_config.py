@@ -326,3 +326,88 @@ def test_invoice_number_format_validation(client, auth_headers, test_tenant, db_
     # Should fall back to default format
     assert invoice_number.startswith("INV-")
     assert "-" in invoice_number
+
+
+def test_invoice_number_format_requires_sequence(
+    client, auth_headers, test_tenant, db_session
+):
+    """Test that formats without sequence fall back to default."""
+    from app.models.tenant import Tenant as TenantModel
+
+    tenant = db_session.query(TenantModel).filter(
+        TenantModel.id == test_tenant.id
+    ).first()
+    tenant.invoice_number_format = "{prefix}-{date}"
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Test Customer",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=auth_headers
+    )
+    assert response.status_code == 201
+    invoice_number = response.json()["invoice_number"]
+    assert invoice_number.startswith("INV-")
+    assert invoice_number.endswith("-0001")
+
+
+def test_invoice_number_duplicate_rejected(
+    client, auth_headers, test_tenant, db_session
+):
+    """Test duplicate invoice numbers are rejected per tenant."""
+    from app.models.tenant import Tenant as TenantModel
+
+    tenant = db_session.query(TenantModel).filter(
+        TenantModel.id == test_tenant.id
+    ).first()
+    tenant.invoice_number_format = "{prefix}-{sequence:04d}"
+    tenant.invoice_number_sequence = 0
+    db_session.commit()
+
+    response1 = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Test Customer",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=auth_headers
+    )
+    assert response1.status_code == 201
+
+    tenant.invoice_number_sequence = 0
+    db_session.commit()
+
+    response2 = client.post(
+        "/api/v1/invoices/",
+        json={
+            "customer_name": "Test Customer",
+            "issue_date": "2024-01-15",
+            "items": [
+                {
+                    "description": "Product",
+                    "quantity": 1,
+                    "unit_price": 100.00
+                }
+            ]
+        },
+        headers=auth_headers
+    )
+    assert response2.status_code == 400
+    assert "Invoice number already exists" in response2.json()["message"]

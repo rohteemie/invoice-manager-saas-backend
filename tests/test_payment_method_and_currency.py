@@ -100,6 +100,55 @@ def test_payment_method_enum_valid_uppercase(
     assert data["payment_method"] == "cash"
 
 
+def test_payment_method_enum_common_variations(
+    client, auth_headers, db_session, test_tenant, test_user
+):
+    """Test common payment method variations are normalized."""
+    variations = [
+        ("Credit Card", "card"),
+        ("Mobile Money", "mobile_money"),
+    ]
+
+    for payment_input, expected in variations:
+        invoice_response = client.post(
+            "/api/v1/invoices/",
+            json={
+                "customer_name": "Test Customer",
+                "issue_date": "2024-01-15",
+                "items": [
+                    {
+                        "description": "Product A",
+                        "quantity": 1,
+                        "unit_price": 100.00
+                    }
+                ]
+            },
+            headers=auth_headers
+        )
+        assert invoice_response.status_code == 201
+        invoice_id = invoice_response.json()["id"]
+
+        sent_response = client.patch(
+            f"/api/v1/invoices/{invoice_id}/status",
+            json={"status": "sent"},
+            headers=auth_headers
+        )
+        assert sent_response.status_code == 200
+
+        response = client.patch(
+            f"/api/v1/invoices/{invoice_id}/status",
+            json={
+                "status": "paid",
+                "payment_method": payment_input
+            },
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "paid"
+        assert data["payment_method"] == expected
+
+
 def test_payment_method_enum_invalid(
     client, auth_headers, db_session, test_tenant, test_user
 ):

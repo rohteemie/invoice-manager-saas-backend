@@ -166,7 +166,7 @@ Represents invoices for billing and payment tracking with lifecycle management.
 **Fields:**
 
 - `id`: String (UUID) - Primary key (inherited from Gen_Model)
-- `invoice_number`: String(50) - Unique invoice identifier (indexed)
+- `invoice_number`: String(50) - Invoice identifier (unique per tenant, indexed)
 - `tenant_id`: String(60) - Foreign key to tenants table (indexed)
 - `customer_name`: String(100) - Customer name (required)
 - `customer_email`: String(255) - Customer email (optional)
@@ -212,6 +212,7 @@ DRAFT → SENT → PAID
 **Constraints:**
 
 - NOT NULL on invoice_number, tenant_id, customer_name, creator_id, status
+- Unique constraint on (tenant_id, invoice_number)
 - Foreign key constraints to tenants and users tables
 - Indexed on invoice_number, tenant_id, creator_id, status
 
