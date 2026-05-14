@@ -487,15 +487,6 @@ async def select_tenant(
             detail="Selected tenant is not active"
         )
 
-    if user.must_change_password:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "Password change required. Please call POST "
-                "/api/v1/auth/force-change-password before selecting a tenant."
-            )
-        )
-
     # All checks passed - generate tokens
     token_data = {
         "sub": user.id,
@@ -644,7 +635,10 @@ def verify_email(
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has expired. Please request a new verification email."
+            detail=(
+                "Verification token has expired. "
+                "Please request a new verification email."
+            )
         )
 
     # Mark user as verified and clear token

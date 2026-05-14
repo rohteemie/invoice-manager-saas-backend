@@ -59,10 +59,10 @@ def test_login_returns_false_when_no_change_needed(client, test_user):
     assert data["requires_password_change"] is False
 
 
-def test_select_tenant_rejects_must_change_password_user(
+def test_select_tenant_returns_token_for_must_change_password_user(
     client, user_must_change_password, test_tenant
 ):
-    """Test that tenant selection is blocked until password change is complete."""
+    """Test tenant selection works and returns password-change requirement."""
     response = client.post(
         "/api/v1/auth/select-tenant",
         json={
@@ -72,8 +72,11 @@ def test_select_tenant_rejects_must_change_password_user(
         }
     )
 
-    assert response.status_code == 403
-    assert "password change required" in response.json()["message"].lower()
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["requires_password_change"] is True
 
 
 def test_force_change_password_success(client, user_must_change_password, db_session):
