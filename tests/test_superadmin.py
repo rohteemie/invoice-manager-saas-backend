@@ -65,6 +65,47 @@ def test_superadmin_can_access_admin_endpoints(
     assert isinstance(data["items"], list)
 
 
+def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
+    """Test that admin stats endpoint enforces IP-based rate limiting."""
+    from app.core.rate_limit import limiter
+
+    original_state = limiter.enabled
+    limiter.enabled = True
+    try:
+        test_headers = {
+            **superadmin_auth_headers,
+            "X-Forwarded-For": "203.0.113.10",
+        }
+        # Endpoint is limited to 30/minute; use a small buffer above that.
+        max_requests = 35
+
+        response = None
+        for _ in range(max_requests):
+            response = client.get(
+                "/api/v1/admin/stats",
+                headers=test_headers
+            )
+            if response.status_code == 429:
+                break
+    finally:
+        limiter.enabled = original_state
+        # SlowAPI storage may be exposed directly or via the wrapped limiter.
+        storage = (
+            getattr(limiter, "_storage", None)
+            or getattr(getattr(limiter, "limiter", None), "storage", None)
+        )
+        if storage and hasattr(storage, "reset"):
+            storage.reset()
+
+    assert response is not None
+    assert response.status_code == 429
+    data = response.json()
+    error_text = (
+        str(data.get("error") or data.get("message") or data.get("detail"))
+    ).lower()
+    assert "rate limit" in error_text
+
+
 def test_non_superadmin_cannot_access_admin_endpoints(
     client, auth_headers
 ):

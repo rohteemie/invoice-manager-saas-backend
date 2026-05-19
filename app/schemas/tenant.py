@@ -249,5 +249,6 @@ class TenantRegister(TenantBase):
 class TenantWithOwner(BaseModel):
     tenant: Tenant
     owner: dict  # We'll return owner info without sensitive data
+    verification_email: Optional[dict] = None
 
     model_config = ConfigDict(from_attributes=True)
