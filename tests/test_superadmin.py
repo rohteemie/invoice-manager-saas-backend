@@ -112,7 +112,11 @@ def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
 
     assert response is not None
     assert response.status_code == 429
-    assert "rate limit" in response.json()["error"].lower()
+    data = response.json()
+    error_text = (
+        str(data.get("error") or data.get("message") or data.get("detail"))
+    ).lower()
+    assert "rate limit" in error_text
 
 
 def test_non_superadmin_cannot_access_admin_endpoints(

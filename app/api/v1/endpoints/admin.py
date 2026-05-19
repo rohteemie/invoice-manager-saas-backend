@@ -226,9 +226,9 @@ def reactivate_tenant(
 @router.put("/tenants/{tenant_id}", response_model=Tenant)
 @limiter.limit("30/minute", key_func=get_remote_address)
 def superadmin_update_tenant(
+    request: Request,
     tenant_id: str,
     tenant_update: SuperAdminTenantUpdate,
-    request: Request,
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
