@@ -93,6 +93,26 @@ def test_admin_endpoints_have_rate_limit_decorators():
         assert hasattr(route.endpoint, "__wrapped__")
 
 
+def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
+    """Test that admin stats endpoint enforces IP-based rate limiting."""
+    from app.core.rate_limit import limiter
+
+    limiter.enabled = True
+
+    response = None
+    for _ in range(40):
+        response = client.get(
+            "/api/v1/admin/stats",
+            headers=superadmin_auth_headers
+        )
+        if response.status_code == 429:
+            break
+
+    assert response is not None
+    assert response.status_code == 429
+    assert "rate limit" in response.json()["error"].lower()
+
+
 def test_non_superadmin_cannot_access_admin_endpoints(
     client, auth_headers
 ):

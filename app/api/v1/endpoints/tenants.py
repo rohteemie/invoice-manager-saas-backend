@@ -23,6 +23,8 @@ from app.tasks.email_tasks import send_verification_email_task
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+DEFAULT_EMAIL_BASE_URL = "http://localhost:5173"
+VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS = 3
 
 
 def queue_verification_email_with_retry(
@@ -33,15 +35,14 @@ def queue_verification_email_with_retry(
     """
     Queue verification email with broker-level retry attempts.
     """
-    max_attempts = 3
     payload = {
         "email": email,
         "token": token,
         "full_name": full_name,
-        "base_url": settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+        "base_url": settings.EMAIL_VERIFICATION_BASE_URL or DEFAULT_EMAIL_BASE_URL
     }
 
-    for attempt in range(1, max_attempts + 1):
+    for attempt in range(1, VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS + 1):
         try:
             send_verification_email_task.delay(**payload)
             return {
@@ -56,13 +57,13 @@ def queue_verification_email_with_retry(
                 ),
                 email,
                 attempt,
-                max_attempts,
+                VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS,
                 str(exc)
             )
 
     logger.error(
         "Verification email queueing failed after %s attempts for %s",
-        max_attempts,
+        VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS,
         email
     )
     return {
