@@ -72,6 +72,10 @@ def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
     original_state = limiter.enabled
     limiter.enabled = True
     try:
+        test_headers = {
+            **superadmin_auth_headers,
+            "X-Forwarded-For": "203.0.113.10",
+        }
         # Endpoint is limited to 30/minute; use a small buffer above that.
         max_requests = 35
 
@@ -79,12 +83,18 @@ def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
         for _ in range(max_requests):
             response = client.get(
                 "/api/v1/admin/stats",
-                headers=superadmin_auth_headers
+                headers=test_headers
             )
             if response.status_code == 429:
                 break
     finally:
         limiter.enabled = original_state
+        storage = (
+            getattr(limiter, "_storage", None)
+            or getattr(getattr(limiter, "limiter", None), "storage", None)
+        )
+        if storage and hasattr(storage, "reset"):
+            storage.reset()
 
     assert response is not None
     assert response.status_code == 429

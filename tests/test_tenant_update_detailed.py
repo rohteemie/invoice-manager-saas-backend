@@ -104,7 +104,10 @@ def test_co_owner_can_update_same_tenant(
             "password": "TestPass123!"
         }
     )
-    token = login_response.json()["access_token"]
+    assert login_response.status_code == 200
+    login_data = login_response.json()
+    assert "access_token" in login_data
+    token = login_data["access_token"]
 
     response = client.put(
         f"/api/v1/tenants/{test_tenant.id}",
