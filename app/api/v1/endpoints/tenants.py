@@ -68,7 +68,8 @@ def queue_verification_email_with_retry(
     )
     raise RuntimeError(
         "Verification email delivery could not be queued for tenant "
-        "registration."
+        "registration. Please try again later or contact support if the "
+        "problem persists."
     )
 
 

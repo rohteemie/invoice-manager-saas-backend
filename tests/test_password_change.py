@@ -203,7 +203,10 @@ def test_force_change_password_no_auth(client):
             "new_password": "NewSecure456@"
         }
     )
-    assert response.status_code == 401
+    assert response.status_code == 400
+    assert "email and tenant_id are required" in response.json()[
+        "message"
+    ].lower()
 
 
 def test_owner_created_user_has_must_change_flag(client, auth_headers, db_session):

@@ -78,7 +78,13 @@ def _get_force_change_user_from_request(
     db: Session
 ) -> UserModel:
     if not change_request.email or not change_request.tenant_id:
-        raise _credentials_exception()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Email and tenant_id are required for multi-tenant "
+                "password change without an access token"
+            )
+        )
 
     user = db.query(UserModel).filter(
         UserModel.email.ilike(change_request.email),
