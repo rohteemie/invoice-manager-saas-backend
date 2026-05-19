@@ -835,7 +835,6 @@ def download_invoice_pdf(
 @router.post("/{invoice_id}/send", response_model=Invoice)
 def send_invoice(
     invoice_id: str,
-    verified_user: User = Depends(require_verified_email),
     current_user: User = Depends(require_role(UserRole.MANAGER)),
     db: Session = Depends(get_db)
 ):

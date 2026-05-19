@@ -81,7 +81,7 @@ def _get_force_change_user_from_request(
         raise _credentials_exception()
 
     user = db.query(UserModel).filter(
-        UserModel.email.ilike(change_request.email.lower()),
+        UserModel.email.ilike(change_request.email),
         UserModel.tenant_id == change_request.tenant_id
     ).first()
     if not user:
@@ -148,7 +148,6 @@ def register(
             hashed_password=hashed_password,
             role=user_in.role,
             tenant_id=None,  # Superadmins have no tenant
-            is_verified=False,
             is_superadmin=True,  # Forced superadmin creation
         )
 
