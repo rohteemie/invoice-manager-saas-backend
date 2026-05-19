@@ -69,18 +69,22 @@ def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
     """Test that admin stats endpoint enforces IP-based rate limiting."""
     from app.core.rate_limit import limiter
 
+    original_state = limiter.enabled
     limiter.enabled = True
-    # Endpoint is limited to 30/minute; use a small buffer above that.
-    max_requests = 35
+    try:
+        # Endpoint is limited to 30/minute; use a small buffer above that.
+        max_requests = 35
 
-    response = None
-    for _ in range(max_requests):
-        response = client.get(
-            "/api/v1/admin/stats",
-            headers=superadmin_auth_headers
-        )
-        if response.status_code == 429:
-            break
+        response = None
+        for _ in range(max_requests):
+            response = client.get(
+                "/api/v1/admin/stats",
+                headers=superadmin_auth_headers
+            )
+            if response.status_code == 429:
+                break
+    finally:
+        limiter.enabled = original_state
 
     assert response is not None
     assert response.status_code == 429
