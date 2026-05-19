@@ -98,9 +98,11 @@ def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
     from app.core.rate_limit import limiter
 
     limiter.enabled = True
+    # Endpoint is limited to 30/minute; use a small buffer above that.
+    max_requests = 35
 
     response = None
-    for _ in range(40):
+    for _ in range(max_requests):
         response = client.get(
             "/api/v1/admin/stats",
             headers=superadmin_auth_headers

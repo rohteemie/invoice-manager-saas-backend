@@ -7,11 +7,15 @@ from datetime import datetime, timezone, timedelta
 
 def test_register_tenant_retries_verification_email_queueing(client, monkeypatch):
     """Test queue retries for verification email during tenant registration."""
+    from app.api.v1.endpoints.tenants import (
+        VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
+    )
+
     attempts = {"count": 0}
 
     def flaky_delay(**kwargs):
         attempts["count"] += 1
-        if attempts["count"] < 3:
+        if attempts["count"] < VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS:
             raise RuntimeError("Broker unavailable")
         return None
 
@@ -37,11 +41,15 @@ def test_register_tenant_retries_verification_email_queueing(client, monkeypatch
     assert response.status_code == 201
     data = response.json()
     assert data["verification_email"]["status"] == "queued"
-    assert attempts["count"] == 3
+    assert attempts["count"] == VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
 
 
 def test_register_tenant_reports_queue_failure(client, monkeypatch):
     """Test explicit feedback when verification email queueing keeps failing."""
+    from app.api.v1.endpoints.tenants import (
+        VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
+    )
+
     attempts = {"count": 0}
 
     def always_fail_delay(**kwargs):
@@ -71,7 +79,7 @@ def test_register_tenant_reports_queue_failure(client, monkeypatch):
     data = response.json()
     assert data["verification_email"]["status"] == "failed"
     assert "could not be queued" in data["verification_email"]["message"].lower()
-    assert attempts["count"] == 3
+    assert attempts["count"] == VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
 
 
 def test_register_tenant_generates_verification_token(client, db_session):
