@@ -5,6 +5,75 @@ Tests email verification token generation, sending, and verification.
 from datetime import datetime, timezone, timedelta
 
 
+def test_register_tenant_retries_verification_email_queueing(client, monkeypatch):
+    """Test queue retries for verification email during tenant registration."""
+    attempts = {"count": 0}
+
+    def flaky_delay(**kwargs):
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise RuntimeError("Broker unavailable")
+        return None
+
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.tenants.send_verification_email_task.delay",
+        flaky_delay
+    )
+
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Retry Queue Company",
+            "domain": "retry-queue.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Retry Owner",
+                "email": "retry-owner@test.com",
+                "password": "SecurePass123@"
+            }
+        }
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["verification_email"]["status"] == "queued"
+    assert attempts["count"] == 3
+
+
+def test_register_tenant_reports_queue_failure(client, monkeypatch):
+    """Test explicit feedback when verification email queueing keeps failing."""
+    attempts = {"count": 0}
+
+    def always_fail_delay(**kwargs):
+        attempts["count"] += 1
+        raise RuntimeError("Broker unavailable")
+
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.tenants.send_verification_email_task.delay",
+        always_fail_delay
+    )
+
+    response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Queue Failure Company",
+            "domain": "queue-failure.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Failure Owner",
+                "email": "failure-owner@test.com",
+                "password": "SecurePass123@"
+            }
+        }
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["verification_email"]["status"] == "failed"
+    assert "could not be queued" in data["verification_email"]["message"].lower()
+    assert attempts["count"] == 3
+
+
 def test_register_tenant_generates_verification_token(client, db_session):
     """Test that registering a tenant generates a verification token for the owner."""
     from app.models.user import User as UserModel

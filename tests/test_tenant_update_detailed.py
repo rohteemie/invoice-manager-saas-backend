@@ -74,3 +74,60 @@ def test_owner_can_update_plan_type_if_same(client, test_tenant, auth_headers):
 
     # New implementation allows if matches current value
     assert response.status_code == 200
+
+
+def test_co_owner_can_update_same_tenant(
+    client,
+    test_tenant,
+    db_session
+):
+    """Test that a co-owner in the same tenant can update tenant fields."""
+    from app.models.user import User, UserRole
+    from app.core.security import get_password_hash
+
+    co_owner = User(
+        email="co-owner@testcompany.com",
+        full_name="Co Owner",
+        hashed_password=get_password_hash("TestPass123!"),
+        role=UserRole.OWNER,
+        tenant_id=test_tenant.id,
+        is_active=True,
+        is_verified=True
+    )
+    db_session.add(co_owner)
+    db_session.commit()
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "co-owner@testcompany.com",
+            "password": "TestPass123!"
+        }
+    )
+    token = login_response.json()["access_token"]
+
+    response = client.put(
+        f"/api/v1/tenants/{test_tenant.id}",
+        json={"description": "Updated by co-owner"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["description"] == "Updated by co-owner"
+
+
+def test_owner_cannot_update_other_tenant(
+    client,
+    test_tenant,
+    second_tenant,
+    second_tenant_auth_headers
+):
+    """Test tenant isolation: owner cannot update another tenant."""
+    response = client.put(
+        f"/api/v1/tenants/{test_tenant.id}",
+        json={"description": "Cross-tenant update attempt"},
+        headers=second_tenant_auth_headers
+    )
+
+    assert response.status_code == 403
+    assert "permission" in response.json()["message"].lower()

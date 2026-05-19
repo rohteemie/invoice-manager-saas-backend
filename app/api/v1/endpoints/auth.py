@@ -625,7 +625,10 @@ def verify_email(
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is already verified. You can now log in to your account."
+            detail=(
+                "Email is already verified. "
+                "You can now log in to your account."
+            )
         )
 
     # Check if token has expired
@@ -715,8 +718,10 @@ def resend_verification_email(
     if not user:
         # Don't reveal whether user exists for security
         return {
-            "message": "If the email exists in our system,\
-                a verification email will be sent.",
+            "message": (
+                "If the email exists in our system, "
+                "a verification email will be sent."
+            ),
             "email": resend_request.email
         }
 
@@ -752,8 +757,10 @@ def resend_verification_email(
         )
 
     return {
-        "message": "Verification email has been resent.\
-        Please check your inbox.",
+        "message": (
+            "Verification email has been resent. "
+            "Please check your inbox."
+        ),
         "email": user.email
     }
 
@@ -900,8 +907,10 @@ def reset_password(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired.\
-                Please request a new password reset."
+            detail=(
+                "Reset token has expired. "
+                "Please request a new password reset."
+            )
         )
 
     # Check if user is active

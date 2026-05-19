@@ -25,6 +25,55 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def queue_verification_email_with_retry(
+    email: str,
+    token: str,
+    full_name: str
+) -> dict:
+    """
+    Queue verification email with broker-level retry attempts.
+    """
+    max_attempts = 3
+    payload = {
+        "email": email,
+        "token": token,
+        "full_name": full_name,
+        "base_url": settings.EMAIL_VERIFICATION_BASE_URL or "http://localhost:5173"
+    }
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            send_verification_email_task.delay(**payload)
+            return {
+                "status": "queued",
+                "message": "Verification email has been queued for delivery."
+            }
+        except Exception as exc:
+            logger.warning(
+                (
+                    "Failed to queue verification email for %s "
+                    "(attempt %s/%s): %s"
+                ),
+                email,
+                attempt,
+                max_attempts,
+                str(exc)
+            )
+
+    logger.error(
+        "Verification email queueing failed after %s attempts for %s",
+        max_attempts,
+        email
+    )
+    return {
+        "status": "failed",
+        "message": (
+            "Tenant and owner were created, but verification email delivery "
+            "could not be queued. Please use resend verification email."
+        )
+    }
+
+
 @router.post("/", response_model=Tenant, status_code=201)
 def create_tenant(
     tenant_in: TenantCreate,
@@ -197,23 +246,11 @@ def register_tenant_with_owner(
         db.refresh(db_tenant)
         db.refresh(db_owner)
 
-        # Send verification email asynchronously
-        try:
-            send_verification_email_task.delay(
-                email=db_owner.email,
-                token=verification_token,
-                full_name=db_owner.full_name,
-                base_url=(
-                    settings.EMAIL_VERIFICATION_BASE_URL
-                    or "http://localhost:5173"
-                ),
-            )
-        except Exception as e:
-            # Log but don't fail registration if email fails
-            logger.warning(
-                "Failed to queue verification email for %s: %s",
-                db_owner.email, str(e)
-            )
+        verification_email = queue_verification_email_with_retry(
+            email=db_owner.email,
+            token=verification_token,
+            full_name=db_owner.full_name
+        )
 
         # Return combined response
         return {
@@ -228,7 +265,8 @@ def register_tenant_with_owner(
                 "is_verified": db_owner.is_verified,
                 "created_at": db_owner.created_at,
                 "updated_at": db_owner.updated_at
-            }
+            },
+            "verification_email": verification_email
         }
     except IntegrityError:
         db.rollback()
@@ -312,10 +350,13 @@ def update_tenant(
     # Verify authentication and permissions
     if not current_user.is_superadmin:
         # Check ownership
-        if (
-            current_user.tenant_id != tenant_id
-            or current_user.role != UserRole.OWNER
-        ):
+        active_owner = db.query(UserModel).filter(
+            UserModel.id == current_user.id,
+            UserModel.tenant_id == tenant.id,
+            UserModel.role == UserRole.OWNER,
+            UserModel.is_active.is_(True)
+        ).first()
+        if not active_owner:
             raise HTTPException(
                 status_code=403,
                 detail="You don't have permission to update this tenant"

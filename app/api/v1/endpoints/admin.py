@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from slowapi.util import get_remote_address
 
 from app.db.session import get_db
 from app.models.tenant import Tenant as TenantModel
@@ -16,6 +17,7 @@ from app.schemas.user import User
 from app.schemas.audit_log import AuditLog
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.core.deps import require_superadmin
+from app.core.rate_limit import limiter
 from app.services.audit_logger import log_tenant_event
 from app.models.audit_log import AuditAction
 
@@ -23,7 +25,9 @@ router = APIRouter()
 
 
 @router.get("/tenants", response_model=PaginatedResponse[Tenant])
+@limiter.limit("60/minute", key_func=get_remote_address)
 def list_all_tenants(
+    request: Request,
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(
         100, ge=1, le=1000,
@@ -74,7 +78,9 @@ def list_all_tenants(
 
 
 @router.get("/tenants/{tenant_id}", response_model=Tenant)
+@limiter.limit("60/minute", key_func=get_remote_address)
 def get_tenant(
+    request: Request,
     tenant_id: str,
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
@@ -102,6 +108,7 @@ def get_tenant(
 
 
 @router.put("/tenants/{tenant_id}/suspend")
+@limiter.limit("30/minute", key_func=get_remote_address)
 def suspend_tenant(
     tenant_id: str,
     request: Request,
@@ -159,6 +166,7 @@ def suspend_tenant(
 
 
 @router.put("/tenants/{tenant_id}/reactivate")
+@limiter.limit("30/minute", key_func=get_remote_address)
 def reactivate_tenant(
     tenant_id: str,
     request: Request,
@@ -216,6 +224,7 @@ def reactivate_tenant(
 
 
 @router.put("/tenants/{tenant_id}", response_model=Tenant)
+@limiter.limit("30/minute", key_func=get_remote_address)
 def superadmin_update_tenant(
     tenant_id: str,
     tenant_update: SuperAdminTenantUpdate,
@@ -336,7 +345,9 @@ def superadmin_update_tenant(
 
 
 @router.get("/users", response_model=PaginatedResponse[User])
+@limiter.limit("60/minute", key_func=get_remote_address)
 def list_all_users(
+    request: Request,
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(
         100, ge=1, le=1000,
@@ -401,7 +412,9 @@ def list_all_users(
 
 
 @router.get("/audit-logs", response_model=PaginatedResponse[AuditLog])
+@limiter.limit("30/minute", key_func=get_remote_address)
 def list_platform_audit_logs(
+    request: Request,
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(
         100, ge=1, le=1000,
@@ -469,7 +482,9 @@ def list_platform_audit_logs(
 
 
 @router.get("/stats")
+@limiter.limit("30/minute", key_func=get_remote_address)
 def get_platform_stats(
+    request: Request,
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):

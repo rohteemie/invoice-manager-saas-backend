@@ -65,6 +65,34 @@ def test_superadmin_can_access_admin_endpoints(
     assert isinstance(data["items"], list)
 
 
+def test_admin_endpoints_have_rate_limit_decorators():
+    """Test that sensitive admin endpoints are wrapped with rate limits."""
+    from app.main import app
+
+    endpoints = [
+        ("/api/v1/admin/tenants", "GET"),
+        ("/api/v1/admin/tenants/{tenant_id}", "GET"),
+        ("/api/v1/admin/tenants/{tenant_id}/suspend", "PUT"),
+        ("/api/v1/admin/tenants/{tenant_id}/reactivate", "PUT"),
+        ("/api/v1/admin/tenants/{tenant_id}", "PUT"),
+        ("/api/v1/admin/users", "GET"),
+        ("/api/v1/admin/audit-logs", "GET"),
+        ("/api/v1/admin/stats", "GET"),
+    ]
+
+    for path, method in endpoints:
+        route = next(
+            (
+                candidate for candidate in app.routes
+                if getattr(candidate, "path", None) == path
+                and method in getattr(candidate, "methods", set())
+            ),
+            None
+        )
+        assert route is not None
+        assert hasattr(route.endpoint, "__wrapped__")
+
+
 def test_non_superadmin_cannot_access_admin_endpoints(
     client, auth_headers
 ):
