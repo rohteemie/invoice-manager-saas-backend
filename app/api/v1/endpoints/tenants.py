@@ -239,6 +239,8 @@ def register_tenant_with_owner(
             verification_token_expires_at=token_expires_at
         )
         db.add(db_owner)
+        # Flush without committing so the whole registration can still roll
+        # back if verification email queueing fails.
         db.flush()
 
         verification_email = queue_verification_email_with_retry(
