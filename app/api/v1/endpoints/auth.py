@@ -27,7 +27,7 @@ from app.core.security import generate_password_reset_token
 from app.core.rate_limit import limiter
 from app.core.config import settings
 from app.core.login_throttle import get_login_throttle
-from app.core.deps import require_superadmin, get_current_user
+from app.core.deps import require_superadmin
 from app.services.audit_logger import log_auth_event
 from app.models.audit_log import AuditAction
 from app.tasks.email_tasks import send_verification_email_task
@@ -36,6 +36,62 @@ from app.tasks.email_tasks import send_password_reset_email_task
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _credentials_exception() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _get_force_change_user_from_token(
+    request: Request,
+    db: Session
+) -> UserModel | None:
+    authorization = request.headers.get("Authorization")
+    if not authorization:
+        return None
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise _credentials_exception()
+
+    payload = decode_token(token)
+    if payload is None:
+        raise _credentials_exception()
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise _credentials_exception()
+
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise _credentials_exception()
+
+    return user
+
+
+def _get_force_change_user_from_request(
+    change_request: ForceChangePasswordRequest,
+    db: Session
+) -> UserModel:
+    if not change_request.email or not change_request.tenant_id:
+        raise _credentials_exception()
+
+    user = db.query(UserModel).filter(
+        UserModel.email.ilike(change_request.email.lower()),
+        UserModel.tenant_id == change_request.tenant_id
+    ).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
 
 
 @router.post("/register", response_model=User, status_code=201)
@@ -92,6 +148,7 @@ def register(
             hashed_password=hashed_password,
             role=user_in.role,
             tenant_id=None,  # Superadmins have no tenant
+            is_verified=False,
             is_superadmin=True,  # Forced superadmin creation
         )
 
@@ -485,6 +542,27 @@ async def select_tenant(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Selected tenant is not active"
+        )
+
+    if user.must_change_password:
+        log_auth_event(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILED,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            status="failure",
+            description=(
+                "Tenant selection blocked until password change is completed"
+            )
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Password change required before tenant access. "
+                "Complete POST /api/v1/auth/force-change-password with "
+                "email, tenant_id, current_password, and new_password."
+            )
         )
 
     # All checks passed - generate tokens
@@ -957,7 +1035,6 @@ def reset_password(
 def force_change_password(
     request: Request,
     change_request: ForceChangePasswordRequest,
-    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -977,6 +1054,10 @@ def force_change_password(
     Returns:
         Success message
     """
+    current_user = _get_force_change_user_from_token(request, db)
+    if current_user is None:
+        current_user = _get_force_change_user_from_request(change_request, db)
+
     # Ensure this endpoint is only usable when a password change is required
     if not current_user.must_change_password:
         raise HTTPException(

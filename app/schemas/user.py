@@ -210,6 +210,14 @@ class RefreshTokenRequest(BaseModel):
 
 class ForceChangePasswordRequest(BaseModel):
     """Schema for force password change on first login."""
+    email: Optional[EmailStr] = Field(
+        None,
+        description="User email for multi-tenant password change without a token"
+    )
+    tenant_id: Optional[str] = Field(
+        None,
+        description="Tenant ID for multi-tenant password change without a token"
+    )
     current_password: str = Field(..., description="Current password")
     new_password: str = Field(
         ...,

@@ -59,10 +59,10 @@ def test_login_returns_false_when_no_change_needed(client, test_user):
     assert data["requires_password_change"] is False
 
 
-def test_select_tenant_returns_token_for_must_change_password_user(
+def test_select_tenant_blocks_token_for_must_change_password_user(
     client, user_must_change_password, test_tenant
 ):
-    """Test tenant selection works and returns password-change requirement."""
+    """Test tenant selection blocks token issuance until password change."""
     response = client.post(
         "/api/v1/auth/select-tenant",
         json={
@@ -72,11 +72,36 @@ def test_select_tenant_returns_token_for_must_change_password_user(
         }
     )
 
+    assert response.status_code == 403
+    assert "password change required" in response.json()["message"].lower()
+
+
+def test_force_change_password_with_email_and_tenant(client, user_must_change_password, db_session):
+    """Test password change can complete without a token for tenant selection flow."""  # noqa: E501
+    response = client.post(
+        "/api/v1/auth/force-change-password",
+        json={
+            "email": user_must_change_password.email,
+            "tenant_id": user_must_change_password.tenant_id,
+            "current_password": "TempPass123!",
+            "new_password": "TenantFlow456@"
+        }
+    )
     assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
-    assert data["requires_password_change"] is True
+    assert "success" in response.json()["message"].lower()
+
+    db_session.refresh(user_must_change_password)
+    assert user_must_change_password.must_change_password is False
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": user_must_change_password.email,
+            "password": "TenantFlow456@"
+        }
+    )
+    assert login_response.status_code == 200
+    assert login_response.json()["requires_password_change"] is False
 
 
 def test_force_change_password_success(client, user_must_change_password, db_session):

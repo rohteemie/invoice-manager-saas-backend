@@ -86,7 +86,7 @@ def get_current_user(
     # Enforce mandatory email verification before accessing protected routes.
     # The onboarding flow remains available so users can still complete the
     # verification or password-change steps required to finish setup.
-    if not user.is_verified and not user.is_superadmin:
+    if not user.is_verified:
         exempt_paths = [
             "/api/v1/auth/force-change-password"
         ]
@@ -222,10 +222,6 @@ def require_verified_email(
     Raises:
         HTTPException: If user's email is not verified
     """
-    # Superadmins bypass email verification requirement
-    if current_user.is_superadmin:
-        return current_user
-
     if not current_user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

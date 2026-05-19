@@ -755,7 +755,7 @@ def delete_invoice(
 def download_invoice_pdf(
     invoice_id: str,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_email),
     db: Session = Depends(get_db)
 ):
     """
@@ -835,6 +835,7 @@ def download_invoice_pdf(
 @router.post("/{invoice_id}/send", response_model=Invoice)
 def send_invoice(
     invoice_id: str,
+    verified_user: User = Depends(require_verified_email),
     current_user: User = Depends(require_role(UserRole.MANAGER)),
     db: Session = Depends(get_db)
 ):
@@ -985,7 +986,7 @@ def export_invoices(
     end_date: Optional[str] = Query(
         None, description="End date filter (ISO 8601)"
     ),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_email),
     db: Session = Depends(get_db)
 ):
     """

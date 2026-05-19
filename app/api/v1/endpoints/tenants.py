@@ -66,13 +66,10 @@ def queue_verification_email_with_retry(
         VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS,
         email
     )
-    return {
-        "status": "failed",
-        "message": (
-            "Tenant and owner were created, but verification email delivery "
-            "could not be queued. Please use resend verification email."
-        )
-    }
+    raise RuntimeError(
+        "Verification email delivery could not be queued for tenant "
+        "registration."
+    )
 
 
 @router.post("/", response_model=Tenant, status_code=201)
@@ -241,17 +238,17 @@ def register_tenant_with_owner(
             verification_token_expires_at=token_expires_at
         )
         db.add(db_owner)
-
-        # Commit both together
-        db.commit()
-        db.refresh(db_tenant)
-        db.refresh(db_owner)
+        db.flush()
 
         verification_email = queue_verification_email_with_retry(
             email=db_owner.email,
             token=verification_token,
             full_name=db_owner.full_name
         )
+
+        db.commit()
+        db.refresh(db_tenant)
+        db.refresh(db_owner)
 
         # Return combined response
         return {
@@ -276,6 +273,15 @@ def register_tenant_with_owner(
             detail=(
                 "Failed to create tenant and owner. "
                 "Domain or email may already exist."
+            )
+        )
+    except RuntimeError:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Unable to complete tenant registration because the "
+                "verification email could not be queued. Please try again."
             )
         )
 
