@@ -89,6 +89,7 @@ def test_admin_stats_endpoint_rate_limited(client, superadmin_auth_headers):
                 break
     finally:
         limiter.enabled = original_state
+        # SlowAPI storage may be exposed directly or via the wrapped limiter.
         storage = (
             getattr(limiter, "_storage", None)
             or getattr(getattr(limiter, "limiter", None), "storage", None)
