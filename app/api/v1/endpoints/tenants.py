@@ -279,14 +279,29 @@ def register_tenant_with_owner(
             )
         )
     except VerificationEmailQueueError:
-        raise HTTPException(
-            status_code=503,
-            detail=(
+        verification_email = {
+            "status": "failed",
+            "message": (
                 "Tenant registration completed, but the verification email "
                 "could not be queued. Please request a new verification "
-                "email and try again."
+                "email."
             )
-        )
+        }
+        return {
+            "tenant": db_tenant,
+            "owner": {
+                "id": db_owner.id,
+                "email": db_owner.email,
+                "full_name": db_owner.full_name,
+                "role": db_owner.role.value,
+                "tenant_id": db_owner.tenant_id,
+                "is_active": db_owner.is_active,
+                "is_verified": db_owner.is_verified,
+                "created_at": db_owner.created_at,
+                "updated_at": db_owner.updated_at
+            },
+            "verification_email": verification_email
+        }
 
 
 @router.get("/", response_model=PaginatedResponse[Tenant])

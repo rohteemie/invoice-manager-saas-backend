@@ -77,9 +77,11 @@ def test_register_tenant_persists_on_queue_failure(client, monkeypatch, db_sessi
         }
     )
 
-    assert response.status_code == 503
+    assert response.status_code == 201
+    data = response.json()
+    assert data["verification_email"]["status"] == "failed"
     assert "verification email could not be queued" in (
-        response.json()["message"].lower()
+        data["verification_email"]["message"].lower()
     )
     assert attempts["count"] == VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
     assert db_session.query(TenantModel).filter(

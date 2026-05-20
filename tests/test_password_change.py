@@ -76,8 +76,14 @@ def test_select_tenant_blocks_token_for_must_change_password_user(
     assert "password change required" in response.json()["message"].lower()
 
 
-def test_force_change_password_with_email_and_tenant(client, user_must_change_password, db_session):
-    """Test password change can complete without a token for tenant selection flow."""  # noqa: E501
+def test_force_change_password_with_email_and_tenant(
+    client,
+    user_must_change_password,
+    db_session
+):
+    """
+    Test password change can complete without a token for tenant selection flow.
+    """
     response = client.post(
         "/api/v1/auth/force-change-password",
         json={
