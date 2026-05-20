@@ -93,7 +93,7 @@ def _get_force_change_user_from_request(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect current password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
