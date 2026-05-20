@@ -243,7 +243,7 @@ def register_tenant_with_owner(
             verification_token_expires_at=token_expires_at
         )
         db.add(db_owner)
-        # Flush owner row so IDs/defaults are available before commit.
+        # Flush tenant/owner rows so IDs/defaults are available before commit.
         db.flush()
 
         db.commit()
