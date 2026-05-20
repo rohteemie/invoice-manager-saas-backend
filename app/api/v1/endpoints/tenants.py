@@ -27,6 +27,10 @@ DEFAULT_EMAIL_BASE_URL = "http://localhost:5173"
 VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS = 3
 
 
+class VerificationEmailQueueError(RuntimeError):
+    """Raised when verification email queueing fails after retries."""
+
+
 def queue_verification_email_with_retry(
     email: str,
     token: str,
@@ -66,7 +70,7 @@ def queue_verification_email_with_retry(
         VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS,
         email
     )
-    raise RuntimeError(
+    raise VerificationEmailQueueError(
         "Verification email delivery could not be queued for tenant "
         "registration. Please try again later or contact support if the "
         "problem persists."
@@ -243,15 +247,14 @@ def register_tenant_with_owner(
         # back if verification email queueing fails.
         db.flush()
 
+        db.commit()
+        db.refresh(db_tenant)
+        db.refresh(db_owner)
         verification_email = queue_verification_email_with_retry(
             email=db_owner.email,
             token=verification_token,
             full_name=db_owner.full_name
         )
-
-        db.commit()
-        db.refresh(db_tenant)
-        db.refresh(db_owner)
 
         # Return combined response
         return {
@@ -278,13 +281,13 @@ def register_tenant_with_owner(
                 "Domain or email may already exist."
             )
         )
-    except RuntimeError:
-        db.rollback()
+    except VerificationEmailQueueError:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Unable to complete tenant registration because the "
-                "verification email could not be queued. Please try again."
+                "Tenant registration completed, but the verification email "
+                "could not be queued. Please request a new verification "
+                "email and try again."
             )
         )
 

@@ -1060,7 +1060,8 @@ def force_change_password(
         Success message
     """
     current_user = _get_force_change_user_from_token(request, db)
-    if current_user is None:
+    using_credential_flow = current_user is None
+    if using_credential_flow:
         current_user = _get_force_change_user_from_request(change_request, db)
 
     # Ensure this endpoint is only usable when a password change is required
@@ -1092,7 +1093,11 @@ def force_change_password(
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect current password"
+            detail=(
+                "Incorrect email or password"
+                if using_credential_flow
+                else "Incorrect current password"
+            )
         )
 
     # Ensure new password is different from current

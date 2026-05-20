@@ -169,6 +169,24 @@ def test_force_change_password_wrong_current(client, user_must_change_password):
     assert "incorrect" in response.json()["message"].lower()
 
 
+def test_force_change_password_credential_flow_wrong_current(
+    client, user_must_change_password
+):
+    """Test credential flow uses generic auth error for wrong password."""
+    response = client.post(
+        "/api/v1/auth/force-change-password",
+        json={
+            "email": user_must_change_password.email,
+            "tenant_id": user_must_change_password.tenant_id,
+            "current_password": "WrongPassword123!",
+            "new_password": "NewSecure456@"
+        }
+    )
+
+    assert response.status_code == 401
+    assert response.json()["message"] == "Incorrect email or password"
+
+
 def test_force_change_password_same_as_current(client, user_must_change_password):
     """Test that new password cannot be same as current."""
     # First login to get token

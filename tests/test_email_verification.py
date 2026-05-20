@@ -44,8 +44,8 @@ def test_register_tenant_retries_verification_email_queueing(client, monkeypatch
     assert attempts["count"] == VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
 
 
-def test_register_tenant_rolls_back_on_queue_failure(client, monkeypatch, db_session):
-    """Test tenant registration rolls back when verification queueing fails."""
+def test_register_tenant_persists_on_queue_failure(client, monkeypatch, db_session):
+    """Test tenant registration persists when verification queueing fails."""
     from app.api.v1.endpoints.tenants import (
         VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
     )
@@ -78,16 +78,16 @@ def test_register_tenant_rolls_back_on_queue_failure(client, monkeypatch, db_ses
     )
 
     assert response.status_code == 503
-    assert "verification email could not be queued" in response.json()[
-        "message"
-    ].lower()
+    assert "verification email could not be queued" in (
+        response.json()["message"].lower()
+    )
     assert attempts["count"] == VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS
     assert db_session.query(TenantModel).filter(
         TenantModel.domain == "queue-failure.com"
-    ).first() is None
+    ).first() is not None
     assert db_session.query(UserModel).filter(
         UserModel.email == "failure-owner@test.com"
-    ).first() is None
+    ).first() is not None
 
 
 def test_register_tenant_generates_verification_token(client, db_session):
