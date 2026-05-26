@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.get("/me", response_model=User)
 def get_current_user_info(
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(get_current_user)
 ):
     """
@@ -36,7 +36,7 @@ def get_current_user_info(
 def create_user(
     user_in: OwnerUserCreate,
     request: Request,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -121,7 +121,7 @@ def create_user(
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -162,7 +162,7 @@ def list_users(
 @router.get("/{user_id}", response_model=User)
 def get_user(
     user_id: str,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -190,7 +190,7 @@ def update_user(
     user_id: str,
     user_update: UserUpdate,
     request: Request,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -282,7 +282,7 @@ def update_user(
 def delete_user(
     user_id: str,
     request: Request,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):

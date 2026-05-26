@@ -101,7 +101,7 @@ def list_audit_logs(
     end_date: Optional[datetime] = Query(
         None, description="Filter by end date (ISO 8601 format)"
     ),
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -167,7 +167,7 @@ def list_audit_logs(
 @router.get("/{audit_log_id}", response_model=AuditLog)
 def get_audit_log(
     audit_log_id: str,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -201,7 +201,7 @@ def get_user_audit_logs(
     ),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -274,7 +274,7 @@ def get_resource_audit_logs(
     ),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):

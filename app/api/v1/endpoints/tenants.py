@@ -358,7 +358,7 @@ def update_tenant(
     tenant_id: str,
     tenant_update: SuperAdminTenantUpdate,
     request: Request,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -493,7 +493,7 @@ def update_tenant(
 def delete_tenant(
     tenant_id: str,
     request: Request,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -530,7 +530,7 @@ def delete_tenant(
 def upload_tenant_logo(
     tenant_id: str,
     file: UploadFile = File(...),
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -624,7 +624,7 @@ def get_tenant_logo(
 @router.delete("/{tenant_id}/logo", response_model=Tenant)
 def delete_tenant_logo(
     tenant_id: str,
-    _verified_user: UserModel = Depends(require_verified_email),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
