@@ -16,6 +16,7 @@ from app.core.security import get_password_hash, generate_verification_token
 from app.core.config import settings
 from app.core.deps import require_role, get_current_active_user
 from app.core.deps import require_superadmin
+from app.core.deps import require_verified_email
 from app.services.file_upload import get_file_upload_service, FileUploadError
 from app.services.audit_logger import log_tenant_event
 from app.models.audit_log import AuditAction
@@ -357,6 +358,7 @@ def update_tenant(
     tenant_id: str,
     tenant_update: SuperAdminTenantUpdate,
     request: Request,
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -491,6 +493,7 @@ def update_tenant(
 def delete_tenant(
     tenant_id: str,
     request: Request,
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -527,6 +530,7 @@ def delete_tenant(
 def upload_tenant_logo(
     tenant_id: str,
     file: UploadFile = File(...),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -620,6 +624,7 @@ def get_tenant_logo(
 @router.delete("/{tenant_id}/logo", response_model=Tenant)
 def delete_tenant_logo(
     tenant_id: str,
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):

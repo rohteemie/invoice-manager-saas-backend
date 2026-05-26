@@ -15,6 +15,30 @@ from app.models.tenant import Tenant
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
+def _enforce_verified_email(user: User, current_path: str) -> None:
+    """
+    Enforce email verification for non-exempt paths.
+
+    Args:
+        user: Authenticated user
+        current_path: Request path
+
+    Raises:
+        HTTPException: If email is not verified and path is not exempt
+    """
+    if not user.is_verified:
+        exempt_paths = [
+            "/api/v1/auth/force-change-password"
+        ]
+
+        if current_path not in exempt_paths:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email verification required. Please verify your "
+                       "email before accessing this feature."
+            )
+
+
 def get_current_user(
     request: Request,
     token: str = Depends(oauth2_scheme),
@@ -83,20 +107,9 @@ def get_current_user(
 
     current_path = request.url.path
 
-    # Enforce mandatory email verification before accessing protected routes.
-    # The onboarding flow remains available so users can still complete the
-    # verification or password-change steps required to finish setup.
-    if not user.is_verified:
-        exempt_paths = [
-            "/api/v1/auth/force-change-password"
-        ]
-
-        if current_path not in exempt_paths:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Email verification required. Please verify your "
-                       "email before accessing this feature."
-            )
+    # Keep a single source of truth for verification checks so route-level
+    # dependencies and base authentication cannot drift.
+    _enforce_verified_email(user, current_path)
 
     # Enforce mandatory password change for owner-created users
     if user.must_change_password:
@@ -205,13 +218,14 @@ def require_superadmin(
 
 
 def require_verified_email(
+    request: Request,
     current_user: User = Depends(get_current_user)
 ) -> User:
     """
     Dependency to ensure user has verified their email.
 
-    This dependency should be used for critical operations that require
-    email verification, such as creating invoices, sending emails, etc.
+    Uses the same shared verification helper as get_current_user to keep
+    verification behavior (including exempt paths) in one source of truth.
 
     Args:
         current_user: Current user from token
@@ -222,13 +236,7 @@ def require_verified_email(
     Raises:
         HTTPException: If user's email is not verified
     """
-    if not current_user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email verification required. "
-                   "Please verify your email address to perform this action. "
-                   "Check inbox for verification link or request a new one."
-        )
+    _enforce_verified_email(current_user, request.url.path)
     return current_user
 
 

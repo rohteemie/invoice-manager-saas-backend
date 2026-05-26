@@ -17,7 +17,7 @@ from app.models.audit_log import (
 from app.models.user import User as UserModel, UserRole
 from app.schemas.audit_log import AuditLog
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
-from app.core.deps import require_role
+from app.core.deps import require_role, require_verified_email
 
 router = APIRouter()
 
@@ -101,6 +101,7 @@ def list_audit_logs(
     end_date: Optional[datetime] = Query(
         None, description="Filter by end date (ISO 8601 format)"
     ),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -166,6 +167,7 @@ def list_audit_logs(
 @router.get("/{audit_log_id}", response_model=AuditLog)
 def get_audit_log(
     audit_log_id: str,
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -199,6 +201,7 @@ def get_user_audit_logs(
     ),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
@@ -271,6 +274,7 @@ def get_resource_audit_logs(
     ),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
+    _: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.ADMIN)),
     db: Session = Depends(get_db)
 ):
