@@ -8,7 +8,7 @@ from app.models.invoice import Invoice as InvoiceModel, InvoiceStatus
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.schemas.analytics import InvoiceSummary, RevenueByStatus
-from app.core.deps import get_current_user
+from app.core.deps import require_verified_email
 from app.core.cache import get_cache, set_cache, cache_key
 
 router = APIRouter()
@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("/invoice-summary", response_model=InvoiceSummary)
 def get_invoice_summary(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_email),
     db: Session = Depends(get_db)
 ):
     """
@@ -139,7 +139,7 @@ def get_invoice_summary(
 
 @router.get("/revenue-by-status", response_model=List[RevenueByStatus])
 def get_revenue_by_status(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_email),
     db: Session = Depends(get_db)
 ):
     """

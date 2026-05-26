@@ -122,28 +122,61 @@ def test_verified_user_can_create_invoice(client, db_session):
     assert data["customer_name"] == "Test Customer"
 
 
-def test_superadmin_bypasses_verification_requirement(
+def test_unverified_superadmin_cannot_access_admin_routes(
     client, db_session, superadmin_auth_headers
 ):
-    """Test that superadmins can access system without email verification."""
+    """Test that superadmin access still requires email verification."""
     from app.models.user import User as UserModel
 
-    # The superadmin fixture in conftest is created with is_verified=True.
-    # Manually clear the flag to simulate an unverified superadmin.
     superadmin = db_session.query(UserModel).filter(
         UserModel.email == "superadmin@testcompany.com"
     ).first()
     superadmin.is_verified = False
     db_session.commit()
 
-    # The token in superadmin_auth_headers was issued before we cleared the
-    # flag; it is still valid.  Superadmins bypass require_verified_email, so
-    # they should reach any superadmin endpoint regardless of is_verified.
     response = client.get(
         "/api/v1/admin/stats",
         headers=superadmin_auth_headers
     )
-    assert response.status_code == 200
+    assert response.status_code == 403
+    assert "email verification required" in response.json()["message"].lower()
+
+
+def test_unverified_user_cannot_access_analytics_reports(client):
+    """Test that unverified users are blocked from report-style analytics."""
+    register_response = client.post(
+        "/api/v1/tenants/register",
+        json={
+            "name": "Analytics Block Company",
+            "domain": "analytics-block.com",
+            "plan_type": "free",
+            "owner": {
+                "full_name": "Analytics Block User",
+                "email": "analytics-block@test.com",
+                "password": "SecurePass123@"
+            }
+        }
+    )
+    assert register_response.status_code == 201
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "analytics-block@test.com",
+            "password": "SecurePass123@"
+        }
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+
+    analytics_response = client.get(
+        "/api/v1/analytics/invoice-summary",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert analytics_response.status_code == 403
+    assert "email verification required" in analytics_response.json()[
+        "message"
+    ].lower()
 
 
 def test_async_verification_email_task_called(client):

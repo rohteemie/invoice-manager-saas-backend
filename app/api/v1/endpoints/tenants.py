@@ -27,6 +27,10 @@ DEFAULT_EMAIL_BASE_URL = "http://localhost:5173"
 VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS = 3
 
 
+class VerificationEmailQueueError(RuntimeError):
+    """Raised when verification email queueing fails after retries."""
+
+
 def queue_verification_email_with_retry(
     email: str,
     token: str,
@@ -66,13 +70,11 @@ def queue_verification_email_with_retry(
         VERIFICATION_EMAIL_QUEUE_MAX_ATTEMPTS,
         email
     )
-    return {
-        "status": "failed",
-        "message": (
-            "Tenant and owner were created, but verification email delivery "
-            "could not be queued. Please use resend verification email."
-        )
-    }
+    raise VerificationEmailQueueError(
+        "Verification email delivery could not be queued for tenant "
+        "registration. Please try again later or contact support if the "
+        "problem persists."
+    )
 
 
 @router.post("/", response_model=Tenant, status_code=201)
@@ -242,11 +244,9 @@ def register_tenant_with_owner(
         )
         db.add(db_owner)
 
-        # Commit both together
         db.commit()
         db.refresh(db_tenant)
         db.refresh(db_owner)
-
         verification_email = queue_verification_email_with_retry(
             email=db_owner.email,
             token=verification_token,
@@ -278,6 +278,30 @@ def register_tenant_with_owner(
                 "Domain or email may already exist."
             )
         )
+    except VerificationEmailQueueError:
+        verification_email = {
+            "status": "failed",
+            "message": (
+                "Tenant registration completed, but the verification email "
+                "could not be queued. Please request a new verification "
+                "email."
+            )
+        }
+        return {
+            "tenant": db_tenant,
+            "owner": {
+                "id": db_owner.id,
+                "email": db_owner.email,
+                "full_name": db_owner.full_name,
+                "role": db_owner.role.value,
+                "tenant_id": db_owner.tenant_id,
+                "is_active": db_owner.is_active,
+                "is_verified": db_owner.is_verified,
+                "created_at": db_owner.created_at,
+                "updated_at": db_owner.updated_at
+            },
+            "verification_email": verification_email
+        }
 
 
 @router.get("/", response_model=PaginatedResponse[Tenant])
