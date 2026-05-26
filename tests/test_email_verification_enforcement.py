@@ -400,7 +400,7 @@ HIGH_IMPACT_ENDPOINTS = [
 ]
 
 
-def _get_route(path: str, method: str) -> APIRoute:
+def find_route_by_path_and_method(path: str, method: str) -> APIRoute:
     for route in app.routes:
         if (
             isinstance(route, APIRoute)
@@ -414,7 +414,7 @@ def _get_route(path: str, method: str) -> APIRoute:
 @pytest.mark.parametrize(("method", "path"), HIGH_IMPACT_ENDPOINTS)
 def test_high_impact_endpoints_require_verified_email_dependency(method, path):
     """Ensure high-impact endpoints explicitly depend on require_verified_email."""
-    route = _get_route(path, method)
+    route = find_route_by_path_and_method(path, method)
     dependency_calls = {
         dependency.call for dependency in route.dependant.dependencies
     }
