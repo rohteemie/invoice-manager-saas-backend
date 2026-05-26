@@ -16,7 +16,7 @@ from app.schemas.tenant import Tenant, SuperAdminTenantUpdate
 from app.schemas.user import User
 from app.schemas.audit_log import AuditLog
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
-from app.core.deps import require_superadmin
+from app.core.deps import require_superadmin, require_verified_email
 from app.core.rate_limit import limiter
 from app.services.audit_logger import log_tenant_event
 from app.models.audit_log import AuditAction
@@ -36,6 +36,7 @@ def list_all_tenants(
     is_active: Optional[bool] = Query(
         None, description="Filter by active status"
     ),
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -82,6 +83,7 @@ def list_all_tenants(
 def get_tenant(
     request: Request,
     tenant_id: str,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -112,6 +114,7 @@ def get_tenant(
 def suspend_tenant(
     tenant_id: str,
     request: Request,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -170,6 +173,7 @@ def suspend_tenant(
 def reactivate_tenant(
     tenant_id: str,
     request: Request,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -229,6 +233,7 @@ def superadmin_update_tenant(
     tenant_id: str,
     tenant_update: SuperAdminTenantUpdate,
     request: Request,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -362,6 +367,7 @@ def list_all_users(
     is_superadmin: Optional[bool] = Query(
         None, description="Filter by superadmin status"
     ),
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -429,6 +435,7 @@ def list_platform_audit_logs(
     action: Optional[str] = Query(
         None, description="Filter by action type"
     ),
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
@@ -485,6 +492,7 @@ def list_platform_audit_logs(
 @limiter.limit("30/minute", key_func=get_remote_address)
 def get_platform_stats(
     request: Request,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):

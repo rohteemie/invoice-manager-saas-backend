@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.models.user import User as UserModel, UserRole
 from app.schemas.user import User, UserUpdate, OwnerUserCreate
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
-from app.core.deps import get_current_user, require_role
+from app.core.deps import get_current_user, require_role, require_verified_email
 from app.services.audit_logger import log_user_event
 from app.models.audit_log import AuditAction
 from app.core.security import get_password_hash
@@ -20,7 +20,8 @@ router = APIRouter()
 
 @router.get("/me", response_model=User)
 def get_current_user_info(
-    current_user: UserModel = Depends(get_current_user)
+    current_user: UserModel = Depends(get_current_user),
+    verified_user: UserModel = Depends(require_verified_email)
 ):
     """
     Get current user information.
@@ -35,6 +36,7 @@ def get_current_user_info(
 def create_user(
     user_in: OwnerUserCreate,
     request: Request,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -119,6 +121,7 @@ def create_user(
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -159,6 +162,7 @@ def list_users(
 @router.get("/{user_id}", response_model=User)
 def get_user(
     user_id: str,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -186,6 +190,7 @@ def update_user(
     user_id: str,
     user_update: UserUpdate,
     request: Request,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):
@@ -277,6 +282,7 @@ def update_user(
 def delete_user(
     user_id: str,
     request: Request,
+    verified_user: UserModel = Depends(require_verified_email),
     current_user: UserModel = Depends(require_role(UserRole.OWNER)),
     db: Session = Depends(get_db)
 ):

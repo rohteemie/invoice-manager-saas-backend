@@ -3,6 +3,10 @@ Test suite for Email Verification Enforcement and Async Email Processing.
 Tests email verification requirement for critical operations and async processing.
 """
 import pytest
+from fastapi.routing import APIRoute
+
+from app.core.deps import require_verified_email
+from app.main import app
 
 
 def test_unverified_user_cannot_create_invoice(client, db_session):
@@ -368,3 +372,50 @@ def test_mock_email_provider_functionality():
     # Clear and verify
     provider.clear_sent_emails()
     assert len(provider.get_sent_emails()) == 0
+
+
+HIGH_IMPACT_ENDPOINTS = [
+    ("GET", "/api/v1/users/me"),
+    ("POST", "/api/v1/users/"),
+    ("GET", "/api/v1/users/"),
+    ("GET", "/api/v1/users/{user_id}"),
+    ("PUT", "/api/v1/users/{user_id}"),
+    ("DELETE", "/api/v1/users/{user_id}"),
+    ("PUT", "/api/v1/tenants/{tenant_id}"),
+    ("DELETE", "/api/v1/tenants/{tenant_id}"),
+    ("POST", "/api/v1/tenants/{tenant_id}/logo"),
+    ("DELETE", "/api/v1/tenants/{tenant_id}/logo"),
+    ("GET", "/api/v1/admin/tenants"),
+    ("GET", "/api/v1/admin/tenants/{tenant_id}"),
+    ("PUT", "/api/v1/admin/tenants/{tenant_id}/suspend"),
+    ("PUT", "/api/v1/admin/tenants/{tenant_id}/reactivate"),
+    ("PUT", "/api/v1/admin/tenants/{tenant_id}"),
+    ("GET", "/api/v1/admin/users"),
+    ("GET", "/api/v1/admin/audit-logs"),
+    ("GET", "/api/v1/admin/stats"),
+    ("GET", "/api/v1/audit-logs/"),
+    ("GET", "/api/v1/audit-logs/{audit_log_id}"),
+    ("GET", "/api/v1/audit-logs/user/{user_id}"),
+    ("GET", "/api/v1/audit-logs/resource/{resource_type}/{resource_id}"),
+]
+
+
+def _get_route(path: str, method: str) -> APIRoute:
+    for route in app.routes:
+        if (
+            isinstance(route, APIRoute)
+            and route.path == path
+            and method in route.methods
+        ):
+            return route
+    raise AssertionError(f"Route not found: {method} {path}")
+
+
+@pytest.mark.parametrize(("method", "path"), HIGH_IMPACT_ENDPOINTS)
+def test_high_impact_endpoints_require_verified_email_dependency(method, path):
+    """Ensure high-impact endpoints explicitly depend on require_verified_email."""
+    route = _get_route(path, method)
+    dependency_calls = {
+        dependency.call for dependency in route.dependant.dependencies
+    }
+    assert require_verified_email in dependency_calls
