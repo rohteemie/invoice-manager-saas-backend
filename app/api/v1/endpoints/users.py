@@ -20,8 +20,8 @@ router = APIRouter()
 
 @router.get("/me", response_model=User)
 def get_current_user_info(
-    current_user: UserModel = Depends(get_current_user),
-    _verified_user: UserModel = Depends(require_verified_email)
+    _verified_user: UserModel = Depends(require_verified_email),
+    current_user: UserModel = Depends(get_current_user)
 ):
     """
     Get current user information.
