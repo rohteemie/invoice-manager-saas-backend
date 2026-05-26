@@ -218,14 +218,14 @@ def require_superadmin(
 
 
 def require_verified_email(
+    request: Request,
     current_user: User = Depends(get_current_user)
 ) -> User:
     """
     Dependency to ensure user has verified their email.
 
-    Explicit dependency marker for endpoints that require verified email.
-    Verification is enforced in get_current_user via _enforce_verified_email,
-    and this dependency keeps that requirement explicit at route level.
+    Uses the same shared verification helper as get_current_user to keep
+    verification behavior (including exempt paths) in one source of truth.
 
     Args:
         current_user: Current user from token
@@ -236,6 +236,7 @@ def require_verified_email(
     Raises:
         HTTPException: If user's email is not verified
     """
+    _enforce_verified_email(current_user, request.url.path)
     return current_user
 
 
