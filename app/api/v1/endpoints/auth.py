@@ -50,6 +50,7 @@ def _get_force_change_user_from_token(
     request: Request,
     db: Session
 ) -> UserModel | None:
+    """Return the authenticated user from a bearer token, if present."""
     authorization = request.headers.get("Authorization")
     if not authorization:
         return None

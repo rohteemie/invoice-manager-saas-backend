@@ -265,7 +265,7 @@ Experience the application without local setup:
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.11+
 - PostgreSQL (for production) or SQLite (for development)
 - pip or poetry for dependency management
 
