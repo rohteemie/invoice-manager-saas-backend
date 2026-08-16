@@ -400,7 +400,15 @@ HIGH_IMPACT_ENDPOINTS = [
 ]
 
 
+def _normalize_path(path: str) -> str:
+    if path != "/" and path.endswith("/"):
+        return path.rstrip("/")
+    return path
+
+
 def find_route_by_path_and_method(path: str, method: str):
+    normalized_target = _normalize_path(path)
+
     def iter_effective_routes(routes):
         for route in routes:
             if (
@@ -416,7 +424,7 @@ def find_route_by_path_and_method(path: str, method: str):
                 yield from iter_effective_routes(route.effective_candidates())
 
     for route in iter_effective_routes(app.router.routes):
-        if route.path == path and method in route.methods:
+        if _normalize_path(route.path) == normalized_target and method in route.methods:
             return route
     raise AssertionError(f"Route not found: {method} {path}")
 
