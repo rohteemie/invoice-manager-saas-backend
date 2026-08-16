@@ -400,13 +400,36 @@ HIGH_IMPACT_ENDPOINTS = [
 ]
 
 
+def _normalize_path(path: str) -> str:
+    if path != "/" and path.endswith("/"):
+        return path.rstrip("/")
+    return path
+
+
+def _join_paths(prefix: str, path: str) -> str:
+    return "/" + "/".join(
+        segment for segment in f"{prefix}/{path}".split("/") if segment
+    )
+
+
+def _iter_api_routes(routes, prefix: str = ""):
+    for route in routes:
+        if isinstance(route, APIRoute):
+            yield route, _normalize_path(_join_paths(prefix, route.path))
+            continue
+
+        if hasattr(route, "original_router") and hasattr(route, "include_context"):
+            included_prefix = getattr(route.include_context, "prefix", "")
+            nested_prefix = _join_paths(prefix, included_prefix)
+            yield from _iter_api_routes(
+                route.original_router.routes, nested_prefix
+            )
+
+
 def find_route_by_path_and_method(path: str, method: str) -> APIRoute:
-    for route in app.routes:
-        if (
-            isinstance(route, APIRoute)
-            and route.path == path
-            and method in route.methods
-        ):
+    normalized_target = _normalize_path(path)
+    for route, full_path in _iter_api_routes(app.router.routes):
+        if full_path == normalized_target and method in route.methods:
             return route
     raise AssertionError(f"Route not found: {method} {path}")
 
