@@ -406,30 +406,25 @@ def _normalize_path(path: str) -> str:
     return path
 
 
-def _join_paths(prefix: str, path: str) -> str:
-    return "/" + "/".join(
-        segment for segment in f"{prefix}/{path}".split("/") if segment
-    )
-
-
-def _iter_api_routes(routes, prefix: str = ""):
-    for route in routes:
-        if isinstance(route, APIRoute):
-            yield route, _normalize_path(_join_paths(prefix, route.path))
-            continue
-
-        if hasattr(route, "original_router") and hasattr(route, "include_context"):
-            included_prefix = getattr(route.include_context, "prefix", "")
-            nested_prefix = _join_paths(prefix, included_prefix)
-            yield from _iter_api_routes(
-                route.original_router.routes, nested_prefix
-            )
-
-
-def find_route_by_path_and_method(path: str, method: str) -> APIRoute:
+def find_route_by_path_and_method(path: str, method: str):
     normalized_target = _normalize_path(path)
-    for route, full_path in _iter_api_routes(app.router.routes):
-        if full_path == normalized_target and method in route.methods:
+
+    def iter_effective_routes(routes):
+        for route in routes:
+            if (
+                isinstance(route, APIRoute)
+                or (
+                    hasattr(route, "path")
+                    and hasattr(route, "methods")
+                    and hasattr(route, "dependant")
+                )
+            ):
+                yield route
+            elif hasattr(route, "effective_candidates"):
+                yield from iter_effective_routes(route.effective_candidates())
+
+    for route in iter_effective_routes(app.router.routes):
+        if _normalize_path(route.path) == normalized_target and method in route.methods:
             return route
     raise AssertionError(f"Route not found: {method} {path}")
 
