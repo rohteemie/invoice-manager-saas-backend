@@ -400,13 +400,23 @@ HIGH_IMPACT_ENDPOINTS = [
 ]
 
 
-def find_route_by_path_and_method(path: str, method: str) -> APIRoute:
-    for route in app.routes:
-        if (
-            isinstance(route, APIRoute)
-            and route.path == path
-            and method in route.methods
-        ):
+def find_route_by_path_and_method(path: str, method: str):
+    def iter_effective_routes(routes):
+        for route in routes:
+            if (
+                isinstance(route, APIRoute)
+                or (
+                    hasattr(route, "path")
+                    and hasattr(route, "methods")
+                    and hasattr(route, "dependant")
+                )
+            ):
+                yield route
+            elif hasattr(route, "effective_candidates"):
+                yield from iter_effective_routes(route.effective_candidates())
+
+    for route in iter_effective_routes(app.router.routes):
+        if route.path == path and method in route.methods:
             return route
     raise AssertionError(f"Route not found: {method} {path}")
 
